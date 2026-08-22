@@ -1,0 +1,17 @@
+{
+  "posting_date": "2026-01-15",
+  "description": "Example cash sale",
+  "reference": "EXAMPLE-001",
+  "lines": [
+    {
+      "account": "Checking",
+      "description": "Cash received",
+      "debit": "125.00"
+    },
+    {
+      "account": "Consulting Revenue",
+      "description": "Consulting revenue",
+      "credit": "125.00"
+    }
+  ]
+}

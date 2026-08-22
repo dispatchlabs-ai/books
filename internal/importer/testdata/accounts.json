@@ -1,0 +1,35 @@
+{
+  "entity": "Account",
+  "rows": [
+    {
+      "Id": "A1",
+      "Name": "Operating Checking",
+      "FullyQualifiedName": "Operating Checking",
+      "AcctNum": "10000",
+      "AccountType": "Bank",
+      "AccountSubType": "Checking",
+      "Classification": "Asset",
+      "Active": true
+    },
+    {
+      "Id": "E1",
+      "Name": "Software & Web Services",
+      "FullyQualifiedName": "IT Expense:Software & Web Services",
+      "AcctNum": "65010",
+      "AccountType": "Expense",
+      "AccountSubType": "OfficeGeneralAdministrativeExpenses",
+      "Classification": "Expense",
+      "Active": true
+    },
+    {
+      "Id": "AR1",
+      "Name": "Accounts Receivable",
+      "FullyQualifiedName": "Accounts Receivable",
+      "AcctNum": "12000",
+      "AccountType": "Accounts Receivable",
+      "AccountSubType": "AccountsReceivable",
+      "Classification": "Asset",
+      "Active": true
+    }
+  ]
+}

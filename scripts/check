@@ -1,0 +1,67 @@
+#!/bin/sh
+set -eu
+
+repository=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repository"
+
+check_home=$(mktemp -d "${TMPDIR:-/tmp}/books-check.XXXXXX")
+cleanup() {
+	rm -rf -- "$check_home"
+}
+trap cleanup EXIT HUP INT TERM
+
+export BOOKS_HOME="$check_home/home"
+export BOOKS_CONFIG="$BOOKS_HOME/books.toml"
+export BOOKS_ACTOR="repository-check"
+export CGO_ENABLED=1
+export GOTOOLCHAIN=auto
+
+private_name_one="sur""ton"
+private_name_two="dre""mont"
+if rg -n -i "${private_name_one}|${private_name_two}" \
+	--hidden --glob '!.git/**' .; then
+	echo "private deployment name found in public source" >&2
+	exit 1
+fi
+
+for required in LICENSE THIRD_PARTY_NOTICES.md SECURITY.md CONTRIBUTING.md AI_POLICY.md AGENTS.md; do
+	if [ ! -s "$required" ]; then
+		echo "required public project file is missing or empty: $required" >&2
+		exit 1
+	fi
+done
+
+unformatted=$(gofmt -l cmd internal)
+if [ -n "$unformatted" ]; then
+	echo "Go files require formatting:" >&2
+	echo "$unformatted" >&2
+	exit 1
+fi
+
+go mod tidy -diff
+go mod verify
+go test ./... -count=1
+go test -race ./... -count=1
+go vet ./...
+go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run
+go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+
+check_bin="$check_home/books"
+go build -trimpath -o "$check_bin" ./cmd/books
+"$check_bin" --version
+"$check_bin" --json init \
+	--name "Example Company LLC" \
+	--company example \
+	--currency USD \
+	--basis accrual \
+	--start 2026-01-01 \
+	--fiscal-year-end december >/dev/null
+"$check_bin" --company example --json account add bank Checking \
+	--default-payment --default-deposit >/dev/null
+"$check_bin" --company example --json receive 100.00 Revenue "Synthetic receipt" \
+	--to Checking --date 2026-01-15 --key repository-check-receipt >/dev/null
+"$check_bin" --company example --json tb --as-of 2026-01-31 >/dev/null
+"$check_bin" --company example --json doctor >/dev/null
+"$check_bin" --company example --json audit verify >/dev/null
+
+echo "Books repository checks passed."
