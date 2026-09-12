@@ -1,0 +1,11 @@
+/books
+/dist/
+/coverage.out
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.backup
+*.bak
+.DS_Store
+/migration/testdata/private/

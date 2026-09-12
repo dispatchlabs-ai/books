@@ -1,0 +1,35 @@
+#!/bin/sh
+set -eu
+
+repository=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+fixture=$(mktemp -d "${TMPDIR:-/tmp}/books-privacy-test.XXXXXX")
+trap 'rm -rf -- "$fixture"' EXIT HUP INT TERM
+mkdir "$fixture/source" "$fixture/bin"
+printf '%s\n' 'synthetic-private-organization' > "$fixture/denylist"
+printf '%s\n' 'public example' > "$fixture/source/example.txt"
+scanner="$repository/scripts/check-privacy"
+export BOOKS_PRIVATE_DENYLIST="$fixture/denylist"
+
+expect_failure() {
+	if "$@" > "$fixture/output" 2>&1; then
+		echo "Privacy regression: expected failure" >&2
+		exit 1
+	fi
+}
+
+"$scanner" "$fixture/source" > /dev/null
+printf '%s\n' 'SYNTHETIC-PRIVATE-ORGANIZATION' > "$fixture/source/.hidden"
+expect_failure "$scanner" "$fixture/source"
+rm "$fixture/source/.hidden"
+BOOKS_PRIVATE_DENYLIST="$fixture/missing" expect_failure "$scanner" "$fixture/source"
+: > "$fixture/empty"
+BOOKS_PRIVATE_DENYLIST="$fixture/empty" expect_failure "$scanner" "$fixture/source"
+
+# A scanner error must fail even though it occurs in a shell conditional.
+printf '#!/bin/sh\nexit 2\n' > "$fixture/bin/rg"
+chmod +x "$fixture/bin/rg"
+PATH="$fixture/bin:$PATH" expect_failure "$scanner" "$fixture/source"
+# No rg at all must fail with a prerequisite diagnostic.
+PATH="$fixture/absent" expect_failure "$scanner" "$fixture/source"
+BOOKS_PRIVATE_DENYLIST= "$scanner" "$fixture/source" > /dev/null
+echo "Privacy scanner regression checks passed."

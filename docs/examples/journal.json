@@ -1,0 +1,19 @@
+{
+  "book": "PARENT",
+  "posting_date": "2026-01-15",
+  "period": "2026-01",
+  "description": "Example cash sale",
+  "reference": "EXAMPLE-001",
+  "lines": [
+    {
+      "account": "1000",
+      "description": "Cash received",
+      "debit": "125.00"
+    },
+    {
+      "account": "4000",
+      "description": "Consulting revenue",
+      "credit": "125.00"
+    }
+  ]
+}

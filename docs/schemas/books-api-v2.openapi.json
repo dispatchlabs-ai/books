@@ -1,0 +1,1992 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Books client API",
+    "version": "1.1.0",
+    "description": "Experimental statement import API. Additive contract snapshot; routes and envelopes remain v1. Read grants permit match inspection; uploads and previews require import; posting requires post. See ../statement-formats.md for supported profiles, source options, identity review, limits, and USD-only accounting. *_cents and int64 fields are integer strings."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8484"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "get_v1_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "summary": "Capabilities",
+        "operationId": "get_v1_capabilities",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies": {
+      "get": {
+        "summary": "List granted companies",
+        "operationId": "get_v1_companies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Company"
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/accounts": {
+      "get": {
+        "summary": "List company accounts",
+        "operationId": "get_v1_companies_company_accounts",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/statement-accounts": {
+      "get": {
+        "summary": "List company statement-accounts",
+        "operationId": "get_v1_companies_company_statement_accounts",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/transactions": {
+      "get": {
+        "summary": "List journal summaries in entry order",
+        "operationId": "get_v1_companies_company_transactions",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "next_cursor": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "next_cursor"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/reports/trial-balance": {
+      "get": {
+        "summary": "Read posted trial-balance",
+        "operationId": "get_v1_companies_company_reports_trial_balance",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/reports/balance-sheet": {
+      "get": {
+        "summary": "Read posted balance-sheet",
+        "operationId": "get_v1_companies_company_reports_balance_sheet",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/reports/profit-loss": {
+      "get": {
+        "summary": "Read posted profit-loss",
+        "operationId": "get_v1_companies_company_reports_profit_loss",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/imports": {
+      "post": {
+        "summary": "Durably upload statement bytes and immutable source options; processing is asynchronous",
+        "operationId": "post_v1_companies_company_imports",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": "Required for octet-stream; optional override of multipart file filename."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Job"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 8388608
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "maxLength": 8388608
+                  },
+                  "options": {
+                    "type": "string",
+                    "maxLength": 32768,
+                    "description": "JSON-encoded Options object; see #/components/schemas/Options. Unknown fields are rejected."
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/imports/{job}": {
+      "get": {
+        "summary": "Read durable job",
+        "operationId": "get_v1_companies_company_imports_job",
+        "parameters": [
+          {
+            "name": "job",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Job"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/imports/{job}/source": {
+      "get": {
+        "summary": "Download original source bytes",
+        "operationId": "get_v1_companies_company_imports_job_source",
+        "parameters": [
+          {
+            "name": "job",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original statement source",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/imports/{job}/previews": {
+      "post": {
+        "summary": "Save preview without committing accounting",
+        "operationId": "post_v1_companies_company_imports_job_previews",
+        "parameters": [
+          {
+            "name": "job",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Plan"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Choices"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/import-plans/{plan}": {
+      "get": {
+        "summary": "Read immutable preview",
+        "operationId": "get_v1_companies_company_import_plans_plan",
+        "parameters": [
+          {
+            "name": "plan",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Plan"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/import-plans/{plan}/apply": {
+      "post": {
+        "summary": "Apply exact preview atomically; repeat for recorded receipt",
+        "operationId": "post_v1_companies_company_import_plans_plan_apply",
+        "parameters": [
+          {
+            "name": "plan",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"[0-9a-f]{64}\"$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Receipt"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/{company}/imports/{job}/matches": {
+      "post": {
+        "summary": "Inspect possible duplicate activity; read grant only; no mutation",
+        "operationId": "post_v1_companies_company_imports_job_matches",
+        "parameters": [
+          {
+            "name": "job",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema": {
+                      "type": "string",
+                      "const": "books.api/v1"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Matches"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See docs/api.md for domain codes and HTTP error statuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Choices"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "type": "string",
+            "const": "books.api/v1"
+          },
+          "ok": {
+            "const": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "schema",
+          "ok",
+          "error"
+        ]
+      },
+      "Summary": {
+        "type": "object",
+        "properties": {
+          "imported_transactions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skipped_transactions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "new_journals": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "existing_journals": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "retained_observations": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "imported_transactions",
+          "skipped_transactions",
+          "new_journals",
+          "existing_journals"
+        ]
+      },
+      "Classification": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string"
+          },
+          "contra_account": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "contra_account"
+        ],
+        "additionalProperties": false
+      },
+      "Mapping": {
+        "type": "object",
+        "properties": {
+          "account_key": {
+            "type": "string"
+          },
+          "statement_account": {
+            "type": "string"
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Classification"
+            }
+          },
+          "identity_decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdentityDecision"
+            }
+          }
+        },
+        "required": [
+          "account_key",
+          "statement_account"
+        ],
+        "additionalProperties": false
+      },
+      "Exclusion": {
+        "type": "object",
+        "properties": {
+          "account_key": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "account_key",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "Choices": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "boolean"
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Mapping"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "exclusions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Exclusion"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "post",
+          "mappings"
+        ],
+        "additionalProperties": false
+      },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "ledger_revision": {
+            "type": "string"
+          },
+          "choices": {
+            "$ref": "#/components/schemas/Choices"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "digest",
+          "ledger_revision",
+          "choices",
+          "summary",
+          "created_at"
+        ]
+      },
+      "Receipt": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "plan_id": {
+            "type": "string"
+          },
+          "plan_digest": {
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "statement_account": {
+                  "type": "string"
+                },
+                "batch_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "statement_account",
+                "batch_id"
+              ]
+            }
+          },
+          "journal_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "applied_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "plan_id",
+          "plan_digest",
+          "summary",
+          "accounts",
+          "journal_ids",
+          "applied_at"
+        ]
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "posted_date": {
+            "type": "string"
+          },
+          "posted_at": {
+            "type": "string"
+          },
+          "value_at": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "identity": {
+            "type": "string",
+            "enum": [
+              "NATIVE",
+              "FILE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "POSTED",
+              "PENDING",
+              "REVIEW"
+            ]
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Detail"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "posted_date",
+          "posted_at",
+          "amount",
+          "description",
+          "fields"
+        ]
+      },
+      "SourceAccount": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "bank_id": {
+            "type": "string"
+          },
+          "branch_id": {
+            "type": "string"
+          },
+          "account_type": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "through": {
+            "type": "string"
+          },
+          "transactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "string"
+                },
+                "as_of": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "amount",
+                "as_of"
+              ]
+            }
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Statement"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "institution",
+          "account_id",
+          "kind",
+          "currency",
+          "from",
+          "through",
+          "transactions",
+          "balances"
+        ]
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "OFX",
+              "QFX",
+              "QBO",
+              "QIF",
+              "CSV",
+              "TSV",
+              "XLSX",
+              "CAMT",
+              "MT940",
+              "MT942",
+              "BAI2",
+              "BTRS",
+              "CODA",
+              "CFONB120",
+              "NORMA43"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "parser": {
+            "type": "string"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceAccount"
+            }
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Diagnostic"
+            }
+          }
+        },
+        "required": [
+          "format",
+          "version",
+          "parser",
+          "accounts"
+        ]
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "book": {
+            "type": "string"
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "source_sha256": {
+            "type": "string"
+          },
+          "parser": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPLOADED",
+              "READY",
+              "FAILED",
+              "APPLIED"
+            ]
+          },
+          "document": {
+            "$ref": "#/components/schemas/Document"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/Receipt"
+          },
+          "options": {
+            "$ref": "#/components/schemas/Options"
+          }
+        },
+        "required": [
+          "id",
+          "book",
+          "source_name",
+          "source_sha256",
+          "status",
+          "created_at",
+          "created_by"
+        ]
+      },
+      "Company": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "book": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "entity",
+          "book",
+          "currency",
+          "basis"
+        ]
+      },
+      "IdentityDecision": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "new",
+              "duplicate"
+            ]
+          },
+          "existing_source_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "transaction_id",
+          "action",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "TabularProfile": {
+        "type": "object",
+        "properties": {
+          "sheet": {
+            "type": "string"
+          },
+          "delimiter": {
+            "type": "string"
+          },
+          "id_column": {
+            "type": "string"
+          },
+          "date_column": {
+            "type": "string"
+          },
+          "value_date_column": {
+            "type": "string"
+          },
+          "amount_column": {
+            "type": "string"
+          },
+          "debit_column": {
+            "type": "string"
+          },
+          "credit_column": {
+            "type": "string"
+          },
+          "account_column": {
+            "type": "string"
+          },
+          "currency_column": {
+            "type": "string"
+          },
+          "status_column": {
+            "type": "string"
+          },
+          "thousands_separator": {
+            "type": "string"
+          },
+          "header_row": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decimal_separator": {
+            "type": "string",
+            "enum": [
+              ".",
+              ","
+            ]
+          },
+          "status_values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "POSTED",
+                "PENDING",
+                "REVIEW"
+              ]
+            }
+          },
+          "invert_sign": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "header_row",
+          "date_column",
+          "description_columns",
+          "decimal_separator"
+        ],
+        "additionalProperties": false
+      },
+      "Options": {
+        "type": "object",
+        "properties": {
+          "institution": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "account_id": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "date_layout": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "OFX",
+              "QFX",
+              "QBO",
+              "QIF",
+              "CSV",
+              "TSV",
+              "XLSX",
+              "CAMT",
+              "MT940",
+              "MT942",
+              "BAI2",
+              "BTRS",
+              "CODA",
+              "CFONB120",
+              "NORMA43",
+              "AUTO"
+            ]
+          },
+          "account_kind": {
+            "type": "string",
+            "enum": [
+              "BANK",
+              "CREDIT_CARD"
+            ]
+          },
+          "year_pivot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "UTF-8",
+              "WINDOWS-1252",
+              "ISO-8859-1",
+              "CP850"
+            ]
+          },
+          "mt_booking_date": {
+            "type": "string",
+            "enum": [
+              "statement",
+              "value"
+            ]
+          },
+          "interim_status": {
+            "type": "string",
+            "enum": [
+              "POSTED",
+              "PENDING",
+              "REVIEW"
+            ]
+          },
+          "tabular": {
+            "$ref": "#/components/schemas/TabularProfile"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Detail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Statement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "through": {
+            "type": "string"
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "string"
+                },
+                "as_of": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "amount",
+                "as_of"
+              ]
+            }
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "Diagnostic": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "account_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "IdentityCandidate": {
+        "type": "object",
+        "properties": {
+          "source_record_id": {
+            "type": "string"
+          },
+          "source_system": {
+            "type": "string"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_record_id",
+          "source_system",
+          "external_id",
+          "description",
+          "disposition"
+        ]
+      },
+      "TransactionMatch": {
+        "type": "object",
+        "properties": {
+          "account_key": {
+            "type": "string"
+          },
+          "transaction_id": {
+            "type": "string"
+          },
+          "posted_date": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdentityCandidate"
+            }
+          }
+        },
+        "required": [
+          "account_key",
+          "transaction_id",
+          "posted_date",
+          "amount",
+          "candidates"
+        ]
+      },
+      "Matches": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "ledger_revision": {
+            "type": "string"
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionMatch"
+            }
+          }
+        },
+        "required": [
+          "job_id",
+          "ledger_revision",
+          "matches"
+        ]
+      }
+    }
+  }
+}

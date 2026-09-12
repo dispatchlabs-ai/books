@@ -1,0 +1,41 @@
+{
+  "Header": {
+    "ReportName": "GeneralLedger",
+    "ReportBasis": "Accrual",
+    "StartPeriod": "2023-01-01",
+    "EndPeriod": "2023-12-31",
+    "Currency": "USD"
+  },
+  "Columns": {
+    "Column": [
+      {"ColTitle":"Date","ColType":"Date","MetaData":[{"Name":"ColKey","Value":"tx_date"}]},
+      {"ColTitle":"Transaction Type","ColType":"String","MetaData":[{"Name":"ColKey","Value":"txn_type"}]},
+      {"ColTitle":"Num","ColType":"String","MetaData":[{"Name":"ColKey","Value":"doc_num"}]},
+      {"ColTitle":"Name","ColType":"String","MetaData":[{"Name":"ColKey","Value":"name"}]},
+      {"ColTitle":"Memo/Description","ColType":"String","MetaData":[{"Name":"ColKey","Value":"memo"}]},
+      {"ColTitle":"Amount","ColType":"Money","MetaData":[{"Name":"ColKey","Value":"subt_nat_amount"}]}
+    ]
+  },
+  "Rows": {
+    "Row": [
+      {
+        "Header":{"ColData":[{"value":"10000 Operating Checking","id":"A1"}]},
+        "Rows":{"Row":[
+          {"ColData":[{"value":"Beginning Balance"},{"value":""},{"value":""},{"value":""},{"value":""},{"value":"0.00"}],"type":"Data"},
+          {"ColData":[{"value":"2023-02-03"},{"value":"Expense","id":"T100"},{"value":"42"},{"value":"Vendor"},{"value":"Monthly service"},{"value":"-12.34"}],"type":"Data"}
+        ]}
+      },
+      {
+        "Header":{"ColData":[{"value":"65000 IT Expense"}]},
+        "Rows":{"Row":[
+          {
+            "Header":{"ColData":[{"value":"65010 Software & Web Services","id":"E1"}]},
+            "Rows":{"Row":[
+              {"ColData":[{"value":"2023-02-03"},{"value":"Expense","id":"T100"},{"value":"42"},{"value":"Vendor"},{"value":"Monthly service"},{"value":"12.34"}],"type":"Data"}
+            ]}
+          }
+        ]}
+      }
+    ]
+  }
+}

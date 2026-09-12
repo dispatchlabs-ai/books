@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+
+command -v rg >/dev/null 2>&1 || {
+	echo "privacy check requires ripgrep (rg) on PATH" >&2
+	exit 1
+}
+if [ -z "${BOOKS_PRIVATE_DENYLIST:-}" ]; then
+	echo "Deployment-name scan skipped: BOOKS_PRIVATE_DENYLIST is not set."
+	exit 0
+fi
+case "$BOOKS_PRIVATE_DENYLIST" in
+	/*) ;;
+	*) echo "BOOKS_PRIVATE_DENYLIST must be an absolute path" >&2; exit 1 ;;
+esac
+if [ ! -f "$BOOKS_PRIVATE_DENYLIST" ] || [ ! -r "$BOOKS_PRIVATE_DENYLIST" ] || [ ! -s "$BOOKS_PRIVATE_DENYLIST" ]; then
+	echo "Private denylist must be a readable, nonempty file" >&2
+	exit 1
+fi
+
+repository=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "${1:-$repository}"
+# Suppress matching content: diagnostics must not disclose private terms.
+status=0
+rg -i -F -f "$BOOKS_PRIVATE_DENYLIST" --hidden --no-ignore --glob '!.git/**' . >/dev/null || status=$?
+case "$status" in
+	0) echo "Private deployment term found in source" >&2; exit 1 ;;
+	1) echo "Deployment-name scan passed." ;;
+	*) echo "Deployment-name scanner failed" >&2; exit 1 ;;
+esac

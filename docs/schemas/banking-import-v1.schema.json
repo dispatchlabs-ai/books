@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dispatchlabs-ai:books:schema:banking-import:v1",
+  "title": "Books Banking Import v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["statement_account", "source_system", "source_name", "transactions"],
+  "properties": {
+    "statement_account": {"type": "string", "minLength": 1},
+    "source_system": {"type": "string", "minLength": 1},
+    "source_name": {"type": "string", "minLength": 1},
+    "transactions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/transaction"}
+    }
+  },
+  "$defs": {
+    "money": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,2})?$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["external_id", "posted_date", "description", "amount"],
+      "properties": {
+        "external_id": {"type": "string", "minLength": 1},
+        "posted_date": {"$ref": "#/$defs/date"},
+        "description": {"type": "string", "minLength": 1},
+        "amount": {"$ref": "#/$defs/money"},
+        "disposition": {
+          "type": "string",
+          "enum": ["POSTED", "PENDING", "NEEDS_REVIEW", "SOURCE_ONLY"]
+        },
+        "exclusion_reason": {"type": "string"},
+        "tax_type": {"type": "string"},
+        "tax_accounting_period": {"type": "string"},
+        "raw_json": {},
+        "resolution_reason": {"type": "string"},
+        "resolution_evidence": {}
+      }
+    }
+  }
+}
