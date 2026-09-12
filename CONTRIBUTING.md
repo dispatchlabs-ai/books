@@ -26,8 +26,10 @@ pull request. Run the checks locally:
 
 That command is the canonical validation entrypoint. It uses a disposable Books
 home and runs formatting, module integrity, tests, race tests, vet, lint, and
-known-vulnerability checks. Passing local checks satisfies the CI gate; hosted
-CI is not required before a maintainer pushes to `main`.
+known-vulnerability checks. Maintainers run this gate on their own equipment;
+GitHub Actions is disabled for this repository. Check relevant changes on both
+Linux and macOS, and include results with the reviewed commit. Do not add hosted
+CI unless the maintainer requests it.
 
 The gate validates the privacy scanner with synthetic fixtures. To additionally
 scan for deployment-specific names, set `BOOKS_PRIVATE_DENYLIST` to an absolute
