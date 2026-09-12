@@ -31,6 +31,11 @@ GitHub Actions is disabled for this repository. Check relevant changes on both
 Linux and macOS, and include results with the reviewed commit. Do not add hosted
 CI unless the maintainer requests it.
 
+The Woodpecker pipeline in `.woodpecker.yml` runs the same gate in a pinned Linux
+container for `main` pushes and manual runs once a maintainer enrolls the repo.
+It needs no repository secrets or private data. Pull requests do not automatically
+run on the maintainer's machines; run the local gate and include its result.
+
 The gate validates the privacy scanner with synthetic fixtures. To additionally
 scan for deployment-specific names, set `BOOKS_PRIVATE_DENYLIST` to an absolute
 path to a private file outside the checkout, with one literal term per line.
