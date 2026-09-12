@@ -21,15 +21,15 @@ expect_failure() {
 printf '%s\n' 'SYNTHETIC-PRIVATE-ORGANIZATION' > "$fixture/source/.hidden"
 expect_failure "$scanner" "$fixture/source"
 rm "$fixture/source/.hidden"
-BOOKS_PRIVATE_DENYLIST="$fixture/missing" expect_failure "$scanner" "$fixture/source"
+expect_failure env BOOKS_PRIVATE_DENYLIST="$fixture/missing" "$scanner" "$fixture/source"
 : > "$fixture/empty"
-BOOKS_PRIVATE_DENYLIST="$fixture/empty" expect_failure "$scanner" "$fixture/source"
+expect_failure env BOOKS_PRIVATE_DENYLIST="$fixture/empty" "$scanner" "$fixture/source"
 
 # A scanner error must fail even though it occurs in a shell conditional.
 printf '#!/bin/sh\nexit 2\n' > "$fixture/bin/rg"
 chmod +x "$fixture/bin/rg"
-PATH="$fixture/bin:$PATH" expect_failure "$scanner" "$fixture/source"
+expect_failure env PATH="$fixture/bin:$PATH" "$scanner" "$fixture/source"
 # No rg at all must fail with a prerequisite diagnostic.
-PATH="$fixture/absent" expect_failure "$scanner" "$fixture/source"
+expect_failure env PATH="$fixture/absent" "$scanner" "$fixture/source"
 BOOKS_PRIVATE_DENYLIST= "$scanner" "$fixture/source" > /dev/null
 echo "Privacy scanner regression checks passed."
