@@ -1,6 +1,13 @@
-# Proposed MCP capability coverage
+# Proposed backend and MCP capability coverage
 
-Design companion to [MCP server design](mcp-design.md). **Not implemented.**
+Design companion to [MCP server design](mcp-design.md) and the
+[interface parity contract](interface-parity.md). **Not implemented.**
+
+Every business or administrative operation in this table requires both HTTP API
+and MCP bindings, backed by the same application operation. The CLI column is
+an inventory source, not the owner of business behavior. API gaps are delivery
+work, not permanent local-only exclusions. See the parity contract for HTTP scope
+and administration routes.
 Baseline: Books `2c492eef297d778e064531eaa4448b5494890999`, September 13, 2026.
 
 Inventory was checked against CLI command constructors and recursive public help
@@ -144,7 +151,7 @@ MCP-specific supporting tools: `books_capabilities`, `books_operation_status`,
 bounded transfer, retry recovery and administrative previews; they do not grant
 capabilities beyond the launch policy.
 
-The full-owner catalog must expose every accounting and administrative operation
+The full-owner MCP catalog and equivalently authorized HTTP API must expose every accounting and administrative operation
 above. Restricted catalogs intentionally expose only authorized tools. Startup,
 shutdown, shell completion, help formatting and client connection setup are
 process/interface lifecycle, not remotely callable accounting tools. Version and

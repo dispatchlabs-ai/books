@@ -10,6 +10,17 @@ atomic apply with optional explicit journal classifications, and scoped queries
 and reports. Both CLI and HTTP call the same services. Existing CLI contracts
 remain supported. No production database is a development fixture.
 
+## Complete backend direction
+
+The [interface parity contract](interface-parity.md) makes the original thin-CLI
+direction explicit: CLI, HTTP API and MCP are frontends to one complete backend.
+All accounting and administrative workflows belong in shared application services.
+The initial company-scoped API is an incremental implementation, not the final
+feature boundary. Registry, migration, backup/restore, consolidation and detailed
+evidence operations must also be exposed through authorized API and MCP bindings.
+The CLI remains usable in-process without a server. This is planned completion;
+[current API documentation](api.md) describes what is implemented today.
+
 ## Ownership
 
 - `internal/banking`: format detection and bounded, deterministic parsing into

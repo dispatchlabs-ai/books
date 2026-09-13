@@ -6,9 +6,14 @@ fields, and schemas below describe the intended interface. Baseline:
 
 ## Decision
 
+This design follows the [complete backend and interface parity contract](interface-parity.md).
+The CLI, HTTP API and MCP are thin frontends over the same complete operation
+catalog. No accounting or administrative feature is reserved for one frontend.
+
 Add `books mcp` to the existing binary. It serves typed MCP tools over stdin and
 stdout, using the same application and ledger services as the CLI. It opens no
-network listener and requires no separately running Books HTTP API. An agent
+network listener and requires no separately running Books HTTP API. The HTTP API must expose the same
+complete operations with explicit authorization. An agent
 can perform every supported accounting and administrative operation when launched
 with the corresponding access policy, including company creation, imports,
 consolidation, migrations, backup and restore.
@@ -95,9 +100,10 @@ not an unrestricted filename supplied by a caller. Low-level entity/book inputs
 must be bound to the authorized database and, where applicable, every affected
 company. Do not loosen the company service to achieve feature parity.
 
-The operation catalog owns canonical IDs, typed input/output definitions, scope,
-required grants, mutation effects, retry behavior, and CLI/API mappings. Tool
-registration, documentation and coverage tests derive from this catalog. Parsing,
+The operation catalog is backend-owned, not MCP-owned. It owns canonical IDs, typed input/output definitions, scope,
+required grants, mutation effects, retry behavior, and CLI/API mappings. MCP tool
+registration, HTTP/OpenAPI bindings, CLI mappings, documentation and coverage tests
+derive from this catalog. Parsing,
 validation and accounting semantics remain in shared services; transport-specific
 money encoding remains in adapters. Preserve existing CLI/API compatibility.
 
@@ -315,7 +321,9 @@ Keep operation receipts as long as their accounting replay guarantees require;
 artifact eviction must not erase evidence or idempotency records. Define and test
 crash recovery before enabling automatic cleanup of abandoned operations.
 
-No Streamable HTTP MCP transport in the first implementation. Complete Books
+No Streamable HTTP MCP transport in the first implementation. This does not limit
+the existing HTTP/JSON API: its complete administrative and accounting coverage
+is required by the parity contract. Complete Books
 functionality remains available through stdio. A future network transport needs
 its own reviewed authorization, origin, session, TLS and deployment design; the
 existing API's bearer policy must not be assumed to satisfy every MCP client.
@@ -324,16 +332,17 @@ tool that silently starts listeners, changes grants, or installs software.
 
 ## Delivery and acceptance
 
-1. Implement the shared operation catalog and complete capability/argument map.
+1. Implement the shared operation catalog and complete capability/argument map
+   for CLI, HTTP/JSON and MCP.
    Add missing company/database administration adapters without changing public
    CLI/API behavior. Decide persistence changes for receipts and maintenance
    journals before migrations; this document does not execute or approve one.
 2. Add SDK integration, stdio, strict policy, scope checks, tools, bounded artifacts
    and schemas. Ship company setup and demo as the first internal milestone.
-3. Complete all operations in the coverage map, including low-level journals,
+3. Complete HTTP API and MCP bindings for all operations in the coverage map, including low-level journals,
    evidence/lifecycle, consolidation, registry, backup/restore and migration.
    Early milestones must advertise their actual subset, not full parity.
-4. Test every mapped command and API operation against the MCP equivalent using
+4. Test every canonical operation across CLI, HTTP API and MCP using
    identical invented inputs and comparison of accounting results and effects.
    Test draft versus posted reversal, all dry-run modes, import formats, retained
    evidence bundles, shared-database isolation, and database-wide permissions.

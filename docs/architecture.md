@@ -2,6 +2,15 @@
 
 See [single-currency rules](currencies.md) for setup, precision, import boundaries, and plan compatibility.
 
+## Application boundary
+
+Books is a headless backend. The CLI, HTTP API and MCP are frontends to shared
+application services; the CLI owns argument parsing, presentation and exit codes,
+not reusable accounting workflows. Full interface parity is the target, including
+authorized administration. See the [interface parity contract](interface-parity.md)
+and [proposed MCP design](mcp-design.md). Current API gaps and MCP implementation
+remain delivery work; these documents do not claim they are already complete.
+
 ## Ledger model
 
 One database can contain many entities (companies or people). Each entity has one active actual book and one functional currency. A consolidation group identifies a parent entity; its perimeter is the parent plus every recursively owned descendant whose effective-dated ownership path is active for the report date or range. Books currently permits only 100% ownership and same-currency consolidation.
