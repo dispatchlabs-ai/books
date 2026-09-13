@@ -102,28 +102,15 @@ func newOwnershipCommand(opts *options) *cobra.Command {
 				return err
 			}
 			defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-			rowsDB, err := store.DB().QueryContext(cmd.Context(), `SELECT oi.id, p.code, c.code, oi.ownership_bps,
-                oi.effective_from, COALESCE(oi.effective_to, '') FROM ownership_interests oi
-                JOIN entities p ON p.id = oi.parent_entity_id JOIN entities c ON c.id = oi.child_entity_id
-                ORDER BY oi.effective_from, p.code, c.code`)
+			data, err := ledger.NewService(store, opts.actor).ListOwnership(cmd.Context())
 			if err != nil {
 				return err
 			}
-			defer func(closer interface{ Close() error }) { _ = closer.Close() }(rowsDB)
-			type record struct {
-				ID, Parent, Child, From, To string
-				OwnershipBPS                int `json:"ownership_bps"`
-			}
-			var data []record
 			var rows [][]string
-			for rowsDB.Next() {
-				var r record
-				if err := rowsDB.Scan(&r.ID, &r.Parent, &r.Child, &r.OwnershipBPS, &r.From, &r.To); err != nil {
-					return err
-				}
-				data = append(data, r)
+			for _, r := range data {
 				rows = append(rows, []string{r.Parent, r.Child, r.From, r.To, fmt.Sprintf("%.2f%%", float64(r.OwnershipBPS)/100), r.ID})
 			}
+
 			return writeResult(cmd, opts.format, data, []string{"PARENT", "CHILD", "FROM", "TO", "OWNERSHIP", "ID"}, rows)
 		},
 	}

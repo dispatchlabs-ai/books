@@ -2,49 +2,20 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"github.com/dispatchlabs-ai/books/internal/application"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	booksconfig "github.com/dispatchlabs-ai/books/internal/config"
-	"github.com/dispatchlabs-ai/books/internal/ledger"
-	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
 
 	"github.com/spf13/cobra"
 )
 
-type companyCreateOptions struct {
-	name          string
-	key           string
-	currency      string
-	basis         string
-	start         string
-	fiscalYearEnd string
-	periods       string
-	chart         string
-	makeDefault   bool
-}
+type companyCreateOptions = application.CompanyCreateOptions
 
-type companyCreateResult struct {
-	Company      string `json:"company"`
-	Name         string `json:"name"`
-	EntityCode   string `json:"entity_code"`
-	Currency     string `json:"currency"`
-	Basis        string `json:"basis"`
-	StartDate    string `json:"start_date"`
-	PeriodCount  int    `json:"period_count"`
-	Chart        string `json:"chart"`
-	AccountCount int    `json:"account_count"`
-	ConfigPath   string `json:"config_path"`
-	Database     string `json:"database"`
-	Backups      string `json:"backups"`
-	Plans        string `json:"plans"`
-	Default      bool   `json:"default"`
-	DryRun       bool   `json:"dry_run"`
-}
+type companyCreateResult = application.CompanyCreateResult
 
 func newInitCommand(opts *options) *cobra.Command {
 	values := defaultCompanyCreateOptions()
@@ -57,7 +28,7 @@ func newInitCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			values.makeDefault = true
+			values.MakeDefault = true
 			return createRegisteredCompany(cmd, opts, path, true, values)
 		},
 	}
@@ -106,7 +77,7 @@ func newCompanyCommand(opts *options) *cobra.Command {
 					return nil
 				})
 				if updateErr != nil {
-					return configMutationError("set default company", updateErr)
+					return application.ConfigMutationError("set default company", updateErr)
 				}
 				opts.loadedConfig = &value
 				opts.resolved = nil
@@ -163,210 +134,41 @@ func newCompanyListCommand(opts *options, use string) *cobra.Command {
 
 func defaultCompanyCreateOptions() companyCreateOptions {
 	return companyCreateOptions{
-		currency: "USD", basis: "accrual", fiscalYearEnd: "december", periods: "monthly", chart: "starter",
+		Currency: "USD", Basis: "accrual", FiscalYearEnd: "december", Periods: "monthly", Chart: "starter",
 	}
 }
 
 func addCompanyCreateFlags(command *cobra.Command, values *companyCreateOptions, first bool) {
-	command.Flags().StringVar(&values.name, "name", "", "legal company name (required)")
-	command.Flags().StringVar(&values.key, "company", "", "registry key (derived from name when omitted)")
-	command.Flags().StringVar(&values.currency, "currency", values.currency, "three-letter functional currency")
-	command.Flags().StringVar(&values.basis, "basis", values.basis, "accounting basis (currently accrual only)")
-	command.Flags().StringVar(&values.start, "start", "", "first fiscal period start date (defaults to current fiscal year)")
-	command.Flags().StringVar(&values.fiscalYearEnd, "fiscal-year-end", values.fiscalYearEnd, "fiscal year ending month")
-	command.Flags().StringVar(&values.periods, "periods", values.periods, "period cadence (monthly)")
-	command.Flags().StringVar(&values.chart, "chart", values.chart, "initial chart: starter or empty")
+	command.Flags().StringVar(&values.Name, "name", "", "legal company name (required)")
+	command.Flags().StringVar(&values.Key, "company", "", "registry key (derived from name when omitted)")
+	command.Flags().StringVar(&values.Currency, "currency", values.Currency, "three-letter functional currency")
+	command.Flags().StringVar(&values.Basis, "basis", values.Basis, "accounting basis (currently accrual only)")
+	command.Flags().StringVar(&values.Start, "start", "", "first fiscal period start date (defaults to current fiscal year)")
+	command.Flags().StringVar(&values.FiscalYearEnd, "fiscal-year-end", values.FiscalYearEnd, "fiscal year ending month")
+	command.Flags().StringVar(&values.Periods, "periods", values.Periods, "period cadence (monthly)")
+	command.Flags().StringVar(&values.Chart, "chart", values.Chart, "initial chart: starter or empty")
 	if !first {
-		command.Flags().BoolVar(&values.makeDefault, "default", false, "make this the default company")
+		command.Flags().BoolVar(&values.MakeDefault, "default", false, "make this the default company")
 	}
 }
 
 func createRegisteredCompany(cmd *cobra.Command, opts *options, configPath string, initialize bool, values companyCreateOptions) error {
-	values.name = strings.TrimSpace(values.name)
-	if values.name == "" {
-		return apperr.New(apperr.Invalid, "COMPANY_NAME_REQUIRED", "--name is required; example: books init --name \"Acme Services, Inc.\"")
-	}
-	key := strings.ToLower(strings.TrimSpace(values.key))
-	if key == "" {
-		key = booksconfig.DeriveCompanyKey(values.name)
-	}
-	if err := booksconfig.ValidateCompanyKey(key); err != nil {
-		return apperr.Wrap(apperr.Invalid, "COMPANY_KEY_INVALID", "validate company key", err)
-	}
-	currency := strings.ToUpper(strings.TrimSpace(values.currency))
-	if len(currency) != 3 || strings.IndexFunc(currency, func(character rune) bool { return character < 'A' || character > 'Z' }) != -1 {
-		return apperr.New(apperr.Invalid, "CURRENCY_INVALID", "--currency must be a three-letter code such as USD")
-	}
-	basis := strings.ToUpper(strings.TrimSpace(values.basis))
-	if basis != "ACCRUAL" {
-		return apperr.New(apperr.Invalid, "BASIS_NOT_SUPPORTED", "cash-basis accounting is not supported; use --basis accrual")
-	}
-	if strings.ToLower(strings.TrimSpace(values.periods)) != "monthly" {
-		return apperr.New(apperr.Invalid, "PERIOD_CADENCE_UNSUPPORTED", "--periods currently supports monthly")
-	}
-	chart := strings.ToLower(strings.TrimSpace(values.chart))
-	if chart != "starter" && chart != "empty" {
-		return apperr.New(apperr.Invalid, "CHART_INVALID", "--chart must be starter or empty")
-	}
-	endMonth, err := parseMonth(values.fiscalYearEnd)
+	month, err := parseMonth(values.FiscalYearEnd)
 	if err != nil {
 		return err
 	}
-	startDate, err := fiscalStart(values.start, endMonth)
+	start, err := fiscalStart(values.Start, month)
 	if err != nil {
 		return err
 	}
-	periods := monthlyPeriods(startDate, endMonth)
-	accountCount := 0
-	if chart == "starter" {
-		accountCount = len(starterAccounts())
-	}
-	prepare := func(current *booksconfig.Config) (booksconfig.ResolvedCompany, companyCreateResult, error) {
-		if current.Companies == nil {
-			current.Companies = make(map[string]booksconfig.Company)
-		}
-		if _, exists := current.Companies[key]; exists {
-			return booksconfig.ResolvedCompany{}, companyCreateResult{}, apperr.New(apperr.Conflict, "COMPANY_EXISTS", fmt.Sprintf("company %q is already registered", key))
-		}
-		company := booksconfig.NewCompany(key, values.name, currency, basis)
-		company.FiscalYearEnd = int(endMonth)
-		current.Companies[key] = company
-		if current.DefaultCompany == "" || values.makeDefault {
-			current.DefaultCompany = key
-		}
-		resolved, resolveErr := current.Resolve(configPath, key)
-		if resolveErr != nil {
-			return booksconfig.ResolvedCompany{}, companyCreateResult{}, apperr.Wrap(apperr.Invalid, "COMPANY_CONFIG_INVALID", "resolve new company", resolveErr)
-		}
-		result := companyCreateResult{
-			Company: key, Name: values.name, EntityCode: company.EntityCode, Currency: currency, Basis: basis,
-			StartDate: startDate.Format("2006-01-02"), PeriodCount: len(periods), Chart: chart, AccountCount: accountCount,
-			ConfigPath: configPath, Database: resolved.Database, Backups: resolved.Backups, Plans: resolved.Plans,
-			Default: current.DefaultCompany == key, DryRun: opts.dryRun,
-		}
-		return resolved, result, nil
-	}
-	if opts.dryRun {
-		var current booksconfig.Config
-		if initialize {
-			if _, statErr := os.Stat(configPath); statErr == nil {
-				return apperr.New(apperr.Conflict, "CONFIG_EXISTS", fmt.Sprintf("Books is already initialized at %s; use books company add", configPath))
-			} else if !os.IsNotExist(statErr) {
-				return apperr.Wrap(apperr.Unavailable, "CONFIG_STAT_FAILED", "inspect Books configuration", statErr)
-			}
-			current = booksconfig.New()
-		} else {
-			loaded, loadErr := booksconfig.Load(configPath)
-			if loadErr != nil {
-				return apperr.Wrap(apperr.NotFound, "CONFIG_NOT_FOUND", "load Books configuration", loadErr)
-			}
-			current = loaded
-		}
-		_, result, prepareErr := prepare(&current)
-		if prepareErr != nil {
-			return prepareErr
-		}
-		return writeCompanyCreateResult(cmd, opts, result)
-	}
-	var result companyCreateResult
-	var companyRoot string
-	createdRoot := false
-	cleanup := func() {
-		if createdRoot {
-			_ = os.RemoveAll(companyRoot)
-		}
-	}
-	var initial *booksconfig.Config
-	if initialize {
-		value := booksconfig.New()
-		initial = &value
-	}
-	updatedConfig, err := booksconfig.Update(configPath, initial, func(current *booksconfig.Config, existed bool) error {
-		if initialize && existed {
-			return apperr.New(apperr.Conflict, "CONFIG_EXISTS", fmt.Sprintf("Books is already initialized at %s; use books company add", configPath))
-		}
-		resolved, prepared, prepareErr := prepare(current)
-		if prepareErr != nil {
-			return prepareErr
-		}
-		result = prepared
-		companyRoot = filepath.Dir(resolved.Database)
-		if _, statErr := os.Lstat(companyRoot); statErr == nil {
-			return apperr.New(apperr.Conflict, "COMPANY_DIRECTORY_EXISTS", fmt.Sprintf("company directory already exists: %s", companyRoot))
-		} else if !os.IsNotExist(statErr) {
-			return apperr.Wrap(apperr.Unavailable, "COMPANY_DIRECTORY_STAT_FAILED", "inspect company directory", statErr)
-		}
-		if directoryErr := booksconfig.EnsureCompanyDirectories(resolved); directoryErr != nil {
-			return apperr.Wrap(apperr.Unavailable, "COMPANY_DIRECTORY_FAILED", "create company directories", directoryErr)
-		}
-		createdRoot = true
-		store, initErr := storesqlite.Init(cmd.Context(), resolved.Database, currency, opts.actor)
-		if initErr != nil {
-			return initErr
-		}
-		company := current.Companies[key]
-		if scanErr := store.DB().QueryRowContext(cmd.Context(), `SELECT database_uuid
-			FROM database_metadata WHERE singleton = 1`).Scan(&company.DatabaseUUID); scanErr != nil {
-			_ = store.Close()
-			return storesqlite.MapError("read initialized company database identity", scanErr)
-		}
-		current.Companies[key] = company
-		service := ledger.NewService(store, opts.actor)
-		if _, createErr := service.CreateEntity(cmd.Context(), ledger.CreateEntityInput{
-			Code: company.EntityCode, LegalName: company.Name, Currency: company.Currency,
-			BookCode: company.BookCode, BookName: company.Name + " Actual", Basis: company.Basis,
-		}); createErr != nil {
-			_ = store.Close()
-			return createErr
-		}
-		for _, period := range periods {
-			if _, periodErr := service.CreatePeriod(cmd.Context(), period); periodErr != nil {
-				_ = store.Close()
-				return periodErr
-			}
-		}
-		if chart == "starter" {
-			for _, account := range starterAccounts() {
-				account.BookCodes = []string{company.BookCode}
-				account.ActiveFrom = startDate.Format("2006-01-02")
-				if _, accountErr := service.CreateAccount(cmd.Context(), account); accountErr != nil {
-					_ = store.Close()
-					return accountErr
-				}
-			}
-			company.Defaults.RetainedEarnings = "3100"
-			current.Companies[key] = company
-		}
-		if _, doctorErr := store.Doctor(cmd.Context()); doctorErr != nil {
-			_ = store.Close()
-			return doctorErr
-		}
-		if closeErr := store.Close(); closeErr != nil {
-			return closeErr
-		}
-		if chmodErr := os.Chmod(resolved.Database, 0o600); chmodErr != nil {
-			return apperr.Wrap(apperr.Unavailable, "DATABASE_PERMISSIONS_FAILED", "secure company database", chmodErr)
-		}
-		return nil
-	})
+	values.Start = start.Format("2006-01-02")
+	result, err := application.CreateRegisteredCompany(cmd.Context(), configPath, opts.actor, initialize, opts.dryRun, values)
 	if err != nil {
-		cleanup()
-		return configMutationError("write Books configuration", err)
+		return err
 	}
-	createdRoot = false
-	opts.loadedConfig = &updatedConfig
+	opts.loadedConfig = nil
 	opts.resolved = nil
 	return writeCompanyCreateResult(cmd, opts, result)
-}
-
-func configMutationError(action string, err error) error {
-	if _, ok := apperr.As(err); ok {
-		return err
-	}
-	if os.IsNotExist(err) {
-		return apperr.Wrap(apperr.NotFound, "CONFIG_NOT_FOUND", "load Books configuration", err)
-	}
-	return apperr.Wrap(apperr.Unavailable, "CONFIG_WRITE_FAILED", action, err)
 }
 
 func writeCompanyCreateResult(cmd *cobra.Command, opts *options, result companyCreateResult) error {
@@ -416,31 +218,6 @@ func fiscalStart(value string, endMonth time.Month) (time.Time, error) {
 		year--
 	}
 	return time.Date(year, startMonth, 1, 0, 0, 0, 0, time.Local), nil
-}
-
-func monthlyPeriods(start time.Time, endMonth time.Month) []ledger.CreatePeriodInput {
-	result := make([]ledger.CreatePeriodInput, 0, 12)
-	endYear := start.AddDate(0, 11, 0).Year()
-	for index := 0; index < 12; index++ {
-		periodStart := start.AddDate(0, index, 0)
-		periodEnd := periodStart.AddDate(0, 1, 0).AddDate(0, 0, -1)
-		result = append(result, ledger.CreatePeriodInput{
-			Code: periodStart.Format("2006-01"), StartDate: periodStart.Format("2006-01-02"), EndDate: periodEnd.Format("2006-01-02"),
-			FiscalYear: endYear, PeriodNumber: index + 1, YearEnd: periodEnd.Month() == endMonth,
-		})
-	}
-	return result
-}
-
-func starterAccounts() []ledger.CreateAccountInput {
-	return []ledger.CreateAccountInput{
-		{Code: "1100", Name: "Accounts Receivable", Type: "ASSET", Subtype: "ACCOUNTS_RECEIVABLE", StatementSection: "BALANCE_SHEET"},
-		{Code: "2000", Name: "Accounts Payable", Type: "LIABILITY", Subtype: "ACCOUNTS_PAYABLE", StatementSection: "BALANCE_SHEET"},
-		{Code: "3000", Name: "Owner Equity", Type: "EQUITY", Subtype: "CONTRIBUTED_CAPITAL", StatementSection: "BALANCE_SHEET"},
-		{Code: "3100", Name: "Retained Earnings", Type: "EQUITY", Subtype: "RETAINED_EARNINGS", StatementSection: "BALANCE_SHEET"},
-		{Code: "4000", Name: "Revenue", Type: "REVENUE", Subtype: "OPERATING_REVENUE", StatementSection: "INCOME_STATEMENT"},
-		{Code: "5000", Name: "General Expense", Type: "EXPENSE", Subtype: "OPERATING_EXPENSE", StatementSection: "INCOME_STATEMENT"},
-	}
 }
 
 func newConfigCommand(opts *options) *cobra.Command {
@@ -507,80 +284,12 @@ func newConfigSetCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			key, setting := args[0], strings.TrimSpace(args[1])
-			value, updateErr := booksconfig.Update(path, nil, func(value *booksconfig.Config, _ bool) error {
-				switch key {
-				case "default-company":
-					setting = strings.ToLower(setting)
-					if _, ok := value.Companies[setting]; !ok {
-						return apperr.New(apperr.NotFound, "COMPANY_NOT_FOUND", fmt.Sprintf("company %q is not registered", setting))
-					}
-					value.DefaultCompany = setting
-				case "output":
-					setting = strings.ToLower(setting)
-					switch setting {
-					case "table", "json", "jsonl", "csv":
-						value.Defaults.Output = setting
-					default:
-						return apperr.New(apperr.Invalid, "FORMAT_INVALID", "output must be table, json, jsonl, or csv")
-					}
-				case "defaults.payment-account", "defaults.deposit-account", "defaults.retained-earnings":
-					selected := strings.ToLower(strings.TrimSpace(opts.company))
-					if selected == "" {
-						selected = value.DefaultCompany
-					}
-					company, ok := value.Companies[selected]
-					if !ok {
-						return apperr.New(apperr.Invalid, "COMPANY_NOT_SELECTED", "supply --company or configure default-company")
-					}
-					resolved, resolveErr := value.Resolve(path, selected)
-					if resolveErr != nil {
-						return apperr.Wrap(apperr.Invalid, "COMPANY_CONFIG_INVALID", "resolve selected company", resolveErr)
-					}
-					store, openErr := storesqlite.Open(cmd.Context(), resolved.Database, storesqlite.ReadOnly)
-					if openErr != nil {
-						return openErr
-					}
-					if verifyErr := store.VerifySchema(cmd.Context()); verifyErr != nil {
-						_ = store.Close()
-						return verifyErr
-					}
-					accounts, listErr := ledger.NewService(store, opts.actor).ListAccounts(cmd.Context(), company.BookCode)
-					_ = store.Close()
-					if listErr != nil {
-						return listErr
-					}
-					account, resolveAccountErr := resolveHumanAccount(accounts, setting)
-					if resolveAccountErr != nil {
-						return resolveAccountErr
-					}
-					switch key {
-					case "defaults.payment-account":
-						if subtype := normalizedSubtype(account.Subtype); subtype != "BANK" && subtype != "CREDIT_CARD" {
-							return apperr.New(apperr.Invalid, "DEFAULT_PAYMENT_ACCOUNT_INVALID", "payment default must be a bank or credit-card account")
-						}
-						company.Defaults.PaymentAccount = account.Code
-					case "defaults.deposit-account":
-						if normalizedSubtype(account.Subtype) != "BANK" {
-							return apperr.New(apperr.Invalid, "DEFAULT_DEPOSIT_ACCOUNT_INVALID", "deposit default must be a bank account")
-						}
-						company.Defaults.DepositAccount = account.Code
-					case "defaults.retained-earnings":
-						if account.Type != "EQUITY" {
-							return apperr.New(apperr.Invalid, "RETAINED_EARNINGS_ACCOUNT_INVALID", "retained-earnings default must be an equity account")
-						}
-						company.Defaults.RetainedEarnings = account.Code
-					}
-					setting = account.Code
-					value.Companies[selected] = company
-				default:
-					return apperr.New(apperr.Invalid, "CONFIG_KEY_UNSUPPORTED", "supported keys are default-company, output, and defaults.{payment-account,deposit-account,retained-earnings}")
-				}
-				return nil
-			})
-			if updateErr != nil {
-				return configMutationError("write Books configuration", updateErr)
+			key := args[0]
+			value, setting, err := application.SetConfiguration(cmd.Context(), path, opts.company, key, args[1], opts.actor)
+			if err != nil {
+				return err
 			}
+
 			opts.loadedConfig = &value
 			opts.resolved = nil
 			data := map[string]any{"key": key, "value": setting, "config_path": path}
@@ -590,36 +299,19 @@ func newConfigSetCommand(opts *options) *cobra.Command {
 }
 
 func runDashboard(cmd *cobra.Command, opts *options) error {
+	app, err := openWorkflow(cmd, opts, false)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = app.Close() }()
+	summary, err := app.Dashboard(cmd.Context())
+	if err != nil {
+		return err
+	}
 	resolved, err := opts.resolveCompany()
 	if err != nil {
 		return err
 	}
-	store, err := storesqlite.Open(cmd.Context(), resolved.Database, storesqlite.ReadOnly)
-	if err != nil {
-		return err
-	}
-	defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-	var accountCount, postedCount, draftCount, openPeriods int
-	queries := []struct {
-		query  string
-		target *int
-	}{
-		{"SELECT COUNT(*) FROM accounts", &accountCount},
-		{"SELECT COUNT(*) FROM journal_entries WHERE status = 'POSTED'", &postedCount},
-		{"SELECT COUNT(*) FROM journal_entries WHERE status = 'DRAFT'", &draftCount},
-		{"SELECT COUNT(*) FROM book_periods WHERE status = 'OPEN'", &openPeriods},
-	}
-	for _, query := range queries {
-		if err := store.DB().QueryRowContext(cmd.Context(), query.query).Scan(query.target); err != nil {
-			return err
-		}
-	}
-	data := map[string]any{
-		"company": resolved.Key, "name": resolved.Company.Name, "entity_code": resolved.Company.EntityCode,
-		"currency": resolved.Company.Currency, "database": resolved.Database, "accounts": accountCount,
-		"posted_transactions": postedCount, "drafts": draftCount, "open_periods": openPeriods,
-	}
-	return writeResult(cmd, opts.format, data,
-		[]string{"COMPANY", "NAME", "CURRENCY", "ACCOUNTS", "POSTED", "DRAFTS", "OPEN PERIODS", "DATABASE"},
-		[][]string{{resolved.Key, resolved.Company.Name, resolved.Company.Currency, strconv.Itoa(accountCount), strconv.Itoa(postedCount), strconv.Itoa(draftCount), strconv.Itoa(openPeriods), resolved.Database}})
+	data := map[string]any{"company": summary.Company, "name": summary.Name, "entity_code": summary.EntityCode, "currency": summary.Currency, "database": resolved.Database, "accounts": summary.Accounts, "posted_transactions": summary.PostedTransactions, "drafts": summary.Drafts, "open_periods": summary.OpenPeriods}
+	return writeResult(cmd, opts.format, data, []string{"COMPANY", "NAME", "CURRENCY", "ACCOUNTS", "POSTED", "DRAFTS", "OPEN PERIODS", "DATABASE"}, [][]string{{summary.Company, summary.Name, summary.Currency, strconv.Itoa(summary.Accounts), strconv.Itoa(summary.PostedTransactions), strconv.Itoa(summary.Drafts), strconv.Itoa(summary.OpenPeriods), resolved.Database}})
 }

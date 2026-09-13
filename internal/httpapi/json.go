@@ -53,9 +53,15 @@ func writeError(w http.ResponseWriter, e error) {
 			message = a.Message
 		case apperr.Unavailable:
 			status = http.StatusServiceUnavailable
+			if a.Code == "ACCOUNT_DEFAULTS_PARTIAL" {
+				message = a.Message
+			}
 		case apperr.Integrity:
 			status = http.StatusInternalServerError
 		}
+	}
+	if code == "PERMISSION_DENIED" {
+		status = http.StatusForbidden
 	}
 	writeFailure(w, status, code, message)
 }
@@ -99,7 +105,8 @@ func serveTransactions(w http.ResponseWriter, r *http.Request, app *application.
 
 // Integer minor units and int64 cursors cross JSON as strings, so JavaScript
 // clients never round accounting values above Number.MAX_SAFE_INTEGER.
-func apiValue(v reflect.Value) any {
+func apiValue(v reflect.Value) any { return encodeAPIValue(v, false) }
+func encodeAPIValue(v reflect.Value, preserveNil bool) any {
 	if !v.IsValid() {
 		return nil
 	}
@@ -107,7 +114,7 @@ func apiValue(v reflect.Value) any {
 		if v.IsNil() {
 			return nil
 		}
-		return apiValue(v.Elem())
+		return encodeAPIValue(v.Elem(), preserveNil)
 	}
 	if v.Type() == reflect.TypeFor[json.RawMessage]() {
 		return v.Interface()
@@ -137,20 +144,23 @@ func apiValue(v reflect.Value) any {
 			if strings.Contains(options, "omitempty") && v.Field(i).IsZero() {
 				continue
 			}
-			out[name] = apiValue(v.Field(i))
+			out[name] = encodeAPIValue(v.Field(i), preserveNil)
 		}
 		return out
 	case reflect.Slice, reflect.Array:
+		if preserveNil && v.Kind() == reflect.Slice && v.IsNil() {
+			return nil
+		}
 		out := make([]any, v.Len())
 		for i := range out {
-			out[i] = apiValue(v.Index(i))
+			out[i] = encodeAPIValue(v.Index(i), preserveNil)
 		}
 		return out
 	case reflect.Map:
 		out := map[string]any{}
 		it := v.MapRange()
 		for it.Next() {
-			out[it.Key().String()] = apiValue(it.Value())
+			out[it.Key().String()] = encodeAPIValue(it.Value(), preserveNil)
 		}
 		return out
 	default:

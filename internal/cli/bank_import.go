@@ -18,21 +18,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func openApplication(cmd *cobra.Command, opts *options, mode storesqlite.Mode) (*application.Service, error) {
-	if opts.database != "" {
-		return nil, apperr.New(apperr.Invalid, "COMPANY_REQUIRED", "client workflows require a registered company rather than --db")
-	}
-	if mode == storesqlite.ReadWrite {
-		if e := requireCommit(opts, cmd.CommandPath()); e != nil {
-			return nil, e
-		}
-	}
-	resolved, e := opts.resolveCompany()
-	if e != nil {
-		return nil, e
-	}
-	return application.Open(cmd.Context(), resolved.ConfigPath, resolved.Key, opts.actor, mode)
-}
 func readLimitedFile(path string, max int64) ([]byte, error) {
 	var reader io.Reader
 	var file *os.File

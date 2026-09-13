@@ -1,6 +1,6 @@
 // Monetary *_cents fields are integer strings in the owning currency: do not assume /100.
 // Minimal transport example, not an offline store or generated complete SDK.
-export type Grant = "read" | "import" | "post";
+export type Grant = "read" | "import" | "post" | "manage";
 export type StatementFormat = "OFX" | "QFX" | "QBO" | "QIF" | "CSV" | "TSV" | "XLSX" | "CAMT" | "MT940" | "MT942" | "BAI2" | "BTRS" | "CODA" | "CFONB120" | "NORMA43";
 export type SourceStatus = "POSTED" | "PENDING" | "REVIEW";
 export interface ImportOptions {
@@ -125,6 +125,77 @@ export interface ImportJob {
   };
   receipt?: ImportReceipt;
 }
+export interface TransactionRequest {
+  amount: string;
+  date: string;
+  account?: string;
+  from?: string;
+  to?: string;
+  description?: string;
+  reference?: string;
+  draft?: boolean;
+  dry_run?: boolean;
+}
+export interface JournalInput {
+  posting_date: string;
+  description: string;
+  period?: string;
+  reference?: string;
+  lines: Array<{account: string; debit?: string; credit?: string; description?: string}>;
+}
+export interface Transaction {
+  number?: string;
+  book: string;
+  company: string;
+  date: string;
+  status: string;
+  total_debit_cents: string;
+  total_credit_cents: string;
+  dry_run: boolean;
+}
+export interface Correction {
+  original_number: string;
+  reversal: Transaction;
+  replacement: Transaction;
+  reason: string;
+}
+export interface ReconciliationRequest {
+  statement_account: string;
+  through: string;
+  ending: string;
+  start?: string;
+  beginning?: string;
+  clear_all?: boolean;
+  cleared?: string[];
+  target_reconciliation_id?: string;
+}
+// Preserve the entire returned plan, including nulls and string integers.
+// Clients display it for review and return it unchanged; they never recompute it.
+export type JSONValue = string | number | boolean | null | JSONValue[] | {[key: string]: JSONValue};
+export interface ReviewPlan {
+  schema: string;
+  company: string;
+  book: string;
+  digest: string;
+  [key: string]: JSONValue;
+}
+export interface AccountInput {
+  kind: "bank" | "ar" | "asset" | "fixed-asset" | "investment" | "ap" | "credit-card" | "loan" | "liability" | "equity" | "income" | "expense";
+  name: string;
+  code: string;
+  active_from: string;
+  reconcile_from?: string;
+  no_reconcile?: boolean;
+  default_payment?: boolean;
+  default_deposit?: boolean;
+  retained_earnings?: boolean;
+  dry_run?: boolean;
+}
+export interface AccountDefaults {
+  payment_account: string;
+  deposit_account: string;
+  retained_earnings: string;
+}
 export class BooksError extends Error {
   readonly status: number;
   readonly code: string;
@@ -154,6 +225,51 @@ export class BooksClient {
     if (body.schema !== "books.api/v1") throw new BooksError(response.status, "PROTOCOL_INVALID", "Unsupported Books response");
     if (!response.ok || !body.ok) throw new BooksError(response.status, body.error?.code ?? "REQUEST_FAILED", body.error?.message ?? "Books request failed");
     return body.data as T;
+  }
+  private workflow<T>(path: string, body: unknown, stableKey?: string): Promise<T> {
+    const headers: Record<string, string> = {"Content-Type": "application/json"};
+    if (stableKey !== undefined) headers["Idempotency-Key"] = stableKey;
+    return this.request(path, {method: "POST", body: JSON.stringify(body), headers});
+  }
+  record(kind: "spend" | "receive" | "transfer", input: TransactionRequest, stableKey: string): Promise<Transaction> {
+    return this.workflow(`/transactions/${kind}`, input, stableKey);
+  }
+  journal(journal: JournalInput, stableKey: string, draft = false): Promise<Transaction> {
+    return this.workflow("/journals", {journal, draft}, stableKey);
+  }
+  changeStatus(number: string, action: "post" | "abandon", dryRun = false): Promise<Transaction> {
+    return this.workflow(`/transactions/${encodeURIComponent(number)}/${action}`, {dry_run: dryRun});
+  }
+  reverse(number: string, date: string, description: string, draft = false): Promise<Transaction> {
+    return this.workflow(`/transactions/${encodeURIComponent(number)}/reverse`, {date, description, draft});
+  }
+  correct(number: string, journal: JournalInput, reason: string, draft = false): Promise<Correction> {
+    return this.workflow(`/transactions/${encodeURIComponent(number)}/correct`, {journal, reason, draft});
+  }
+  planReconciliation(input: ReconciliationRequest): Promise<ReviewPlan> {
+    return this.workflow("/reconciliations/plan", input);
+  }
+  planClose(period: string): Promise<ReviewPlan> {
+    return this.workflow("/close/plan", {period});
+  }
+  planYearClose(fiscalYear: number, retainedEarnings?: string): Promise<ReviewPlan> {
+    return this.workflow("/year-close/plan", {fiscal_year: fiscalYear, retained_earnings: retainedEarnings});
+  }
+  applyReviewedPlan(kind: "reconciliations" | "close" | "year-close", plan: ReviewPlan, dryRun = false): Promise<Record<string, JSONValue>> {
+    return this.workflow(`/${kind}/apply`, {plan, dry_run: dryRun});
+  }
+  createAccount(input: AccountInput): Promise<Record<string, JSONValue>> {
+    return this.workflow("/accounts", input);
+  }
+  defaults(): Promise<AccountDefaults> { return this.request("/defaults"); }
+  setDefault(key: "payment-account" | "deposit-account" | "retained-earnings", account: string): Promise<AccountDefaults> {
+    return this.workflow("/defaults", {key, account});
+  }
+  configureYear(fiscalYear: number): Promise<Record<string, JSONValue>> {
+    return this.workflow("/periods", {fiscal_year: fiscalYear});
+  }
+  reopen(kind: "periods" | "reconciliations", id: string, reason: string): Promise<Record<string, JSONValue>> {
+    return this.workflow(`/${kind}/${encodeURIComponent(id)}/reopen`, {reason});
   }
   upload(bytes: Uint8Array<ArrayBuffer>, name: string, stableKey: string): Promise<ImportJob> {
     return this.request(`/imports?name=${encodeURIComponent(name)}`, {

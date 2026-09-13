@@ -60,8 +60,8 @@ var principalPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
 
 func (c Config) Validate() error {
 	bad := func(message string) error { return apperr.New(apperr.Invalid, "SERVER_CONFIG_INVALID", message) }
-	if c.Schema != "books.server/v1" {
-		return bad("server schema must be books.server/v1")
+	if c.Schema != "books.server/v1" && c.Schema != "books.server/v2" {
+		return bad("server schema must be books.server/v1 or books.server/v2")
 	}
 	host, port, e := net.SplitHostPort(c.Listen)
 	if e != nil || port == "" {
@@ -115,13 +115,13 @@ func (c Config) Validate() error {
 			}
 			found := map[string]bool{}
 			for _, grant := range grants {
-				if found[grant] || (grant != "read" && grant != "import" && grant != "post") {
-					return bad("grants must be unique read, import, or post values")
+				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && (c.Schema != "books.server/v2" || grant != "manage")) {
+					return bad("grants must be unique read, import, post, or (v2 only) manage values")
 				}
 				found[grant] = true
 			}
-			if !found["read"] || found["post"] && !found["import"] {
-				return bad("all grants require read; post also requires import")
+			if !found["read"] || c.Schema == "books.server/v1" && found["post"] && !found["import"] {
+				return bad("all grants require read; v1 post also requires import")
 			}
 		}
 	}

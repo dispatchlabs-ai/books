@@ -599,6 +599,9 @@ func samePeriodDefinition(left, right CreatePeriodInput) bool {
 }
 
 func createPeriodInTransaction(ctx context.Context, tx *sql.Tx, actor string, input CreatePeriodInput) (Period, error) {
+	return createPeriodForBook(ctx, tx, actor, input, "")
+}
+func createPeriodForBook(ctx context.Context, tx *sql.Tx, actor string, input CreatePeriodInput, bookID string) (Period, error) {
 	id, err := storesqlite.NewID()
 	if err != nil {
 		return Period{}, err
@@ -609,7 +612,7 @@ func createPeriodInTransaction(ctx context.Context, tx *sql.Tx, actor string, in
 		return Period{}, storesqlite.MapError("create fiscal period", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO book_periods(book_id, period_id)
-		SELECT id, ? FROM books WHERE status = 'ACTIVE'`, id); err != nil {
+		SELECT id, ? FROM books WHERE status = 'ACTIVE' AND (?='' OR id=?)`, id, bookID, bookID); err != nil {
 		return Period{}, storesqlite.MapError("open fiscal period for books", err)
 	}
 	if _, err := storesqlite.AppendAudit(ctx, tx, storesqlite.AuditInput{
@@ -670,4 +673,75 @@ func sourceDigest(input CreateJournalInput) (string, error) {
 	}
 	sum := sha256.Sum256(payload)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// ConfigureBookPeriods creates shared definitions as needed but only opens them
+// for the selected book. Company clients must not open other books' periods.
+func (s *Service) ConfigureBookPeriods(ctx context.Context, book string, inputs []CreatePeriodInput, dryRun bool) (int, error) {
+	if !dryRun {
+		if err := s.requireActor(); err != nil {
+			return 0, err
+		}
+	}
+	normalized, err := normalizePeriodInputs(inputs)
+	if err != nil {
+		return 0, err
+	}
+	var tx *sql.Tx
+	if dryRun {
+		tx, err = s.store.DB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	} else {
+		tx, err = s.store.Begin(ctx)
+	}
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	bookID, err := lookupID(ctx, tx, "books", book)
+	if err != nil {
+		return 0, err
+	}
+	if _, err = findMissingPeriods(ctx, tx, normalized); err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, input := range normalized {
+		var periodID string
+		err := tx.QueryRowContext(ctx, `SELECT id FROM fiscal_periods WHERE code=?`, input.Code).Scan(&periodID)
+		if err != nil && err != sql.ErrNoRows {
+			return 0, err
+		}
+		if err == sql.ErrNoRows {
+			count++
+			if !dryRun {
+				if _, err = createPeriodForBook(ctx, tx, s.actor, input, bookID); err != nil {
+					return 0, err
+				}
+			}
+			continue
+		}
+		var found int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM book_periods WHERE book_id=? AND period_id=?`, bookID, periodID).Scan(&found); err != nil {
+			return 0, err
+		}
+		if found > 0 {
+			continue
+		}
+		count++
+		if dryRun {
+			continue
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO book_periods(book_id,period_id) VALUES(?,?)`, bookID, periodID); err != nil {
+			return 0, storesqlite.MapError("configure book period", err)
+		}
+		if _, err = storesqlite.AppendAudit(ctx, tx, storesqlite.AuditInput{Actor: s.actor, Command: "period configure", AggregateType: "book", AggregateID: bookID, Payload: map[string]any{"period": input.Code}}); err != nil {
+			return 0, err
+		}
+	}
+	if !dryRun {
+		if err = tx.Commit(); err != nil {
+			return 0, storesqlite.MapError("commit book fiscal periods", err)
+		}
+	}
+	return count, nil
 }

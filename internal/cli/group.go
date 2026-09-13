@@ -43,34 +43,15 @@ func newGroupCommand(opts *options) *cobra.Command {
 				return err
 			}
 			defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-			rowsDB, err := store.DB().QueryContext(cmd.Context(), `SELECT g.id, g.code, g.name, e.code, g.currency,
-                COALESCE(b.id, ''), COALESCE(b.code, '') FROM consolidation_groups g
-                JOIN entities e ON e.id = g.parent_entity_id
-                LEFT JOIN books b ON b.group_id = g.id AND b.kind = 'ELIMINATION' AND b.status = 'ACTIVE'
-                ORDER BY g.code`)
+			data, err := ledger.NewService(store, opts.actor).ListGroups(cmd.Context())
 			if err != nil {
 				return err
 			}
-			defer func(closer interface{ Close() error }) { _ = closer.Close() }(rowsDB)
-			type item struct {
-				ID                string `json:"id"`
-				Code              string `json:"code"`
-				Name              string `json:"name"`
-				Parent            string `json:"parent"`
-				Currency          string `json:"currency"`
-				EliminationBookID string `json:"elimination_book_id"`
-				EliminationBook   string `json:"elimination_book"`
-			}
-			var data []item
 			var rows [][]string
-			for rowsDB.Next() {
-				var value item
-				if err := rowsDB.Scan(&value.ID, &value.Code, &value.Name, &value.Parent, &value.Currency, &value.EliminationBookID, &value.EliminationBook); err != nil {
-					return err
-				}
-				data = append(data, value)
+			for _, value := range data {
 				rows = append(rows, []string{value.Code, value.Name, value.Parent, value.Currency, value.EliminationBook, value.ID})
 			}
+
 			return writeResult(cmd, opts.format, data, []string{"GROUP", "NAME", "PARENT", "CURRENCY", "ELIMINATION BOOK", "ID"}, rows)
 		},
 	}

@@ -8,6 +8,17 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Added company API workflows for routine transactions, journal corrections and
+  reversals, reconciliation, period/year close, chart defaults and fiscal periods.
+  CLI and API share application services; direct CLI use requires no server.
+- Added server configuration v2 with independent posting and management grants,
+  an additive OpenAPI 1.3.0 snapshot and typed workflow client examples.
+- Corrections commit their reversal and replacement together. Year-close apply
+  rejects changed balances inside the write transaction, and fiscal-year setup
+  opens periods only in the selected book.
+- QuickBooks apply failures identify completed durable setup/import steps and
+  the batch recovery target; account-default failures identify the created account.
+
 - Added a selectable single currency per company or person, including exact
   zero-, two-, three-, and four-decimal monetary units. USD remains the default.
   Accounts, imports, reports, reconciliation, and close use the book currency;

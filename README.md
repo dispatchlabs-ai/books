@@ -6,7 +6,7 @@ Books is a local-first general ledger and headless financial backend for humans,
 
 Books is experimental source software. It includes company setup, a manual chart of accounts, manual transaction entry, bank/card/loan/investment reconciliation, general ledger, trial balance, profit and loss, balance sheet, period and fiscal-year close, optional QuickBooks initial import, consolidation, audit verification, and verified backup/restore.
 
-The [client API and statement import workflow](docs/api.md) provide authenticated company-scoped access for web, desktop, and mobile integrations. Durable uploads, explicit mapping, saved previews, atomic application, and posted reports support OFX/QFX/QBO, QIF, CSV/TSV/XLSX, CAMT, MT940/942, BAI2/BTRS, CODA, CFONB120, and Norma 43. See [supported profiles and limits](docs/statement-formats.md); each company or person uses one chosen currency. Cash planning and offline synchronization remain future work.
+The [client API and statement import workflow](docs/api.md) provide authenticated company-scoped access for web, desktop, and mobile integrations. Durable uploads, explicit mapping, saved previews, atomic application, and posted reports support OFX/QFX/QBO, QIF, CSV/TSV/XLSX, CAMT, MT940/942, BAI2/BTRS, CODA, CFONB120, and Norma 43. See [supported profiles and limits](docs/statement-formats.md); each company or person uses one chosen currency. Routine posting, corrections, reconciliation, close, account defaults and fiscal-period setup also use shared application services through the CLI and API. The CLI runs in-process without a server. Cash planning and offline synchronization remain future work.
 
 Books supports single-currency accrual books for a company or person on macOS and Linux. It is not accounting, tax, or legal advice. Keep independent backups and have a qualified professional review accounting outputs before relying on them.
 
@@ -314,7 +314,7 @@ Restore validates the exact source bytes first and requires their immutable data
 - Closed periods retain a balance digest, and the audit log is hash chained. The in-database chain detects uncoordinated changes but does not resist a privileged party that can rewrite and replace the entire SQLite file.
 - Every database open verifies the application ID, migration ledger, migration checksums, and live SQLite schema.
 
-The CLI is the supported write interface. Direct SQLite writes are unsupported.
+The CLI and documented authenticated API are supported write interfaces, backed by shared application and ledger services. Direct SQLite writes are unsupported.
 
 ## Product boundary
 

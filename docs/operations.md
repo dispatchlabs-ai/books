@@ -232,3 +232,26 @@ between different statement exports before preview. Run Doctor and audit verific
 after migration or restore. Keep server config and client credentials private,
 monitor database/disk growth, and protect backups as financial records. The
 service has per-request limits but no total upload quota. See [API operation](api.md).
+
+## Client workflow operations
+
+The [API](api.md#shared-accounting-workflows) supports posting, corrections,
+reconciliation, close and account/fiscal-period setup through the same services
+as the CLI. A correction commits its reversal and replacement together; an error
+leaves neither newly created journal. An existing conflicting reversal is rejected.
+Year-close apply rederives current income and expense balances under the write
+transaction and rejects a stale reviewed journal before writing.
+
+Use server config v2 for separate `post` and `manage` grants. Year-close posting
+and changes to closing journals require both. Reopen and chart/default changes
+require `manage`; changing a principal's configuration takes effect on restart.
+Company grants do not authorize local registry or database-wide restore access.
+
+QuickBooks initial import retains its staged setup/import/posting lifecycle.
+If a later phase fails, `QUICKBOOKS_APPLY_PARTIAL` reports completed operations
+and their targets, plus the source batch when one exists. Inspect those steps,
+resolve the reported blocker, and retry the same reviewed plan. Setup and source
+identities converge on their existing records; the posting phase is atomic.
+An `ACCOUNT_DEFAULTS_PARTIAL` error means the account exists but its requested
+registry default could not be saved. Set the default for the reported code;
+do not create a second account.

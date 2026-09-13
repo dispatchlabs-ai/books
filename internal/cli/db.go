@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/dispatchlabs-ai/books/internal/application"
 	"path/filepath"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
@@ -37,10 +38,11 @@ func newDBInitCommand(opts *options) *cobra.Command {
 				return err
 			}
 			defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-			var databaseID, createdAt, baseCurrency string
-			if err := store.DB().QueryRowContext(cmd.Context(), `SELECT database_uuid, created_at, base_currency FROM database_metadata WHERE singleton = 1`).Scan(&databaseID, &createdAt, &baseCurrency); err != nil {
+			info, err := store.DatabaseInfo(cmd.Context())
+			if err != nil {
 				return err
 			}
+			databaseID, createdAt, baseCurrency := info.DatabaseID, info.CreatedAt, info.BaseCurrency
 			data := map[string]any{"database_id": databaseID, "path": store.Path(), "created_at": createdAt, "base_currency": baseCurrency, "schema_version": storesqlite.CurrentSchemaVersion}
 			return writeResult(cmd, opts.format, data, []string{"DATABASE ID", "PATH", "CURRENCY", "SCHEMA"}, [][]string{{databaseID, store.Path(), baseCurrency, fmt.Sprint(storesqlite.CurrentSchemaVersion)}})
 		},
@@ -86,17 +88,11 @@ func newDBStatusCommand(opts *options) *cobra.Command {
 				return err
 			}
 			defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-			var id, createdAt, currency, sqliteVersion string
-			var migrationCount int
-			if err := store.DB().QueryRowContext(cmd.Context(), `SELECT database_uuid, created_at, base_currency FROM database_metadata WHERE singleton = 1`).Scan(&id, &createdAt, &currency); err != nil {
+			info, err := store.DatabaseInfo(cmd.Context())
+			if err != nil {
 				return err
 			}
-			if err := store.DB().QueryRowContext(cmd.Context(), "SELECT sqlite_version()").Scan(&sqliteVersion); err != nil {
-				return err
-			}
-			if err := store.DB().QueryRowContext(cmd.Context(), "SELECT COUNT(*) FROM schema_migrations").Scan(&migrationCount); err != nil {
-				return err
-			}
+			id, createdAt, currency, sqliteVersion, migrationCount := info.DatabaseID, info.CreatedAt, info.BaseCurrency, info.SQLiteVersion, info.MigrationCount
 			data := map[string]any{"database_id": id, "path": store.Path(), "created_at": createdAt, "base_currency": currency, "schema_version": storesqlite.CurrentSchemaVersion, "migration_count": migrationCount, "sqlite_version": sqliteVersion, "app_version": version.Identifier()}
 			return writeResult(cmd, opts.format, data, []string{"DATABASE ID", "PATH", "CURRENCY", "SCHEMA", "SQLITE"}, [][]string{{id, store.Path(), currency, fmt.Sprint(storesqlite.CurrentSchemaVersion), sqliteVersion}})
 		},
@@ -172,7 +168,7 @@ func newDBRestoreCommand(opts *options) *cobra.Command {
 			var registered booksconfig.ResolvedCompany
 			var backfillIdentity bool
 			if opts.resolved != nil {
-				registered, validation, expected, backfillIdentity, err = validateCompanyRestore(cmd, *opts.resolved, source)
+				registered, validation, expected, backfillIdentity, err = application.ValidateCompanyRestore(cmd.Context(), *opts.resolved, source)
 			} else {
 				validation, err = storesqlite.ValidateRestore(cmd.Context(), targetAbs, source, expected)
 			}

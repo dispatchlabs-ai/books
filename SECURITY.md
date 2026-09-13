@@ -22,8 +22,8 @@ remediation time.
 
 ## Security boundary
 
-- Books is a local, single-user CLI. It does not provide network authentication,
-  multi-user authorization, or a hosted service boundary.
+- Books provides a local CLI and an optional authenticated company-scoped API.
+  The API boundary is described below; it is not a hosted multi-tenant service.
 - Databases, attachments, plans, and backups are plaintext local files. Books
   relies on operating-system permissions and, where needed, full-disk
   encryption for confidentiality.
@@ -33,7 +33,8 @@ remediation time.
 - Imports are untrusted input. Supported parsers enforce resource limits, but
   imports should still be processed in a constrained environment when their
   origin is unknown.
-- The supported write boundary is the Books CLI. Direct SQLite writes are
+- Supported writes use the Books CLI or authenticated API through shared
+  application and ledger services. Direct SQLite writes are
   unsupported and can invalidate accounting and audit guarantees.
 - Users are responsible for offline or independently protected backups and for
   professionally reviewing accounting outputs.
@@ -47,7 +48,11 @@ company record to a public issue or pull request. Use minimal synthetic evidence
 ## Headless API boundary
 
 The experimental v1 service uses operator-provisioned high-entropy bearer
-credentials stored as SHA-256 digests, with read/import/post grants per company.
+credentials stored as SHA-256 digests, with read/import/post grants per company
+and an additional manage grant in server configuration v2. Chart/default changes, reopen and period close require
+manage; year-close posting and changes to closing journals require manage and
+post. Registry creation, migrations, backup/restore and local-file imports remain
+local administrative operations.
 Grants and tokens reload on process restart. Non-loopback listeners require TLS;
 browser access requires exact configured origins. There is no cookie auth,
 public signup, OIDC, or distributed tenant isolation. All authenticated readers

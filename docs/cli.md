@@ -215,3 +215,12 @@ Use `bank-import formats` to list supported profiles. `upload --options profile.
 binds date, locale, account, and column options to durable source evidence. Use
 `matches JOB --input choices.json` before preview to inspect possible duplicates.
 See [statement formats and profile examples](statement-formats.md).
+
+## Frontend boundary
+
+The CLI parses terminal syntax and renders results. Company workflows are shared
+with the [client API](api.md) through `internal/application`; accounting and
+atomic mutations remain in `internal/ledger`. Direct CLI use needs no server.
+Relative dates, transaction ranges and plan-file paths are CLI conveniences.
+Local company registration, restore and filesystem import administration use
+shared services but are not exposed through company HTTP grants.

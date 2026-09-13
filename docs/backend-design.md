@@ -101,3 +101,48 @@ monetary scales. Independent KWD QuickBooks object JSON, general-ledger JSON,
 and journal XLSX probes preserve exact minor units. The OpenAPI 1.2.0 artifact
 validates and the TypeScript example passes strict compilation. Independent
 advisory review found no remaining code findings.
+
+## Shared application workflows
+
+Routine posting, draft lifecycle, corrections, reversals, reconciliation plans
+and apply, period/year close, chart/default setup, and fiscal-year setup now
+belong to shared application services. CLI code owns flags, relative-date and
+range syntax, file selection and rendering. It contains no SQL queries. The API
+adds company-bound routes with independent posting and management permissions.
+Local registry, restore and filesystem-import administration also lives outside
+the CLI; it remains local because a company grant does not authorize database-wide
+or filesystem access.
+
+The previous placement of complete workflows in Cobra handlers made a second
+frontend duplicate policy. Moving those workflows to application services keeps
+the CLI usable without an HTTP process. Calling the CLI as a backend or requiring
+localhost HTTP for every CLI command would preserve coupling and add process
+failure modes. Ledger services continue to own transactions and lifecycle rules.
+Corrections now create/post the linked pair atomically, year-close apply derives
+fresh balances under its write lock, and book-scoped status changes reread the
+authoritative journal before mutation. Fiscal-year configuration opens only the
+selected book's periods. No SQLite migration or runtime dependency is added.
+
+HTTP contracts are documented in the additive 1.3.0 OpenAPI snapshot. Published
+snapshots and CLI saved-plan formats remain unchanged. API wire plans encode
+int64 values as strings and preserve null arrays so review/apply digests survive
+JSON roundtrips.
+
+Validation of this boundary includes the full `./scripts/check` gate and fresh
+independent review with no remaining findings. Regression tests cover a real
+CLI/API journey, shared-database foreign transaction IDs, read/post/manage grant
+separation, closing-journal management permission, correction rollback and
+concurrent correction conflicts, stale year-close plans, and QuickBooks partial
+apply recovery. An architecture check prevents SQL execution in transports and
+transport dependencies in application/ledger services.
+
+Two disposable compiled-binary KWD HTTP journeys validate 53 request/response
+exchanges against OpenAPI 1.3.0, including reconciliation, close/reopen, year-close
+replay and reversal. Human and JSON CLI reads confirm exact three-decimal amounts;
+Doctor and audit verification pass after both journeys. The TypeScript example
+passes strict ES2022/DOM compilation. The full repository gate also passes on
+Linux from a clean public-source export with Go 1.26.6, CGO and an isolated dependency cache. Both supported
+platforms therefore exercise tests, race detection, lint, vulnerability checks
+and the disposable CLI/Doctor/audit flow. Standard MIT licensing, creator credit
+and upstream attribution are preserved; the public source requires no private
+configuration and retains its Woodpecker pipeline without GitHub Actions.

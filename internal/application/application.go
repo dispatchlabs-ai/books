@@ -24,9 +24,10 @@ type Company struct {
 	Basis    string `json:"basis"`
 }
 type Service struct {
-	store   *storesqlite.Store
-	company Company
-	actor   string
+	store    *storesqlite.Store
+	company  Company
+	actor    string
+	resolved booksconfig.ResolvedCompany
 }
 
 func Open(ctx context.Context, configPath, company, actor string, mode storesqlite.Mode) (*Service, error) {
@@ -45,27 +46,37 @@ func Open(ctx context.Context, configPath, company, actor string, mode storesqli
 	if e != nil {
 		return nil, e
 	}
-	closeError := func(e error) (*Service, error) { _ = store.Close(); return nil, e }
-	if e = store.VerifySchema(ctx); e != nil {
-		return closeError(e)
+	app, e := Bind(ctx, store, resolved, actor)
+	if e != nil {
+		_ = store.Close()
+	}
+	return app, e
+}
+
+// Bind constructs a company-scoped application over a caller-owned store.
+// Database identity is verified here for every client, including local CLI use.
+func Bind(ctx context.Context, store *storesqlite.Store, resolved booksconfig.ResolvedCompany, actor string) (*Service, error) {
+	if e := store.VerifySchema(ctx); e != nil {
+		return nil, e
 	}
 	var uuid string
-	if e = store.DB().QueryRowContext(ctx, `SELECT database_uuid FROM database_metadata WHERE singleton=1`).Scan(&uuid); e != nil {
-		return closeError(e)
+	if e := store.DB().QueryRowContext(ctx, `SELECT database_uuid FROM database_metadata WHERE singleton=1`).Scan(&uuid); e != nil {
+		return nil, e
 	}
 	if resolved.Company.DatabaseUUID == "" || resolved.Company.DatabaseUUID != uuid {
-		return closeError(apperr.New(apperr.Conflict, "COMPANY_DATABASE_MISMATCH", "company must be bound to this database; verify it through the CLI first"))
+		return nil, (apperr.New(apperr.Conflict, "COMPANY_DATABASE_MISMATCH", "company must be bound to this database; verify it through the CLI first"))
 	}
 	var bookID string
-	e = store.DB().QueryRowContext(ctx, `SELECT b.id FROM books b JOIN entities e ON e.id=b.entity_id WHERE b.code=? AND e.code=? AND b.kind='ACTUAL' AND b.status='ACTIVE' AND e.status='ACTIVE' AND b.currency=? AND e.functional_currency=b.currency AND b.accounting_basis='ACCRUAL'`, resolved.Company.BookCode, resolved.Company.EntityCode, resolved.Company.Currency).Scan(&bookID)
+	e := store.DB().QueryRowContext(ctx, `SELECT b.id FROM books b JOIN entities e ON e.id=b.entity_id WHERE b.code=? AND e.code=? AND b.kind='ACTUAL' AND b.status='ACTIVE' AND e.status='ACTIVE' AND b.currency=? AND e.functional_currency=b.currency AND b.accounting_basis='ACCRUAL'`, resolved.Company.BookCode, resolved.Company.EntityCode, resolved.Company.Currency).Scan(&bookID)
 	if e == sql.ErrNoRows {
-		return closeError(apperr.New(apperr.Conflict, "COMPANY_DATABASE_MISMATCH", "configured company does not match an active actual book"))
+		return nil, (apperr.New(apperr.Conflict, "COMPANY_DATABASE_MISMATCH", "configured company does not match an active actual book"))
 	}
 	if e != nil {
-		return closeError(e)
+		return nil, e
 	}
-	return &Service{store: store, company: Company{Key: resolved.Key, Name: resolved.Company.Name, Entity: resolved.Company.EntityCode, Book: resolved.Company.BookCode, Currency: resolved.Company.Currency, Basis: "ACCRUAL"}, actor: actor}, nil
+	return &Service{store: store, company: Company{Key: resolved.Key, Name: resolved.Company.Name, Entity: resolved.Company.EntityCode, Book: resolved.Company.BookCode, Currency: resolved.Company.Currency, Basis: "ACCRUAL"}, actor: actor, resolved: resolved}, nil
 }
+
 func (s *Service) Close() error     { return s.store.Close() }
 func (s *Service) Company() Company { return s.company }
 
@@ -128,38 +139,7 @@ func (s *Service) ProfitLoss(ctx context.Context, from, to string) (report.Profi
 // Transactions uses the monotonic per-book journal number as its cursor. The
 // result describes current journal states; it is not an offline replication log.
 func (s *Service) Transactions(ctx context.Context, after int64, limit int) ([]ledger.Journal, error) {
-	if after < 0 || limit < 1 || limit > 200 {
-		return nil, apperr.New(apperr.Invalid, "PAGE_INVALID", "after must be nonnegative and limit between 1 and 200")
-	}
-	rows, e := s.store.DB().QueryContext(ctx, `SELECT je.id FROM journal_entries je JOIN books b ON b.id=je.book_id WHERE b.code=? AND je.entry_number>? ORDER BY je.entry_number LIMIT ?`, s.company.Book, after, limit)
-	if e != nil {
-		return nil, e
-	}
-	ids := []string{}
-	for rows.Next() {
-		var id string
-		if e = rows.Scan(&id); e != nil {
-			_ = rows.Close()
-			return nil, e
-		}
-		ids = append(ids, id)
-	}
-	iterationError := rows.Err()
-	if e = rows.Close(); e != nil {
-		return nil, e
-	}
-	if iterationError != nil {
-		return nil, iterationError
-	}
-	result := []ledger.Journal{}
-	for _, id := range ids {
-		j, e := s.ledger().GetJournal(ctx, id)
-		if e != nil {
-			return nil, e
-		}
-		result = append(result, j)
-	}
-	return result, nil
+	return s.ledger().BookTransactions(ctx, s.company.Book, after, limit)
 }
 
 func (s *Service) Matches(ctx context.Context, job string, choices ledger.BankImportChoices) (ledger.BankImportMatches, error) {

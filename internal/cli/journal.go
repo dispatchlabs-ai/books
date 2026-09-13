@@ -9,64 +9,12 @@ import (
 	"strings"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
+	"github.com/dispatchlabs-ai/books/internal/application"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/money"
 
 	"github.com/spf13/cobra"
 )
-
-type journalFile struct {
-	Book                string            `json:"book"`
-	Kind                string            `json:"kind,omitempty"`
-	PostingDate         string            `json:"posting_date"`
-	Period              string            `json:"period"`
-	Description         string            `json:"description"`
-	Reference           string            `json:"reference,omitempty"`
-	SourceSystem        string            `json:"source_system,omitempty"`
-	SourceKey           string            `json:"source_key,omitempty"`
-	TaxType             string            `json:"tax_type,omitempty"`
-	TaxAccountingPeriod string            `json:"tax_accounting_period,omitempty"`
-	Lines               []journalLineFile `json:"lines"`
-}
-
-type journalLineFile struct {
-	Account            string `json:"account"`
-	Description        string `json:"description,omitempty"`
-	Debit              string `json:"debit,omitempty"`
-	Credit             string `json:"credit,omitempty"`
-	CounterpartyEntity string `json:"counterparty_entity,omitempty"`
-	IntercompanyKey    string `json:"intercompany_key,omitempty"`
-}
-
-func (input journalFile) ledgerInput(currencies ...money.Currency) (ledger.CreateJournalInput, error) {
-	currency := money.Currency{}
-	if len(currencies) > 0 {
-		currency = currencies[0]
-	}
-	result := ledger.CreateJournalInput{
-		Book: input.Book, Kind: input.Kind, PostingDate: input.PostingDate, Period: input.Period, Description: input.Description,
-		Reference: input.Reference, SourceSystem: input.SourceSystem, SourceKey: input.SourceKey,
-		TaxType: input.TaxType, TaxAccountingPeriod: input.TaxAccountingPeriod,
-	}
-	for i, line := range input.Lines {
-		var debit, credit int64
-		var err error
-		if strings.TrimSpace(line.Debit) != "" {
-			debit, err = currency.Parse(line.Debit)
-			if err != nil {
-				return result, apperr.Wrap(apperr.Input, "JOURNAL_AMOUNT_INVALID", fmt.Sprintf("line %d debit is invalid", i+1), err)
-			}
-		}
-		if strings.TrimSpace(line.Credit) != "" {
-			credit, err = currency.Parse(line.Credit)
-			if err != nil {
-				return result, apperr.Wrap(apperr.Input, "JOURNAL_AMOUNT_INVALID", fmt.Sprintf("line %d credit is invalid", i+1), err)
-			}
-		}
-		result.Lines = append(result.Lines, ledger.JournalLineInput{Account: line.Account, Description: line.Description, DebitCents: debit, CreditCents: credit, CounterpartyEntity: line.CounterpartyEntity, IntercompanyKey: line.IntercompanyKey})
-	}
-	return result, nil
-}
 
 func journalRows(journal ledger.Journal) [][]string {
 	rows := make([][]string, 0, len(journal.Lines))
@@ -104,7 +52,7 @@ func newJournalCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			input, err := file.ledgerInput(currency)
+			input, err := file.LedgerInput(currency)
 			if err != nil {
 				return err
 			}
@@ -139,7 +87,7 @@ func newJournalCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			input, err := file.ledgerInput(currency)
+			input, err := file.LedgerInput(currency)
 			if err != nil {
 				return err
 			}
@@ -377,7 +325,7 @@ func parseJournalImport(raw []byte, resolvers ...func(string) (money.Currency, e
 				return result, err
 			}
 		}
-		input, err := record.Journal.ledgerInput(currency)
+		input, err := record.Journal.LedgerInput(currency)
 		if err != nil {
 			return result, apperr.Wrap(apperr.Input, "JOURNAL_IMPORT_RECORD_INVALID", fmt.Sprintf("record %d is invalid", i+1), err)
 		}
@@ -385,3 +333,5 @@ func parseJournalImport(raw []byte, resolvers ...func(string) (money.Currency, e
 	}
 	return result, nil
 }
+
+type journalFile = application.JournalInput

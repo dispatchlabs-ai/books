@@ -164,6 +164,7 @@ type ManualReconciliationInput struct {
 }
 
 type ReconciliationFilter struct {
+	Book             string
 	StatementAccount string
 	Status           string
 	FromDate         string
@@ -1680,6 +1681,10 @@ func (s *Service) ListReconciliations(ctx context.Context, filter Reconciliation
         JOIN reconciliation_status status ON status.reconciliation_id = r.id
         WHERE 1=1`
 	var args []any
+	if filter.Book != "" {
+		query += " AND sa.book_id=(SELECT id FROM books WHERE code=?)"
+		args = append(args, normalizeCode(filter.Book))
+	}
 	if filter.StatementAccount != "" {
 		query += " AND sa.code = ?"
 		args = append(args, filter.StatementAccount)
@@ -1907,6 +1912,12 @@ func validateNoLaterReconciliation(ctx context.Context, q interface {
 }
 
 func (s *Service) ReopenReconciliation(ctx context.Context, id, reason string) error {
+	return s.reopenReconciliation(ctx, id, reason, "")
+}
+func (s *Service) ReopenBookReconciliation(ctx context.Context, book, id, reason string) error {
+	return s.reopenReconciliation(ctx, id, reason, book)
+}
+func (s *Service) reopenReconciliation(ctx context.Context, id, reason, book string) error {
 	if err := s.requireActor(); err != nil {
 		return err
 	}
@@ -1919,6 +1930,19 @@ func (s *Service) ReopenReconciliation(ctx context.Context, id, reason string) e
 		return err
 	}
 	defer func(transaction interface{ Rollback() error }) { _ = transaction.Rollback() }(tx)
+	if book != "" {
+		var status, previousReason string
+		err := tx.QueryRowContext(ctx, `SELECT r.status,COALESCE(r.reopen_reason,'') FROM reconciliations r JOIN statement_accounts sa ON sa.id=r.statement_account_id JOIN books b ON b.id=sa.book_id WHERE r.id=? AND b.code=?`, id, normalizeCode(book)).Scan(&status, &previousReason)
+		if err == sql.ErrNoRows {
+			return apperr.New(apperr.NotFound, "RECONCILIATION_NOT_FOUND", "reconciliation was not found in this company")
+		}
+		if err != nil {
+			return err
+		}
+		if status == "OPEN" && previousReason == reason {
+			return nil
+		}
+	}
 	var precoverageClosed int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*)
 		FROM reconciliations reconciliation

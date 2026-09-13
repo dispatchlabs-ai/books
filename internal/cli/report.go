@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/dispatchlabs-ai/books/internal/application"
 	"strings"
 	"time"
 
@@ -59,7 +60,7 @@ func newGLCommand(opts *options) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				selected, err := resolveHumanAccount(accounts, account)
+				selected, err := application.ResolveAccount(accounts, account)
 				if err != nil {
 					return err
 				}

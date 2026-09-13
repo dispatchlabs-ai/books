@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/dispatchlabs-ai/books/internal/application"
 	"io"
 	"os"
 	"os/user"
@@ -370,19 +371,9 @@ func bindResolvedCompanyDatabase(cmd *cobra.Command, opts *options, store *store
 		return nil
 	}
 	resolved := *opts.resolved
-	var databaseUUID string
-	if err := store.DB().QueryRowContext(cmd.Context(), `SELECT database_uuid
-		FROM database_metadata WHERE singleton = 1`).Scan(&databaseUUID); err != nil {
-		return storesqlite.MapError("read registered company database identity", err)
-	}
-	var companyMatches int
-	if err := store.DB().QueryRowContext(cmd.Context(), `SELECT COUNT(*)
-		FROM books book JOIN entities entity ON entity.id = book.entity_id
-		WHERE book.code = ? AND entity.code = ? AND book.currency=? AND entity.functional_currency=book.currency`, resolved.Company.BookCode, resolved.Company.EntityCode, resolved.Company.Currency).Scan(&companyMatches); err != nil {
-		return storesqlite.MapError("verify registered company database identity", err)
-	}
-	if companyMatches != 1 || (resolved.Company.DatabaseUUID != "" && resolved.Company.DatabaseUUID != databaseUUID) {
-		return apperr.New(apperr.Conflict, "COMPANY_DATABASE_MISMATCH", "registered company database identity does not match books.toml")
+	databaseUUID, err := application.VerifyCompanyIdentity(cmd.Context(), store, resolved)
+	if err != nil {
+		return err
 	}
 	currency, err := money.Lookup(resolved.Company.Currency)
 	if err != nil {
@@ -397,33 +388,11 @@ func bindResolvedCompanyDatabase(cmd *cobra.Command, opts *options, store *store
 }
 
 func persistResolvedCompanyDatabaseUUID(opts *options, resolved booksconfig.ResolvedCompany, databaseUUID string) (booksconfig.ResolvedCompany, error) {
-	updated, err := booksconfig.Update(resolved.ConfigPath, nil, func(current *booksconfig.Config, _ bool) error {
-		company, ok := current.Companies[resolved.Key]
-		if !ok {
-			return apperr.New(apperr.NotFound, "COMPANY_NOT_FOUND", fmt.Sprintf("company %q is no longer registered", resolved.Key))
-		}
-		currentResolved, err := current.Resolve(resolved.ConfigPath, resolved.Key)
-		if err != nil {
-			return apperr.Wrap(apperr.Invalid, "COMPANY_CONFIG_INVALID", "resolve company while binding database identity", err)
-		}
-		if currentResolved.Database != resolved.Database {
-			return apperr.New(apperr.Conflict, "COMPANY_CONFIG_CHANGED", "registered company database path changed while its identity was being bound")
-		}
-		if company.DatabaseUUID != "" && company.DatabaseUUID != databaseUUID {
-			return apperr.New(apperr.Conflict, "COMPANY_DATABASE_MISMATCH", "registered company database identity changed while books.toml was being updated")
-		}
-		company.DatabaseUUID = databaseUUID
-		current.Companies[resolved.Key] = company
-		return nil
-	})
+	updatedResolved, err := application.PersistCompanyDatabaseUUID(resolved, databaseUUID)
 	if err != nil {
-		return booksconfig.ResolvedCompany{}, configMutationError("bind registered company database identity", err)
+		return booksconfig.ResolvedCompany{}, err
 	}
-	updatedResolved, err := updated.Resolve(resolved.ConfigPath, resolved.Key)
-	if err != nil {
-		return booksconfig.ResolvedCompany{}, apperr.Wrap(apperr.Invalid, "COMPANY_CONFIG_INVALID", "resolve identity-bound company", err)
-	}
-	opts.loadedConfig = &updated
+	opts.loadedConfig = nil
 	opts.resolved = &updatedResolved
 	return updatedResolved, nil
 }

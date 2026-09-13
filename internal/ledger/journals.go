@@ -636,6 +636,13 @@ func (s *Service) AbandonJournal(ctx context.Context, journalID string) error {
 		return err
 	}
 	defer func(transaction interface{ Rollback() error }) { _ = transaction.Rollback() }(tx)
+	if err := s.abandonJournalTx(ctx, tx, journalID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Service) abandonJournalTx(ctx context.Context, tx *sql.Tx, journalID string) error {
 	result, err := tx.ExecContext(ctx, `UPDATE journal_entries SET status = 'ABANDONED', updated_at = ?
         WHERE id = ? AND status = 'DRAFT'`, storesqlite.UTCNow(), journalID)
 	if err != nil {
@@ -649,25 +656,38 @@ func (s *Service) AbandonJournal(ctx context.Context, journalID string) error {
 	}); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return nil
 }
 
 func (s *Service) ReverseJournal(ctx context.Context, originalID, postingDate, periodCode, description string) (Journal, error) {
-	if err := s.requireActor(); err != nil {
-		return Journal{}, err
-	}
-	if err := validateDate(postingDate, "posting date"); err != nil {
-		return Journal{}, err
-	}
-	original, err := s.GetJournal(ctx, originalID)
+	input, err := reversalInput(ctx, s.store.DB(), originalID, postingDate, periodCode, description)
 	if err != nil {
 		return Journal{}, err
 	}
+	return s.CreateJournal(ctx, input)
+}
+
+// ReversalInput uses the same accounting rules for previews and committed work.
+func (s *Service) ReversalInput(ctx context.Context, originalID, postingDate, periodCode, description string) (CreateJournalInput, error) {
+	input, err := reversalInput(ctx, s.store.DB(), originalID, postingDate, periodCode, description)
+	if err == nil {
+		_, err = existingReversal(ctx, s.store.DB(), input)
+	}
+	return input, err
+}
+func reversalInput(ctx context.Context, q queryer, originalID, postingDate, periodCode, description string) (CreateJournalInput, error) {
+	if err := validateDate(postingDate, "posting date"); err != nil {
+		return CreateJournalInput{}, err
+	}
+	original, err := getJournal(ctx, q, originalID)
+	if err != nil {
+		return CreateJournalInput{}, err
+	}
 	if original.Status != "POSTED" {
-		return Journal{}, apperr.New(apperr.Validation, "REVERSAL_INVALID", "only a posted journal can be reversed")
+		return CreateJournalInput{}, apperr.New(apperr.Validation, "REVERSAL_INVALID", "only a posted journal can be reversed")
 	}
 	if postingDate < original.PostingDate {
-		return Journal{}, apperr.New(apperr.Validation, "REVERSAL_DATE_INVALID", "reversal posting date cannot precede the original journal")
+		return CreateJournalInput{}, apperr.New(apperr.Validation, "REVERSAL_DATE_INVALID", "reversal posting date cannot precede the original journal")
 	}
 	if strings.TrimSpace(description) == "" {
 		description = "Reversal of " + original.BookCode + " journal " + fmt.Sprint(original.EntryNumber)
@@ -676,11 +696,11 @@ func (s *Service) ReverseJournal(ctx context.Context, originalID, postingDate, p
 	if original.Kind == "CLOSING" {
 		kind = "CLOSING_REVERSAL"
 		if postingDate != original.PostingDate || normalizeCode(periodCode) != original.PeriodCode {
-			return Journal{}, apperr.New(apperr.Validation, "CLOSING_REVERSAL_PERIOD_INVALID", "a closing journal must be reversed on its original year-end date and period after reopening that period")
+			return CreateJournalInput{}, apperr.New(apperr.Validation, "CLOSING_REVERSAL_PERIOD_INVALID", "a closing journal must be reversed on its original year-end date and period after reopening that period")
 		}
 	}
 	if original.Kind == "CLOSING_REVERSAL" {
-		return Journal{}, apperr.New(apperr.Validation, "REVERSAL_INVALID", "a closing reversal cannot itself be reversed")
+		return CreateJournalInput{}, apperr.New(apperr.Validation, "REVERSAL_INVALID", "a closing reversal cannot itself be reversed")
 	}
 	input := CreateJournalInput{
 		Book: original.BookCode, Kind: kind, PostingDate: postingDate, Period: periodCode, Description: description,
@@ -693,7 +713,8 @@ func (s *Service) ReverseJournal(ctx context.Context, originalID, postingDate, p
 			CreditCents: line.DebitCents, CounterpartyEntity: line.CounterpartyEntity, IntercompanyKey: line.IntercompanyKey,
 		})
 	}
-	return s.CreateJournal(ctx, input)
+
+	return input, nil
 }
 
 func (s *Service) ListJournals(ctx context.Context, bookCode, from, to, status string) ([]Journal, error) {
@@ -745,4 +766,118 @@ func (s *Service) ListJournals(ctx context.Context, bookCode, from, to, status s
 		journals = append(journals, journal)
 	}
 	return journals, rows.Err()
+}
+
+// GetJournalByNumber resolves a human-visible number within one book.
+func (s *Service) GetJournalByNumber(ctx context.Context, book string, number int64) (Journal, error) {
+	tx, err := s.store.DB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return Journal{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	return getJournalByNumber(ctx, tx, book, number)
+}
+func getJournalByNumber(ctx context.Context, q queryer, book string, number int64) (Journal, error) {
+	var id string
+	err := q.QueryRowContext(ctx, `SELECT je.id FROM journal_entries je JOIN books b ON b.id=je.book_id WHERE b.code=? AND je.entry_number=?`, normalizeCode(book), number).Scan(&id)
+	if err == sql.ErrNoRows {
+		return Journal{}, apperr.New(apperr.NotFound, "TRANSACTION_NOT_FOUND", fmt.Sprintf("transaction %d was not found", number))
+	}
+	if err != nil {
+		return Journal{}, storesqlite.MapError("read transaction", err)
+	}
+	return getJournal(ctx, q, id)
+}
+
+// ChangeJournalStatus re-resolves a company-visible number under the write lock.
+// A local draft edit may move a journal to another book before this operation.
+func (s *Service) ChangeJournalStatus(ctx context.Context, book string, number int64, action string, allowedKinds ...string) (Journal, error) {
+	if err := s.requireActor(); err != nil {
+		return Journal{}, err
+	}
+	target := ""
+	switch action {
+	case "post":
+		target = "POSTED"
+	case "abandon":
+		target = "ABANDONED"
+	default:
+		return Journal{}, apperr.New(apperr.Invalid, "TRANSACTION_ACTION_INVALID", "action must be post or abandon")
+	}
+	tx, err := s.store.Begin(ctx)
+	if err != nil {
+		return Journal{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	j, err := getJournalByNumber(ctx, tx, book, number)
+	if err != nil {
+		return Journal{}, err
+	}
+	if err = CheckJournalKind(j.Kind, allowedKinds); err != nil {
+		return Journal{}, err
+	}
+	if j.Status == target {
+		return j, nil
+	}
+	if j.Status != "DRAFT" {
+		return Journal{}, apperr.New(apperr.Conflict, "JOURNAL_NOT_DRAFT", "only a draft transaction can be posted or abandoned")
+	}
+	if action == "post" {
+		_, err = s.postJournalTx(ctx, tx, j.ID)
+	} else {
+		err = s.abandonJournalTx(ctx, tx, j.ID)
+	}
+	if err != nil {
+		return Journal{}, err
+	}
+	j, err = getJournal(ctx, tx, j.ID)
+	if err != nil {
+		return Journal{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return Journal{}, storesqlite.MapError("commit transaction status", err)
+	}
+	return j, nil
+}
+
+// BookTransactions returns a consistent scoped page, including draft lines.
+func (s *Service) BookTransactions(ctx context.Context, book string, after int64, limit int) ([]Journal, error) {
+	if after < 0 || limit < 1 || limit > 200 {
+		return nil, apperr.New(apperr.Invalid, "PAGE_INVALID", "after must be nonnegative and limit between 1 and 200")
+	}
+	tx, err := s.store.DB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	rows, err := tx.QueryContext(ctx, `SELECT j.id FROM journal_entries j JOIN books b ON b.id=j.book_id WHERE b.code=? AND j.entry_number>? ORDER BY j.entry_number LIMIT ?`, normalizeCode(book), after, limit)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	closeErr := rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	result := []Journal{}
+	for _, id := range ids {
+		j, err := getJournal(ctx, tx, id)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, j)
+	}
+	return result, nil
 }

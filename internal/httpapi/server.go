@@ -199,7 +199,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet && r.URL.Path == "/v1/capabilities" {
-		writeData(w, http.StatusOK, map[string]any{"api": "books.api/v1", "formats": statementFormatNames(), "format_profiles": banking.Capabilities(), "parser": banking.StatementParserVersion, "supported_parsers": []string{banking.ParserVersion, banking.StatementParserVersion}, "sgml_versions": []string{"102", "103", "160"}, "xml": "OFX 2 bank/card subset", "currency": money.SupportedCurrencies(), "single_currency_per_entity": true, "currency_conversion": false, "max_upload_bytes": banking.MaxBytes, "durable_imports": true, "atomic_apply": true, "offline_posting": false, "change_feed": false, "posting_contra_types": []string{"REVENUE", "EXPENSE", "EQUITY"}})
+		writeData(w, http.StatusOK, map[string]any{"api": "books.api/v1", "formats": statementFormatNames(), "format_profiles": banking.Capabilities(), "parser": banking.StatementParserVersion, "supported_parsers": []string{banking.ParserVersion, banking.StatementParserVersion}, "sgml_versions": []string{"102", "103", "160"}, "xml": "OFX 2 bank/card subset", "currency": money.SupportedCurrencies(), "single_currency_per_entity": true, "currency_conversion": false, "max_upload_bytes": banking.MaxBytes, "durable_imports": true, "atomic_apply": true, "workflows": []string{"transactions", "corrections", "reconciliation", "period-close", "year-close", "accounts", "periods", "defaults"}, "local_administration": []string{"company-registry", "backup-restore", "quickbooks", "retained-lifecycle-evidence", "consolidation"}, "offline_posting": false, "change_feed": false, "posting_contra_types": []string{"REVENUE", "EXPENSE", "EQUITY"}})
 		return
 	}
 	if r.Method == http.MethodGet && r.URL.Path == "/v1/companies" {
@@ -239,7 +239,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	app = app.AsActor(p.ID)
 	isMatches := len(parts) == 6 && parts[3] == "imports" && parts[5] == "matches"
-	if r.Method == http.MethodPost && !isMatches && !granted(p, company, "import") {
+	isImport := parts[3] == "imports" || parts[3] == "import-plans"
+	if r.Method == http.MethodPost && isImport && !isMatches && !granted(p, company, "import") {
 		writeFailure(w, http.StatusForbidden, "PERMISSION_DENIED", "import permission is required")
 		return
 	}
@@ -248,6 +249,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, company string, app *application.Service, path []string) error {
+	if handled, err := serveWorkflow(w, r, p, company, app, path); handled {
+		return err
+	}
 	ctx := r.Context()
 	resource := strings.Join(path, "/")
 	if r.Method == http.MethodGet {

@@ -2,13 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"github.com/dispatchlabs-ai/books/internal/application"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
-	booksconfig "github.com/dispatchlabs-ai/books/internal/config"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
 
@@ -102,7 +101,7 @@ func newRestoreCommand(opts *options) *cobra.Command {
 			if source == filepath.Clean(resolved.Database) {
 				return apperr.New(apperr.Invalid, "RESTORE_SOURCE_IS_TARGET", "restore source must be a separate backup file")
 			}
-			resolved, validation, expected, backfillIdentity, err := validateCompanyRestore(cmd, resolved, source)
+			resolved, validation, expected, backfillIdentity, err := application.ValidateCompanyRestore(cmd.Context(), resolved, source)
 			if err != nil {
 				return err
 			}
@@ -144,30 +143,6 @@ func newRestoreCommand(opts *options) *cobra.Command {
 	command.Flags().StringVar(&source, "from", "", "backup SQLite file")
 	command.Flags().StringVar(&confirmation, "confirm", "", "selected company key required to authorize replacement")
 	return command
-}
-
-func validateCompanyRestore(cmd *cobra.Command, resolved booksconfig.ResolvedCompany, source string) (
-	booksconfig.ResolvedCompany, storesqlite.RestoreValidation, storesqlite.RestoreExpectation, bool, error,
-) {
-	expected := storesqlite.RestoreExpectation{
-		DatabaseUUID: resolved.Company.DatabaseUUID,
-		EntityCode:   resolved.Company.EntityCode,
-		BookCode:     resolved.Company.BookCode,
-	}
-	validation, err := storesqlite.ValidateRestore(cmd.Context(), resolved.Database, source, expected)
-	if err != nil {
-		return booksconfig.ResolvedCompany{}, storesqlite.RestoreValidation{}, storesqlite.RestoreExpectation{}, false, err
-	}
-	backfillIdentity := false
-	if expected.DatabaseUUID == "" {
-		if validation.PreviousTargetDatabaseUUID == "" {
-			return booksconfig.ResolvedCompany{}, storesqlite.RestoreValidation{}, storesqlite.RestoreExpectation{}, false,
-				apperr.New(apperr.Conflict, "RESTORE_DATABASE_IDENTITY_MISSING", "books.toml has no database UUID for this company; restore cannot safely adopt a backup while the registered database is missing")
-		}
-		expected.DatabaseUUID = validation.PreviousTargetDatabaseUUID
-		backfillIdentity = true
-	}
-	return resolved, validation, expected, backfillIdentity, nil
 }
 
 func newPeriodsCommand(opts *options) *cobra.Command {
@@ -212,47 +187,16 @@ func newAddFiscalYearCommand(opts *options) *cobra.Command {
 			if err != nil || year < 1900 {
 				return apperr.New(apperr.Invalid, "FISCAL_YEAR_INVALID", "YEAR must be a four-digit fiscal year")
 			}
-			resolved, err := opts.resolveCompany()
+			app, err := openWorkflow(cmd, opts, true)
 			if err != nil {
 				return err
 			}
-			endMonth := time.Month(resolved.Company.FiscalYearEnd)
-			startMonth := endMonth%12 + 1
-			startYear := year
-			if startMonth != time.January {
-				startYear--
+			defer func() { _ = app.Close() }()
+			data, err := app.AddFiscalYear(cmd.Context(), year, opts.dryRun)
+			if err != nil {
+				return err
 			}
-			planned := monthlyPeriods(time.Date(startYear, startMonth, 1, 0, 0, 0, 0, time.Local), endMonth)
-			var periodsCreated int
-			if opts.dryRun {
-				store, err := openRead(cmd, opts)
-				if err != nil {
-					return err
-				}
-				periodsCreated, err = ledger.NewService(store, opts.actor).PreviewMissingPeriods(cmd.Context(), planned)
-				closeErr := store.Close()
-				if err != nil {
-					return err
-				}
-				if closeErr != nil {
-					return closeErr
-				}
-			} else {
-				store, err := openWrite(cmd, opts)
-				if err != nil {
-					return err
-				}
-				periodsCreated, err = ledger.NewService(store, opts.actor).CreateMissingPeriods(cmd.Context(), planned)
-				closeErr := store.Close()
-				if err != nil {
-					return err
-				}
-				if closeErr != nil {
-					return closeErr
-				}
-			}
-			data := map[string]any{"company": resolved.Key, "fiscal_year": year, "periods_created": periodsCreated, "dry_run": opts.dryRun}
-			return writeResult(cmd, opts.format, data, []string{"COMPANY", "FISCAL YEAR", "PERIODS CREATED", "DRY RUN"}, [][]string{{resolved.Key, strconv.Itoa(year), strconv.Itoa(periodsCreated), fmt.Sprint(opts.dryRun)}})
+			return writeResult(cmd, opts.format, data, []string{"COMPANY", "FISCAL YEAR", "PERIODS CREATED", "DRY RUN"}, [][]string{{data.Company, strconv.Itoa(year), strconv.Itoa(data.PeriodsCreated), fmt.Sprint(data.DryRun)}})
 		},
 	}
 }
@@ -262,52 +206,19 @@ func newReopenCommand(opts *options) *cobra.Command {
 	command := &cobra.Command{
 		Use: "reopen PERIOD", Short: "Reopen a closed period with an audit reason", Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			reason = strings.TrimSpace(reason)
-			if reason == "" {
-				return apperr.New(apperr.Invalid, "REOPEN_REASON_REQUIRED", "--reason is required")
-			}
-			resolved, err := opts.resolveCompany()
+			app, err := openWorkflow(cmd, opts, true)
 			if err != nil {
 				return err
 			}
-			periodCode := strings.ToUpper(strings.TrimSpace(args[0]))
+			defer func() { _ = app.Close() }()
+			data, err := app.ReopenPeriod(cmd.Context(), args[0], reason, opts.dryRun)
+			if err != nil {
+				return err
+			}
 			if opts.dryRun {
-				store, err := openRead(cmd, opts)
-				if err != nil {
-					return err
-				}
-				periods, err := ledger.NewService(store, opts.actor).ListPeriods(cmd.Context(), resolved.Company.BookCode)
-				_ = store.Close()
-				if err != nil {
-					return err
-				}
-				found := false
-				for _, period := range periods {
-					if period.Code != periodCode {
-						continue
-					}
-					found = true
-					if period.BookStatus != "CLOSED" {
-						return apperr.New(apperr.Conflict, "PERIOD_NOT_CLOSED", "book period is not closed")
-					}
-					break
-				}
-				if !found {
-					return apperr.New(apperr.NotFound, "BOOK_PERIOD_NOT_FOUND", "period is not configured for this book")
-				}
-				data := map[string]any{"company": resolved.Key, "period": periodCode, "reason": reason, "status": "OPEN (PREVIEW)", "dry_run": true}
-				return writeResult(cmd, opts.format, data, []string{"COMPANY", "PERIOD", "STATUS", "REASON", "DRY RUN"}, [][]string{{resolved.Key, periodCode, "OPEN (PREVIEW)", reason, "true"}})
+				return writeResult(cmd, opts.format, data, []string{"COMPANY", "PERIOD", "STATUS", "REASON", "DRY RUN"}, [][]string{{data.Company, data.Period, data.Status, data.Reason, "true"}})
 			}
-			store, err := openWrite(cmd, opts)
-			if err != nil {
-				return err
-			}
-			defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-			if err := ledger.NewService(store, opts.actor).ReopenPeriod(cmd.Context(), resolved.Company.BookCode, periodCode, reason); err != nil {
-				return err
-			}
-			data := map[string]any{"company": resolved.Key, "period": periodCode, "reason": reason, "status": "OPEN"}
-			return writeResult(cmd, opts.format, data, []string{"COMPANY", "PERIOD", "STATUS", "REASON"}, [][]string{{resolved.Key, periodCode, "OPEN", reason}})
+			return writeResult(cmd, opts.format, data, []string{"COMPANY", "PERIOD", "STATUS", "REASON"}, [][]string{{data.Company, data.Period, data.Status, data.Reason}})
 		},
 	}
 	command.Flags().StringVar(&reason, "reason", "", "required audit reason")

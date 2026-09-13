@@ -3,11 +3,11 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v3.openapi.json), and the small
+[OpenAPI](schemas/books-api-v4.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
-The new OpenAPI artifact is an additive contract snapshot (1.2.0); routes and
-response envelopes remain v1. The [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
+The new OpenAPI artifact is an additive contract snapshot (1.3.0); routes and
+response envelopes remain v1. The [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
 [initial snapshot](schemas/books-api-v1.openapi.json) remain unchanged.
 
 ## Run locally
@@ -34,12 +34,12 @@ token = secrets.token_urlsafe(32)
 for name, data in {
     'client-token': token,
     'server.json': json.dumps({
-        'schema': 'books.server/v1', 'listen': '127.0.0.1:8484',
+        'schema': 'books.server/v2', 'listen': '127.0.0.1:8484',
         'allowed_origins': ['http://localhost:3000'],
         'principals': [{
             'id': 'demo-client',
             'token_sha256': hashlib.sha256(token.encode()).hexdigest(),
-            'companies': {'example': ['read', 'import', 'post']}
+            'companies': {'example': ['read', 'import', 'post', 'manage']}
         }]
     }, indent=2)
 }.items():
@@ -67,20 +67,81 @@ shared posting token in distributed JavaScript or an Electron renderer bundle.
 
 ## Permissions and scopes
 
-`read` permits company accounts, source files, jobs, plans, transactions, and
-reports. `import` additionally permits uploads, previews, and source-only
-application. `post` additionally permits posting previews and their application.
-Every company grant requires `read`; `post` also requires `import`. The apply
-endpoint rechecks the current principal's posting permission even when another
-principal created the plan. Principals supply the audit actor; JSON cannot
-specify an actor, database path, or another target book.
+Server configuration `books.server/v2` supports these company grants:
 
+| Grant | Operations |
+| --- | --- |
+| `read` | Queries, reports, and reconciliation/close plan generation |
+| `import` | Statement upload, preview, and source-only import apply |
+| `post` | Routine posting, journal status/correction/reversal, reconciliation apply; posting imported journals also requires `import` |
+| `manage` | Chart accounts, defaults, fiscal periods, reopen and period-close apply |
+
+Every grant set includes `read`. Applying a year-end close or changing a closing
+journal requires both `manage` and `post`. In v2, `post` can be granted without
+`import`. Existing `books.server/v1` configurations keep their original rule
+that `post` requires `import`, and do not accept `manage`.
+
+Principals supply the audit actor; JSON cannot specify an actor or database path.
 `GET /v1/companies` lists only granted registry keys. All company routes use
-`/v1/companies/{company}`. An unavailable company, job, source, or plan returns
-404 without exposing another company's content. Company registry entries must
-bind the database UUID, active actual book, and entity; startup fails if any
-configured binding is invalid. Administrative setup, migrations, chart changes,
-correction, and reconciliation remain CLI workflows in this milestone.
+`/v1/companies/{company}`. An unavailable company or foreign journal,
+reconciliation, job, source, or plan returns 404. Scope remains enforced when
+companies share one SQLite file. Company registry entries bind the database UUID,
+active actual book, and entity; startup fails if a binding is invalid.
+
+## Shared accounting workflows
+
+The CLI calls `internal/application` in-process. HTTP calls the same company-bound
+workflows. HTTP uses explicit ISO dates; CLI conveniences such as `today` and
+transaction-number ranges are parsed by the CLI. Requests use JSON content type
+and a 2 MiB limit. Unknown/duplicate fields are rejected. Decimal amounts are
+strings, for example `"12.34"`; every int64 value, including transaction numbers
+and plan minor-unit amounts, is a canonical decimal string.
+
+| Route suffix | Method and body |
+| --- | --- |
+| `transactions/spend`, `receive`, `transfer` | POST amount, date, account/from/to selectors; optional description, reference, draft, dry_run |
+| `journals` | POST journal with posting_date, description and decimal debit/credit lines; optional draft, dry_run |
+| `transactions/{number}` | GET journal |
+| `transactions/{number}/post`, `/abandon` | POST optional dry_run |
+| `transactions/{number}/reverse`, `/undo` | POST date; optional description, draft, dry_run |
+| `transactions/{number}/correct` | POST replacement journal and reason; optional draft, dry_run |
+| `accounts` | POST kind, name, explicit code and active_from; optional statement-control/default settings |
+| `defaults` | GET, or POST key (payment-account/deposit-account/retained-earnings) and account |
+| `periods` | GET, or POST fiscal_year and optional dry_run |
+| `periods/{period}/reopen` | POST reason and optional dry_run |
+| `dashboard` | GET company counts and open work |
+| `reconciliations` | GET; optional account/status/from/to filters |
+| `reconciliations/{id}` | GET |
+| `reconciliations/{id}/reopen` | POST reason |
+| `reconciliations/plan` | POST statement_account, through, ending; optional start, beginning, clear_all or cleared number strings, target_reconciliation_id |
+| `reconciliations/apply` | POST plan and optional dry_run |
+| `close/plan` | POST period |
+| `close/apply` | POST plan and optional dry_run |
+| `year-close/plan` | POST fiscal_year; optional retained_earnings selector |
+| `year-close/apply` | POST plan and optional dry_run |
+
+New routine transactions and journals require `Idempotency-Key`. Repeating the
+same key and content returns the existing journal; changed content conflicts.
+The journal route assigns manual source identity and accepts standard journals.
+Correction identifies a retry by original transaction, replacement and reason;
+its reversal and replacement commit together. Reversals identify the original
+and require matching date/period/description on retry. Status changes converge
+on the requested status. Account codes identify creations; an existing code
+returns `ACCOUNT_EXISTS` and can be inspected before retrying another operation.
+Defaults are assignments and fiscal-year setup reuses existing definitions.
+
+Display the complete plan before apply and send it back unchanged, including
+null arrays and decimal-string integers. Plans retain their digest and bind
+company, currency and relevant control state. Apply rejects stale evidence
+before committing. Identical successful reconciliation and close plans can be
+replayed. Reconciliation plan requests may return a blocked plan with HTTP 200: inspect `ready`
+and `blockers` before offering apply. Dry runs do not reserve idempotency keys.
+
+Global registry creation, database migration/backup/restore, QuickBooks imports
+from local paths, and precoverage evidence files are shared local administration
+services. They are callable in-process by local clients and the CLI. They are
+not company HTTP routes: database-wide administration and arbitrary filesystem
+paths need a separate administrative trust boundary.
 
 ## Upload, inspect, preview, apply
 

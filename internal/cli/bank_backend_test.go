@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -48,6 +49,14 @@ func TestBankBackendPermissionsAndRestart(t *testing.T) {
 	}
 	if _, err = service.CreateStatementAccount(context.Background(), ledger.CreateStatementAccountInput{Code: "OTHER-CASH", Entity: "OTHER", Book: "OTHER", GLAccount: "1000", Name: "Other checking", Kind: "BANK", Currency: "USD", ReconciliationRequiredFrom: "2026-01-01"}); err != nil {
 		_ = store.Close()
+		t.Fatal(err)
+	}
+
+	if err = service.ConfigureBookAccount(context.Background(), "OTHER", "4000", "2026-01-01", "", true); err != nil {
+		t.Fatal(err)
+	}
+	foreign, err := service.CreateAndPostJournal(context.Background(), ledger.CreateJournalInput{Book: "OTHER", PostingDate: "2026-01-15", Period: "2026-01", Description: "Other company sale", Lines: []ledger.JournalLineInput{{Account: "1000", DebitCents: 100}, {Account: "4000", CreditCents: 100}}})
+	if err != nil {
 		t.Fatal(err)
 	}
 	if err = store.Close(); err != nil {
@@ -113,6 +122,13 @@ func TestBankBackendPermissionsAndRestart(t *testing.T) {
 	base := "/v1/companies/acme"
 	request("", "GET", base+"/accounts", "", "", "", 401)
 	request("other", "GET", base+"/accounts", "", "", "", 404)
+
+	foreignPath := base + "/transactions/" + strconv.FormatInt(foreign.EntryNumber, 10)
+	request("poster", "GET", foreignPath, "", "", "", 404)
+	for _, action := range []string{"post", "abandon", "reverse", "undo", "correct"} {
+		request("poster", "POST", foreignPath+"/"+action, `{}`, "", "", 404)
+	}
+	request("poster", "POST", base+"/reconciliations/plan", `{"statement_account":"OTHER-CASH","through":"2026-01-31","ending":"1.00","clear_all":true}`, "", "", 404)
 	request("reader", "POST", base+"/imports?name=synthetic.ofx", syntheticOFX, "denied", "", 403)
 	job := request("importer", "POST", base+"/imports?name=synthetic.ofx", syntheticOFX, "upload", "", 202)
 	id := job["id"].(string)

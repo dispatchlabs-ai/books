@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
@@ -346,61 +345,15 @@ func newTransactionCommand(opts *options) *cobra.Command {
 				return err
 			}
 			defer func(closer interface{ Close() error }) { _ = closer.Close() }(store)
-			query := `SELECT st.id, sa.code, sa.currency, si.external_id, st.posted_date, st.description, st.amount_cents,
-	                COALESCE(sr.disposition, ''), COALESCE(sr.exclusion_reason, ''),
-	                COALESCE(SUM(ri.allocated_amount_cents), 0), COUNT(ri.id) FROM statement_transactions st
-	                JOIN statement_accounts sa ON sa.id = st.statement_account_id
-	                JOIN source_identities si ON si.id = st.source_identity_id
-	                LEFT JOIN source_records sr ON sr.id = st.source_record_id
-                LEFT JOIN reconciliation_allocations ri ON ri.statement_transaction_id = st.id WHERE 1=1`
-			var queryArgs []any
-			if account != "" {
-				query += " AND sa.code = ?"
-				queryArgs = append(queryArgs, strings.ToUpper(account))
-			}
-			if from != "" {
-				query += " AND st.posted_date >= ?"
-				queryArgs = append(queryArgs, from)
-			}
-			if to != "" {
-				query += " AND st.posted_date <= ?"
-				queryArgs = append(queryArgs, to)
-			}
-			query += ` GROUP BY st.id, sa.code, si.external_id, st.posted_date, st.description, st.amount_cents, sr.disposition, sr.exclusion_reason`
-			if unallocated {
-				query += " HAVING COALESCE(SUM(ri.allocated_amount_cents), 0) <> st.amount_cents"
-			}
-			query += " ORDER BY st.posted_date, sa.code, si.external_id"
-			rowsDB, err := store.DB().QueryContext(cmd.Context(), query, queryArgs...)
+			data, err := ledger.NewService(store, opts.actor).ListStatementTransactions(cmd.Context(), account, from, to, unallocated)
 			if err != nil {
 				return err
 			}
-			defer func(closer interface{ Close() error }) { _ = closer.Close() }(rowsDB)
-			type item struct {
-				Currency         money.Currency `json:"currency"`
-				ID               string         `json:"id"`
-				StatementAccount string         `json:"statement_account"`
-				ExternalID       string         `json:"external_id"`
-				PostedDate       string         `json:"posted_date"`
-				Description      string         `json:"description"`
-				AmountCents      int64          `json:"amount_cents"`
-				Disposition      string         `json:"disposition"`
-				ExclusionReason  string         `json:"exclusion_reason,omitempty"`
-				AllocatedCents   int64          `json:"allocated_cents"`
-				RemainingCents   int64          `json:"remaining_cents"`
-				AllocationCount  int            `json:"allocation_count"`
-			}
-			var data []item
 			var rows [][]string
-			for rowsDB.Next() {
-				var value item
-				if err := rowsDB.Scan(&value.ID, &value.StatementAccount, &value.Currency, &value.ExternalID, &value.PostedDate, &value.Description, &value.AmountCents, &value.Disposition, &value.ExclusionReason, &value.AllocatedCents, &value.AllocationCount); err != nil {
-					return err
-				}
-				value.RemainingCents = value.AmountCents - value.AllocatedCents
-				data = append(data, value)
+			for _, value := range data {
 				rows = append(rows, []string{value.PostedDate, value.StatementAccount, value.Description, value.Currency.Format(value.AmountCents), value.Disposition, value.Currency.Format(value.AllocatedCents), value.Currency.Format(value.RemainingCents), fmt.Sprint(value.AllocationCount), value.ExternalID, value.ID})
 			}
+
 			return writeResult(cmd, opts.format, data, []string{"DATE", "ACCOUNT", "DESCRIPTION", "STATEMENT AMOUNT", "DISPOSITION", "ALLOCATED", "REMAINING", "ALLOCATIONS", "EXTERNAL ID", "ID"}, rows)
 		},
 	}
