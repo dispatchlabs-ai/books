@@ -19,6 +19,7 @@ import (
 	"github.com/dispatchlabs-ai/books/internal/banking"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/money"
+	"github.com/dispatchlabs-ai/books/internal/operations"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
 )
 
@@ -273,9 +274,9 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 		case "transactions":
 			return serveTransactions(w, r, app)
 		case "reports/general-ledger":
-			return serveGeneralLedger(w, r, app)
+			return serveGeneralLedger(w, r, app, operations.CompanyAccess(p.ID, company, p.Companies[company]))
 		case "reports/trial-balance", "reports/balance-sheet", "reports/profit-loss":
-			return serveCompanyReport(w, r, app, path[1])
+			return serveCompanyReport(w, r, app, operations.CompanyAccess(p.ID, company, p.Companies[company]), path[1])
 		}
 		if len(path) == 2 && path[0] == "imports" {
 			v, e := app.Job(ctx, path[1])

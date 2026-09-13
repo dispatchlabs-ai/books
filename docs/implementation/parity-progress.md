@@ -21,8 +21,8 @@ implemented and no MCP server ships yet.** This is the durable tracker for the
 - [x] Commit and push the verified milestone (see this file’s Git history).
 
 The inventory currently contains 106 operation records. It inventories bindings;
-it is **not yet typed dispatch, shared authorization, or evidence of complete
-argument/scope parity**. Existing company-scoped report routes do not cover
+the inventory itself is **not executable dispatch, authorization, or evidence of
+complete argument/scope parity**. Existing company-scoped report routes do not cover
 consolidated reporting. Every MCP binding is still missing. `gap` fields keep
 those limits explicit; no operation is marked fully complete merely because its
 name appears in the inventory.
@@ -40,14 +40,32 @@ name appears in the inventory.
 - [x] Complete independent review, macOS gate and Linux validation.
 - [x] Commit and push this verified slice (see this file’s Git history).
 
-This is a typed report slice, not a complete typed operation dispatcher or shared
-permission catalog. Consolidated API access and all MCP tools remain missing.
+Consolidated API access and all MCP tools remain missing.
+
+## Milestone 3: executable company report contracts — complete
+
+- [x] Bind the four company report operation IDs to typed input/output contracts,
+  version, company scope, read grant and read effect.
+- [x] Couple shared grant validation to application execution; zero access denies,
+  authenticated grants are copied, and local owner access is explicit.
+- [x] Route company CLI and HTTP reports through the executable contracts.
+- [x] Test backend denials without an HTTP handler, local/scoped equivalence,
+  grant snapshot isolation, cancellation and inventory consistency.
+- [x] Complete canonical macOS checks, Linux validation and independent review.
+- [x] Commit and push the verified milestone (see this file’s Git history).
+
+This first executable subset lives in `internal/operations/reports.go`. The JSON
+inventory tracks bindings and gaps; it does not grant authority. Non-report
+operations, consolidated/direct-database CLI paths and legacy application methods
+have not yet moved behind shared policy. JSON Schema generation and runtime
+binding/parameter audits remain pending. Trusted constructors are adapter APIs,
+not client input; HTTP constructs company access only after authentication.
 
 ## Remaining milestones
 
 | Work | State | Completion evidence required |
 | --- | --- | --- |
-| Typed backend operation descriptors and shared authorization | Not started | Typed schemas, scope/grants, effects and adapter bindings; no policy bypasses |
+| Typed backend operation descriptors and shared authorization | Four company reports implemented; remainder pending | Typed schemas, scope/grants, effects and adapter bindings; no policy bypasses |
 | Remaining workflow extraction from CLI | Not started | Application-owned orchestration with preserved CLI behavior |
 | Detailed journals, account/evidence/lifecycle and reconciliation API gaps | Not started | Shared service routes, OpenAPI and cross-interface tests |
 | Database topology, ownership and consolidation API | Not started | Whole-scope authorization and complete report equivalence |
@@ -57,8 +75,8 @@ permission catalog. Consolidated API access and all MCP tools remain missing.
 | Complete CLI/API/MCP parity | Not started | Every catalog operation and argument covered; no unexplained gaps |
 | Fresh-agent and independent frontend acceptance | Not started | Named client/platform journeys and independent security review |
 
-Next implementation slice: expand the inventory into typed operation and scope
-contracts, then complete the remaining read/report and evidence operations before
+Next implementation slice: extend executable operation and scope contracts to
+remaining read and evidence operations, then complete their API gaps before
 introducing database administration grants. Preserve all interfaces during the
 extraction. MCP must use those same contracts rather than gaining a separate
 implementation of accounting behavior.
@@ -96,6 +114,18 @@ The catalog audit currently compares implemented CLI names and documented HTTP
 routes. It does not prove router registration or full parameter coverage for every
 historical endpoint. Runtime route/schema conformance and the final zero-gap gate
 remain explicit work, alongside typed backend dispatch.
+
+Milestone 3 validation (September 13): canonical macOS checks passed, including
+unit/race tests, vet, lint, vulnerability scanning and synthetic CLI smoke. Linux
+CLI/application/HTTP/operations tests passed with Go 1.26.6. Independent review
+identified a blank CLI actor compatibility edge; the CLI now supplies its default
+identity for those read-only calls, and all four reports have empty/whitespace
+actor equivalence regressions. Follow-up review found no further issues.
+`TestReportBackendAuthorization` tests denials directly against shared execution,
+and `TestTypedReportCatalog` checks typed metadata against inventory bindings.
+Local documentation links, JSON and diff checks passed. Optional deployment-name
+denylist was unset. Existing application methods remain callable internally;
+this slice does not claim a universal backend policy boundary.
 
 ## How to maintain this tracker
 

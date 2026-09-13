@@ -317,3 +317,10 @@ company CLI paths. Raw-database and consolidated CLI reports remain supported;
 consolidated HTTP reporting is still a separate tracked gap. Existing API money
 fields retain exact minor-unit strings, including values beyond JavaScript's
 safe integer range; do not convert them to JavaScript numbers.
+
+
+Company report execution now passes through backend operation descriptors with a
+company `read` grant check. HTTP supplies authenticated principal access, and the
+local CLI explicitly supplies local owner access. This shared policy currently
+covers general ledger, trial balance, balance sheet and profit/loss only; other
+workflows retain their existing checks while the backend rollout continues.

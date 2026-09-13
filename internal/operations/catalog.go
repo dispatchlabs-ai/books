@@ -1,5 +1,5 @@
-// Package operations records the backend's interface coverage. The inventory is
-// the first step toward typed operation dispatch, not an authorization registry.
+// Package operations records interface coverage and implements typed, authorized
+// company report operations. The remaining inventory is not executable policy.
 package operations
 
 import (

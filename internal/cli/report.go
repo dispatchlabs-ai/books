@@ -8,6 +8,7 @@ import (
 
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/money"
+	"github.com/dispatchlabs-ai/books/internal/operations"
 	"github.com/dispatchlabs-ai/books/internal/report"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
 
@@ -57,7 +58,7 @@ func newGLCommand(opts *options) *cobra.Command {
 				return err
 			}
 			if app != nil {
-				result, err = app.GeneralLedger(cmd.Context(), application.GeneralLedgerRequest{From: from, To: to, Account: account, IncludeZero: zero})
+				result, err = operations.GeneralLedger().Execute(cmd.Context(), app, localReportAccess(opts), application.GeneralLedgerRequest{From: from, To: to, Account: account, IncludeZero: zero})
 			}
 
 			if app == nil {
@@ -129,7 +130,7 @@ func newTBCommand(opts *options) *cobra.Command {
 			}
 			var result report.TrialBalanceReport
 			if app != nil {
-				result, err = app.TrialBalanceWithOptions(cmd.Context(), application.AsOfReportRequest{AsOf: asOf, IncludeZero: zero})
+				result, err = operations.TrialBalance().Execute(cmd.Context(), app, localReportAccess(opts), application.AsOfReportRequest{AsOf: asOf, IncludeZero: zero})
 			} else {
 				result, err = report.NewService(store).TrialBalance(cmd.Context(), report.TrialBalanceInput{Scope: scopeFrom(entity, group), AsOfDate: asOf, IncludeZero: zero})
 			}
@@ -170,7 +171,7 @@ func newPLCommand(opts *options) *cobra.Command {
 			}
 			var result report.ProfitLossReport
 			if app != nil {
-				result, err = app.ProfitLossWithOptions(cmd.Context(), application.RangeReportRequest{From: from, To: to, IncludeZero: zero})
+				result, err = operations.ProfitLoss().Execute(cmd.Context(), app, localReportAccess(opts), application.RangeReportRequest{From: from, To: to, IncludeZero: zero})
 			} else {
 				result, err = report.NewService(store).ProfitLoss(cmd.Context(), report.ProfitLossInput{Scope: scopeFrom(entity, group), FromDate: from, ToDate: to, IncludeZero: zero})
 			}
@@ -218,7 +219,7 @@ func newBSCommand(opts *options) *cobra.Command {
 			}
 			var result report.BalanceSheetReport
 			if app != nil {
-				result, err = app.BalanceSheetWithOptions(cmd.Context(), application.AsOfReportRequest{AsOf: asOf, IncludeZero: zero})
+				result, err = operations.BalanceSheet().Execute(cmd.Context(), app, localReportAccess(opts), application.AsOfReportRequest{AsOf: asOf, IncludeZero: zero})
 			} else {
 				result, err = report.NewService(store).BalanceSheet(cmd.Context(), report.BalanceSheetInput{Scope: scopeFrom(entity, group), AsOfDate: asOf, IncludeZero: zero})
 			}
@@ -332,4 +333,14 @@ func companyReportApplication(cmd *cobra.Command, opts *options, store *storesql
 		return nil, nil
 	}
 	return application.Bind(cmd.Context(), store, resolved, opts.actor)
+}
+
+// Read-only reports historically accepted a blank actor override. Use the CLI's
+// default identity at the policy boundary without changing report behavior.
+func localReportAccess(opts *options) operations.Access {
+	actor := opts.actor
+	if strings.TrimSpace(actor) == "" {
+		actor = defaultActor()
+	}
+	return operations.TrustedLocalAccess(actor)
 }

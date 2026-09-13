@@ -11,6 +11,7 @@ import (
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
+	"github.com/dispatchlabs-ai/books/internal/operations"
 )
 
 type envelope struct {
@@ -170,7 +171,7 @@ func encodeAPIValue(v reflect.Value, preserveNil bool) any {
 
 // Company scope is bound before this handler; do not accept alternate entity or
 // group selectors that could turn a company credential into database access.
-func serveGeneralLedger(w http.ResponseWriter, r *http.Request, app *application.Service) error {
+func serveGeneralLedger(w http.ResponseWriter, r *http.Request, app *application.Service, access operations.Access) error {
 	q := r.URL.Query()
 	for key, values := range q {
 		switch key {
@@ -189,7 +190,7 @@ func serveGeneralLedger(w http.ResponseWriter, r *http.Request, app *application
 		}
 		zero = values[0] == "true"
 	}
-	result, err := app.GeneralLedger(r.Context(), application.GeneralLedgerRequest{
+	result, err := operations.GeneralLedger().Execute(r.Context(), app, access, application.GeneralLedgerRequest{
 		From: q.Get("from"), To: q.Get("to"), Account: q.Get("account"), IncludeZero: zero,
 	})
 	if err != nil {
@@ -199,7 +200,7 @@ func serveGeneralLedger(w http.ResponseWriter, r *http.Request, app *application
 	return nil
 }
 
-func serveCompanyReport(w http.ResponseWriter, r *http.Request, app *application.Service, kind string) error {
+func serveCompanyReport(w http.ResponseWriter, r *http.Request, app *application.Service, access operations.Access, kind string) error {
 	q := r.URL.Query()
 	zero := false
 	if values, ok := q["include_zero"]; ok {
@@ -212,11 +213,11 @@ func serveCompanyReport(w http.ResponseWriter, r *http.Request, app *application
 	var err error
 	switch kind {
 	case "trial-balance":
-		result, err = app.TrialBalanceWithOptions(r.Context(), application.AsOfReportRequest{AsOf: q.Get("as_of"), IncludeZero: zero})
+		result, err = operations.TrialBalance().Execute(r.Context(), app, access, application.AsOfReportRequest{AsOf: q.Get("as_of"), IncludeZero: zero})
 	case "balance-sheet":
-		result, err = app.BalanceSheetWithOptions(r.Context(), application.AsOfReportRequest{AsOf: q.Get("as_of"), IncludeZero: zero})
+		result, err = operations.BalanceSheet().Execute(r.Context(), app, access, application.AsOfReportRequest{AsOf: q.Get("as_of"), IncludeZero: zero})
 	case "profit-loss":
-		result, err = app.ProfitLossWithOptions(r.Context(), application.RangeReportRequest{From: q.Get("from"), To: q.Get("to"), IncludeZero: zero})
+		result, err = operations.ProfitLoss().Execute(r.Context(), app, access, application.RangeReportRequest{From: q.Get("from"), To: q.Get("to"), IncludeZero: zero})
 	default:
 		return apperr.New(apperr.NotFound, "REPORT_NOT_FOUND", "report is not available")
 	}

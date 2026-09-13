@@ -859,7 +859,7 @@
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP date and include-zero options share typed application requests. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
   },
   {
     "id": "report_general_ledger",
@@ -874,7 +874,7 @@
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
   },
   {
     "id": "report_profit_loss",
@@ -889,7 +889,7 @@
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP date and include-zero options share typed application requests. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
   },
   {
     "id": "report_trial_balance",
@@ -904,7 +904,7 @@
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP date and include-zero options share typed application requests. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
   },
   {
     "id": "reverse",
