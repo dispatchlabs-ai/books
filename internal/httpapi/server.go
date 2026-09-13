@@ -278,6 +278,25 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 		case "reports/trial-balance", "reports/balance-sheet", "reports/profit-loss":
 			return serveCompanyReport(w, r, app, operations.CompanyAccess(p.ID, company, p.Companies[company]), path[1])
 		}
+		if path[0] == "journals" && (len(path) == 2 || (len(path) == 3 && path[2] == "validation")) {
+			if r.URL.RawQuery != "" {
+				return apperr.New(apperr.Invalid, "JOURNAL_QUERY_INVALID", "journal reads do not accept query parameters")
+			}
+			access := operations.CompanyAccess(p.ID, company, p.Companies[company])
+			input := application.JournalReadRequest{ID: path[1]}
+			var value any
+			var err error
+			if len(path) == 2 {
+				value, err = operations.JournalShow().Execute(ctx, app, access, input)
+			} else {
+				value, err = operations.JournalValidate().Execute(ctx, app, access, input)
+			}
+			if err != nil {
+				return err
+			}
+			writeData(w, http.StatusOK, value)
+			return nil
+		}
 		if len(path) == 2 && path[0] == "imports" {
 			v, e := app.Job(ctx, path[1])
 			if e != nil {

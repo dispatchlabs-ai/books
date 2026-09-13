@@ -61,13 +61,29 @@ have not yet moved behind shared policy. JSON Schema generation and runtime
 binding/parameter audits remain pending. Trusted constructors are adapter APIs,
 not client input; HTTP constructs company access only after authentication.
 
+## Milestone 4: journal inspection and validation API — complete
+
+- [x] Add typed company journal read/validation operations and HTTP bindings.
+- [x] Hold one snapshot for journal membership and result reads; reject foreign
+  reversal targets before inspecting their validation details.
+- [x] Reject aggregate journal amount overflow with rollback.
+- [x] Test shared-database isolation, authorization, exact amounts, invalid drafts,
+  no posting, CLI amount equivalence, foreign reversal and overflow retry behavior.
+- [x] Add OpenAPI 1.6.0 snapshot and update inventory/docs.
+- [x] Complete canonical checks, Linux validation and independent follow-up review.
+- [x] Commit and push the verified milestone (see this file’s Git history).
+
+The low-level CLI still reads its trusted database directly through the ledger
+reader/validator; its typed company/database scope extraction remains pending.
+Journal create/edit/post/reverse API completeness and MCP are separate work.
+
 ## Remaining milestones
 
 | Work | State | Completion evidence required |
 | --- | --- | --- |
 | Typed backend operation descriptors and shared authorization | Four company reports implemented; remainder pending | Typed schemas, scope/grants, effects and adapter bindings; no policy bypasses |
 | Remaining workflow extraction from CLI | Not started | Application-owned orchestration with preserved CLI behavior |
-| Detailed journals, account/evidence/lifecycle and reconciliation API gaps | Not started | Shared service routes, OpenAPI and cross-interface tests |
+| Detailed journals, account/evidence/lifecycle and reconciliation API gaps | Journal inspection/validation added; remaining gaps pending | Shared service routes, OpenAPI and cross-interface tests |
 | Database topology, ownership and consolidation API | Not started | Whole-scope authorization and complete report equivalence |
 | Registry, migration, backup/restore administration API | Not started | Explicit admin grants, lineage, maintenance locks and crash recovery |
 | Remote file bundles, artifact transfer and durable operation receipts | Not started | Bounded transfer, authorization, replay/conflict and interruption tests |
@@ -126,6 +142,18 @@ and `TestTypedReportCatalog` checks typed metadata against inventory bindings.
 Local documentation links, JSON and diff checks passed. Optional deployment-name
 denylist was unset. Existing application methods remain callable internally;
 this slice does not claim a universal backend policy boundary.
+
+Milestone 4 validation (September 13): canonical macOS checks and Linux
+CLI/application/HTTP/operations/ledger package tests passed with Go 1.26.6.
+Independent review found unchecked journal aggregate overflow and cross-book
+reversal validation assumptions in the existing ledger reader; both were repaired
+with synthetic regressions and follow-up review found no remaining issues.
+`TestJournalReadsAPI` covers exact large totals, foreign IDs in one database,
+read grants, invalid drafts, no posting, CLI amount agreement and overflow
+rollback/retry. OpenAPI additive comparison, documentation links and diff checks
+passed. Optional deployment-name denylist was unset. Concurrency is protected by
+a database transaction; this slice does not include a forced concurrent-edit test
+or complete CLI/API/MCP conformance.
 
 ## How to maintain this tracker
 

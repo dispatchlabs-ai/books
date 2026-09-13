@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
@@ -316,6 +317,9 @@ func getJournal(ctx context.Context, q queryer, journalID string) (Journal, erro
 		if err := rows.Scan(&line.ID, &line.LineNumber, &line.AccountID, &line.AccountCode, &line.AccountName,
 			&line.Description, &line.DebitCents, &line.CreditCents, &line.CounterpartyEntity, &line.IntercompanyKey); err != nil {
 			return Journal{}, err
+		}
+		if line.DebitCents > math.MaxInt64-journal.TotalDebitCents || line.CreditCents > math.MaxInt64-journal.TotalCreditCents {
+			return Journal{}, apperr.New(apperr.Integrity, "AMOUNT_OVERFLOW", "journal totals exceed int64 minor units")
 		}
 		journal.TotalDebitCents += line.DebitCents
 		journal.TotalCreditCents += line.CreditCents

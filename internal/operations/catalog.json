@@ -597,18 +597,28 @@
     "cli": [
       "journal show"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/journals/{journal}"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Company HTTP uses shared typed read authorization and scoped ledger snapshots. Trusted-database CLI extraction and MCP binding remain pending."
   },
   {
     "id": "journal_validate",
     "cli": [
       "journal validate"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/journals/{journal}/validation"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Company HTTP uses shared typed read authorization and scoped ledger snapshots. Trusted-database CLI extraction and MCP binding remain pending."
   },
   {
     "id": "ownership_list",

@@ -3,11 +3,11 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v6.openapi.json), and the small
+[OpenAPI](schemas/books-api-v7.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
-The new OpenAPI artifact is an additive contract snapshot (1.5.0); routes and
-response envelopes remain v1. The [1.4.0 snapshot](schemas/books-api-v5.openapi.json), [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
+The new OpenAPI artifact is an additive contract snapshot (1.6.0); routes and
+response envelopes remain v1. The [1.5.0 snapshot](schemas/books-api-v6.openapi.json), [1.4.0 snapshot](schemas/books-api-v5.openapi.json), [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
 [initial snapshot](schemas/books-api-v1.openapi.json) remain unchanged.
 
 ## Run locally
@@ -322,5 +322,20 @@ safe integer range; do not convert them to JavaScript numbers.
 Company report execution now passes through backend operation descriptors with a
 company `read` grant check. HTTP supplies authenticated principal access, and the
 local CLI explicitly supplies local owner access. This shared policy currently
-covers general ledger, trial balance, balance sheet and profit/loss only; other
+covers the four company reports and journal inspection/validation; other
 workflows retain their existing checks while the backend rollout continues.
+
+## Journal inspection and validation
+
+`GET /v1/companies/{company}/journals/{journal}` reads a journal by its opaque ID,
+including lines and exact minor-unit totals. `GET` on the same path followed by
+`/validation` returns `valid`, `errors`, debit/credit totals and currency without
+posting or editing the journal. An invalid draft returns HTTP 200 with
+`valid: false`; callers must inspect that field. The CLI retains its nonzero exit
+status for an invalid `journal validate` result.
+
+Both routes require company `read` access and reject query parameters. Missing
+IDs and IDs belonging to another book return `JOURNAL_NOT_FOUND` (404). The
+scope check and result use one database snapshot. The existing transaction-number
+route remains supported. Low-level CLI journal reads retain their trusted local
+database scope while extraction into the typed operation layer continues.
