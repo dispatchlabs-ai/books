@@ -1,0 +1,1 @@
+Use case: precise-object-edit. Edit target: supplied Books desktop/mobile board. Change ONLY the small descriptive subtitle under the desktop Undo posting action to exact text 'Create a reversal'. Remove the existing garbled subtitle completely. Preserve all other pixels.

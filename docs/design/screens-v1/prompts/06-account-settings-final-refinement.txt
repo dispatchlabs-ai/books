@@ -1,0 +1,1 @@
+Use case: precise-object-edit. Edit target: supplied Books desktop/mobile board. Change ONLY the desktop sidebar's top selector text, currently Example Studio, to Maple Household. This is at the upper-left directly under Books. Preserve every other pixel and all mobile content.
