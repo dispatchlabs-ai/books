@@ -117,7 +117,7 @@ Inspect destination coverage before removing anything. Moving a section is not p
 
 Keep the source-only, experimental status visible. Preserve the MIT license and creator attribution. State macOS/Linux support, single-currency accrual accounting, installation requirements, one working example, and its expected outcome. These requirements fit comfortably in a shorter README.
 
-Avoid calling Books a complete QuickBooks replacement, an autonomous accountant, or a service that automatically connects every bank. Describe the optional HTTP API as an integration surface. Avoid implying a bundled chat UI, bank feed, payroll service, or tax filing feature. [Current product boundary](../../README.md#product-boundary).
+Avoid calling Books a complete QuickBooks replacement, an autonomous accountant, or a service that automatically connects every bank. Describe the optional HTTP API as an integration surface. Avoid implying a bundled chat UI, bank feed, payroll service, or tax filing feature. [Reviewed product boundary](https://github.com/dispatchlabs-ai/books/blob/4cdb44f9fed65af840af8beaba17c9ac179af3a9/README.md#product-boundary).
 
 Explain the data boundary briefly: Books stores its ledger locally; an external agent's access to financial files and its model provider determine what that agent may transmit. Local storage alone does not establish that data stays off cloud model services. Point readers to the [security policy](../../SECURITY.md) for software boundaries.
 
