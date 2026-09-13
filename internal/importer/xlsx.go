@@ -2,10 +2,10 @@ package importer
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -65,25 +65,16 @@ type xlsxCell struct {
 }
 
 func parseJournalXLSX(state *entityState, source Source) error {
-	info, err := os.Stat(source.Path)
+	data, err := readImportFileFS(state.files, source.Path, maxXLSXCompressedBytes, "journal workbook")
 	if err != nil {
-		return fmt.Errorf("inspect journal workbook: %w", err)
+		return err
 	}
-	if !info.Mode().IsRegular() {
-		return fmt.Errorf("journal workbook is not a regular file")
-	}
-	if info.Size() > maxXLSXCompressedBytes {
-		return fmt.Errorf("journal workbook exceeds the %d-byte compressed input limit", maxXLSXCompressedBytes)
-	}
-	fileDigest, err := fileSHA256(source.Path)
-	if err != nil {
-		return fmt.Errorf("hash journal workbook: %w", err)
-	}
-	reader, err := zip.OpenReader(source.Path)
+	fileDigest := bytesSHA256(data)
+	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return fmt.Errorf("open journal workbook: %w", err)
 	}
-	defer func(closer interface{ Close() error }) { _ = closer.Close() }(reader)
+
 	if err := validateXLSXArchive(reader.File); err != nil {
 		return err
 	}

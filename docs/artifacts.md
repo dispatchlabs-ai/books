@@ -52,3 +52,26 @@ idempotency and retry contracts.
 
 Bundles, maintenance backup streaming and explicit authorized local-path mappings
 remain pending; this initial transfer layer does not yet imply full file parity.
+
+## Existing evidence workflows
+
+QuickBooks inspect/plan/apply accept `files`, a list of `{name, artifact}` members.
+`from` and `accounts` select logical names within that bundle; `from: "."` selects
+the bundle directory. Absolute names, parent traversal, duplicate names and
+file/directory collisions are rejected. Existing JSON/XLSX parser limits apply.
+The same application workflow reads local files for CLI users and bundle files
+for HTTP/MCP users. Plan digests and import retry behavior are unchanged.
+
+For precoverage lifecycle closure, upload the provider evidence and account
+snapshot, then upload the lifecycle JSON with each `source_path` set to
+`/artifacts/<id>`. These are logical artifact names, not server filesystem paths.
+Pass the lifecycle JSON artifact ID as `input` to
+`statement_account_lifecycle_close_before_coverage`. Omitting `commit`, or setting
+`dry_run`, retains the existing validation-only behavior.
+
+Before a committed evidence operation, Books marks its source artifacts
+`retained`. They cannot be discarded because the accounting evidence references
+them. A failed apply may conservatively retain its inputs. Preserve the artifact
+directory alongside database backups; do not retire a store containing retained
+accounting evidence. This matches the existing requirement to preserve local
+QuickBooks and lifecycle source files.

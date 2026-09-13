@@ -775,27 +775,48 @@
     "cli": [
       "import quickbooks apply"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/import_quickbooks_apply"
+      }
+    ],
+    "mcp": [
+      "books_company_import_quickbooks_apply"
+    ],
+    "gap": "Shared existing workflow exposed through authorized artifact files; final adapter conformance pending."
   },
   {
     "id": "import_quickbooks_inspect",
     "cli": [
       "import quickbooks inspect"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/import_quickbooks_inspect"
+      }
+    ],
+    "mcp": [
+      "books_company_import_quickbooks_inspect"
+    ],
+    "gap": "Shared existing workflow exposed through authorized artifact files; final adapter conformance pending."
   },
   {
     "id": "import_quickbooks_plan",
     "cli": [
       "import quickbooks plan"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/import_quickbooks_plan"
+      }
+    ],
+    "mcp": [
+      "books_company_import_quickbooks_plan"
+    ],
+    "gap": "Shared existing workflow exposed through authorized artifact files; final adapter conformance pending."
   },
   {
     "id": "import_source_read",
@@ -1689,9 +1710,16 @@
     "cli": [
       "statement-account lifecycle close-before-coverage"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_lifecycle_close_before_coverage"
+      }
+    ],
+    "mcp": [
+      "books_db_statement_account_lifecycle_close_before_coverage"
+    ],
+    "gap": "Shared existing workflow exposed through authorized artifact files; final adapter conformance pending."
   },
   {
     "id": "statement_account_lifecycle_list",

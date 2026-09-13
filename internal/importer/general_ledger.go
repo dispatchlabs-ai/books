@@ -55,7 +55,7 @@ type generalLedgerPosting struct {
 }
 
 func parseGeneralLedger(state *entityState, source Source) error {
-	data, err := readImportFile(source.Path, maxJSONImportBytes, "GeneralLedger JSON")
+	data, err := readImportFileFS(state.files, source.Path, maxJSONImportBytes, "GeneralLedger JSON")
 	if err != nil {
 		return fmt.Errorf("read general ledger: %w", err)
 	}

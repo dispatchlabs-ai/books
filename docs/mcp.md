@@ -2,8 +2,7 @@
 
 Books now includes an experimental stdio MCP adapter. It calls the shared backend
 without an HTTP server or network listener. Full parity is still in progress:
-registry administration, backup/restore, migration, file bundles, QuickBooks and
-file-based lifecycle validation remain pending. See the
+registry administration, backup/restore and migration remain pending. See the
 [progress tracker](implementation/parity-progress.md) for the current gaps.
 
 Launch with `books mcp --policy /absolute/path/books-mcp.json`. The policy must be
@@ -43,7 +42,7 @@ Idempotency keys are part of workflows that support them; reuse the same key and
 payload after an uncertain response instead of creating another transaction.
 
 The stdio frame limit is 4 MiB and decoded operation input is bounded to 2 MiB.
-Bounded file transfer and large-result references are described in [artifacts](artifacts.md). Bundle and maintenance file workflows remain pending.
+Bounded file transfer and large-result references are described in [artifacts](artifacts.md). QuickBooks and lifecycle evidence use authorized bundles; maintenance workflows remain pending.
 No client-supplied roots, credentials, SQL, shell commands or server paths can
 expand policy. The process runs as its OS user; this is application authorization,
 not isolation from another program with that user's filesystem authority.

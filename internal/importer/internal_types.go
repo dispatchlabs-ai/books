@@ -3,6 +3,7 @@ package importer
 import (
 	"encoding/json"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
+	"io/fs"
 )
 
 type accountRecord struct {
@@ -50,6 +51,7 @@ type rawJournal struct {
 }
 
 type entityState struct {
+	files       fs.FS
 	request     EntityRequest
 	catalog     *accountCatalog
 	journals    []rawJournal

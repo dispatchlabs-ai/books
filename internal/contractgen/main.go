@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	base := flag.String("base", "docs/schemas/books-api-v9.openapi.json", "base snapshot")
-	out := flag.String("out", "docs/schemas/books-api-v10.openapi.json", "output snapshot")
+	base := flag.String("base", "docs/schemas/books-api-v10.openapi.json", "base snapshot")
+	out := flag.String("out", "docs/schemas/books-api-v11.openapi.json", "output snapshot")
 	flag.Parse()
 	data, err := os.ReadFile(*base)
 	if err != nil {
@@ -23,7 +23,7 @@ func main() {
 	if err := json.Unmarshal(data, &spec); err != nil {
 		panic(err)
 	}
-	spec["info"].(map[string]any)["version"] = "1.9.0"
+	spec["info"].(map[string]any)["version"] = "1.10.0"
 	paths := spec["paths"].(map[string]any)
 	descriptors := []operations.Descriptor{}
 	for _, op := range operations.CompanyOperations() {

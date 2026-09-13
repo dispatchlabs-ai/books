@@ -3,6 +3,7 @@ package importer
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -19,7 +20,7 @@ type qboAccount struct {
 	Active             *bool  `json:"Active"`
 }
 
-func loadAccountCatalog(entity EntityRequest) (*accountCatalog, error) {
+func loadAccountCatalog(entity EntityRequest, files fs.FS) (*accountCatalog, error) {
 	path := entity.AccountCatalogPath
 	if path == "" {
 		for _, source := range entity.Sources {
@@ -32,11 +33,11 @@ func loadAccountCatalog(entity EntityRequest) (*accountCatalog, error) {
 	if path == "" {
 		return nil, fmt.Errorf("entity %s requires a QBO account catalog", entity.EntityCode)
 	}
-	rows, err := readJSONRows(path)
+	rows, err := readJSONRows(files, path)
 	if err != nil {
 		return nil, fmt.Errorf("load account catalog for %s: %w", entity.EntityCode, err)
 	}
-	fileDigest, err := fileSHA256(path)
+	fileDigest, err := fileSHA256(files, path)
 	if err != nil {
 		return nil, fmt.Errorf("hash account catalog for %s: %w", entity.EntityCode, err)
 	}

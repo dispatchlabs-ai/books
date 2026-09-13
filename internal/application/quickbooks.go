@@ -10,6 +10,7 @@ import (
 	"github.com/dispatchlabs-ai/books/internal/importer"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -66,12 +67,18 @@ type QuickBooksResult struct {
 
 type QuickBooksRequest struct{ From, Accounts, Start, Through, Mode string }
 
-func discoverQuickBooksSource(flags QuickBooksRequest) (QuickBooksSource, error) {
-	path, err := filepath.Abs(filepath.Clean(flags.From))
+func discoverQuickBooksSourceFS(flags QuickBooksRequest, files fs.FS) (QuickBooksSource, error) {
+	path := filepath.Clean(flags.From)
+	var err error
+	local := files == nil
+	if local {
+		files = importer.LocalFiles{}
+		path, err = filepath.Abs(path)
+	}
 	if err != nil {
 		return QuickBooksSource{}, apperr.Wrap(apperr.Invalid, "QUICKBOOKS_SOURCE_INVALID", "resolve source path", err)
 	}
-	info, err := os.Stat(path)
+	info, err := fs.Stat(files, path)
 	if err != nil {
 		return QuickBooksSource{}, apperr.Wrap(apperr.Input, "QUICKBOOKS_SOURCE_NOT_FOUND", "inspect QuickBooks source", err)
 	}
@@ -85,7 +92,7 @@ func discoverQuickBooksSource(flags QuickBooksRequest) (QuickBooksSource, error)
 	source := QuickBooksSource{}
 	if info.IsDir() {
 		generalLedger := filepath.Join(path, "GeneralLedger.json")
-		_, glErr := os.Stat(generalLedger)
+		_, glErr := fs.Stat(files, generalLedger)
 		if mode == "general-ledger" || (mode == "auto" && glErr == nil) {
 			if glErr != nil {
 				return source, apperr.New(apperr.NotFound, "GENERAL_LEDGER_NOT_FOUND", fmt.Sprintf("%s does not contain GeneralLedger.json", path))
@@ -120,15 +127,18 @@ func discoverQuickBooksSource(flags QuickBooksRequest) (QuickBooksSource, error)
 		}
 		accountCatalog = filepath.Join(base, "Account.json")
 	}
-	accountCatalog, err = filepath.Abs(filepath.Clean(accountCatalog))
+	accountCatalog = filepath.Clean(accountCatalog)
+	if local {
+		accountCatalog, err = filepath.Abs(accountCatalog)
+	}
 	if err != nil {
 		return source, err
 	}
-	if stat, statErr := os.Stat(accountCatalog); statErr != nil || stat.IsDir() {
+	if stat, statErr := fs.Stat(files, accountCatalog); statErr != nil || stat.IsDir() {
 		return source, apperr.New(apperr.NotFound, "QUICKBOOKS_ACCOUNTS_NOT_FOUND", fmt.Sprintf("account catalog was not found at %s; pass --accounts", accountCatalog))
 	}
 	source.AccountCatalog = accountCatalog
-	inferredStart, inferredEnd, err := inferQuickBooksBounds(source)
+	inferredStart, inferredEnd, err := inferQuickBooksBoundsFS(source, files)
 	if err != nil {
 		return source, err
 	}
@@ -154,12 +164,12 @@ func discoverQuickBooksSource(flags QuickBooksRequest) (QuickBooksSource, error)
 	return source, nil
 }
 
-func inferQuickBooksBounds(source QuickBooksSource) (string, string, error) {
+func inferQuickBooksBoundsFS(source QuickBooksSource, files fs.FS) (string, string, error) {
 	if source.Kind == importer.SourceJournalXLSX {
 		return "", "", nil
 	}
 	if source.Kind == importer.SourceGeneralLedger {
-		data, err := os.ReadFile(source.Path)
+		data, err := fs.ReadFile(files, source.Path)
 		if err != nil {
 			return "", "", err
 		}
@@ -178,7 +188,7 @@ func inferQuickBooksBounds(source QuickBooksSource) (string, string, error) {
 	var dates []string
 	for _, transactionType := range transactionTypes {
 		path := filepath.Join(source.Path, transactionType+".json")
-		data, err := os.ReadFile(path)
+		data, err := fs.ReadFile(files, path)
 		if os.IsNotExist(err) {
 			continue
 		}
@@ -441,16 +451,22 @@ func quickBooksStatementCode(entity, account string) (string, error) {
 }
 
 func (s *Service) PlanQuickBooks(ctx context.Context, flags QuickBooksRequest) (QuickBooksPlan, error) {
+	return s.PlanQuickBooksFromFS(ctx, flags, nil)
+}
+func (s *Service) PlanQuickBooksFromFS(ctx context.Context, flags QuickBooksRequest, files fs.FS) (QuickBooksPlan, error) {
 	if flags.From == "" {
 		return QuickBooksPlan{}, apperr.New(apperr.Invalid, "QUICKBOOKS_SOURCE_REQUIRED", "--from is required")
 	}
 	resolved := s.resolved
-	source, err := discoverQuickBooksSource(flags)
+	source, err := discoverQuickBooksSourceFS(flags, files)
 	if err != nil {
 		return QuickBooksPlan{}, err
 	}
 	request := quickBooksRequest(resolved.Company.EntityCode, resolved.Company.BookCode, resolved.Company.Currency, source)
-	built, err := importer.Build(ctx, request)
+	if files == nil {
+		files = importer.LocalFiles{}
+	}
+	built, err := importer.BuildFromFS(ctx, request, files)
 	if err != nil {
 		return QuickBooksPlan{}, apperr.Wrap(apperr.Input, "QUICKBOOKS_INSPECTION_FAILED", "inspect QuickBooks export", err)
 	}
@@ -488,6 +504,9 @@ func (s *Service) PlanQuickBooks(ctx context.Context, flags QuickBooksRequest) (
 }
 
 func (s *Service) ApplyQuickBooks(ctx context.Context, plan QuickBooksPlan, sourceName string, draft, dryRun bool) (QuickBooksResult, error) {
+	return s.ApplyQuickBooksFromFS(ctx, plan, sourceName, draft, dryRun, importer.LocalFiles{})
+}
+func (s *Service) ApplyQuickBooksFromFS(ctx context.Context, plan QuickBooksPlan, sourceName string, draft, dryRun bool, files fs.FS) (QuickBooksResult, error) {
 	if plan.Schema != quickBooksPlanSchema || !plan.Ready {
 		return QuickBooksResult{}, apperr.New(apperr.Invalid, "QUICKBOOKS_PLAN_INVALID", "plan schema is unsupported or the plan is blocked")
 	}
@@ -502,7 +521,7 @@ func (s *Service) ApplyQuickBooks(ctx context.Context, plan QuickBooksPlan, sour
 	if resolved.Key != plan.Company || resolved.Company.EntityCode != plan.Entity || resolved.Company.BookCode != plan.Book || resolved.Company.Currency != plan.Currency {
 		return QuickBooksResult{}, apperr.New(apperr.Invalid, "PLAN_COMPANY_MISMATCH", fmt.Sprintf("plan belongs to --company %s", plan.Company))
 	}
-	rebuilt, err := importer.Build(ctx, quickBooksRequest(plan.Entity, plan.Book, plan.Currency, plan.Source))
+	rebuilt, err := importer.BuildFromFS(ctx, quickBooksRequest(plan.Entity, plan.Book, plan.Currency, plan.Source), files)
 	if err != nil {
 		return QuickBooksResult{}, apperr.Wrap(apperr.Input, "QUICKBOOKS_SOURCE_CHANGED", "reinspect QuickBooks source", err)
 	}

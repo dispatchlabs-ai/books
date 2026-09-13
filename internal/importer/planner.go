@@ -3,13 +3,15 @@ package importer
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"sort"
 )
 
 // Build reads immutable sources and returns a database-independent migration
 // plan. Source content problems are diagnostics; filesystem and schema failures
 // are returned as errors because a complete plan cannot be established.
-func Build(ctx context.Context, input Request) (Plan, error) {
+func Build(ctx context.Context, input Request) (Plan, error) { return build(ctx, input, LocalFiles{}) }
+func build(ctx context.Context, input Request, files fs.FS) (Plan, error) {
 	request := cloneRequest(input)
 	if err := validateRequest(request); err != nil {
 		return Plan{}, err
@@ -19,11 +21,11 @@ func Build(ctx context.Context, input Request) (Plan, error) {
 		if err := ctx.Err(); err != nil {
 			return Plan{}, err
 		}
-		catalog, err := loadAccountCatalog(entity)
+		catalog, err := loadAccountCatalog(entity, files)
 		if err != nil {
 			return Plan{}, err
 		}
-		state := &entityState{request: entity, catalog: catalog}
+		state := &entityState{request: entity, catalog: catalog, files: files}
 		sources := append([]Source(nil), entity.Sources...)
 		sort.Slice(sources, func(i, j int) bool {
 			if sources[i].StartDate != sources[j].StartDate {

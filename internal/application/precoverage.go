@@ -7,10 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
+	"github.com/dispatchlabs-ai/books/internal/importer"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/money"
 	"io"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -37,6 +38,9 @@ type precoverageClosureInputFile struct {
 }
 
 func ReadPrecoverageClosureInput(path string, resolve ...func(string) (money.Currency, error)) (ledger.CloseStatementAccountBeforeCoverageInput, error) {
+	return ReadPrecoverageClosureInputFS(path, importer.LocalFiles{}, resolve...)
+}
+func ReadPrecoverageClosureInputFS(path string, files fs.FS, resolve ...func(string) (money.Currency, error)) (ledger.CloseStatementAccountBeforeCoverageInput, error) {
 	if path == "" || path == "-" {
 		return ledger.CloseStatementAccountBeforeCoverageInput{}, apperr.New(apperr.Invalid, "INPUT_REQUIRED", "--input must be an absolute retained JSON file path")
 	}
@@ -47,7 +51,7 @@ func ReadPrecoverageClosureInput(path string, resolve ...func(string) (money.Cur
 	if err != nil {
 		return ledger.CloseStatementAccountBeforeCoverageInput{}, apperr.Wrap(apperr.Input, "INPUT_PATH_INVALID", "resolve lifecycle input path", err)
 	}
-	data, err := os.ReadFile(absPath)
+	data, err := fs.ReadFile(files, absPath)
 	if err != nil {
 		return ledger.CloseStatementAccountBeforeCoverageInput{}, apperr.Wrap(apperr.Input, "INPUT_READ_FAILED", "read lifecycle input file", err)
 	}
@@ -93,14 +97,14 @@ func ReadPrecoverageClosureInput(path string, resolve ...func(string) (money.Cur
 		AccountHolder: file.AccountHolder, AccountSuffix: file.AccountSuffix, Reason: file.Reason,
 		InputSourcePath: absPath, InputSourceSHA256: hex.EncodeToString(inputDigest[:]),
 	}
-	if err := verifyPrecoverageEvidenceFiles(input, currency); err != nil {
+	if err := verifyPrecoverageEvidenceFilesFS(input, files, currency); err != nil {
 		return ledger.CloseStatementAccountBeforeCoverageInput{}, err
 	}
 	return input, nil
 }
 
-func verifyEvidenceDigest(path, expected, label string) ([]byte, error) {
-	data, err := os.ReadFile(path)
+func verifyEvidenceDigest(files fs.FS, path, expected, label string) ([]byte, error) {
+	data, err := fs.ReadFile(files, path)
 	if err != nil {
 		return nil, apperr.Wrap(apperr.Input, "EVIDENCE_READ_FAILED", "read "+label, err)
 	}
@@ -112,11 +116,11 @@ func verifyEvidenceDigest(path, expected, label string) ([]byte, error) {
 	return data, nil
 }
 
-func verifyPrecoverageEvidenceFiles(input ledger.CloseStatementAccountBeforeCoverageInput, currencies ...money.Currency) error {
-	if _, err := verifyEvidenceDigest(input.ClosureEvidence.SourcePath, input.ClosureEvidence.SourceSHA256, "provider closure evidence"); err != nil {
+func verifyPrecoverageEvidenceFilesFS(input ledger.CloseStatementAccountBeforeCoverageInput, files fs.FS, currencies ...money.Currency) error {
+	if _, err := verifyEvidenceDigest(files, input.ClosureEvidence.SourcePath, input.ClosureEvidence.SourceSHA256, "provider closure evidence"); err != nil {
 		return err
 	}
-	snapshotData, err := verifyEvidenceDigest(input.ZeroEvidence.SourcePath, input.ZeroEvidence.SourceSHA256, "provider account snapshot")
+	snapshotData, err := verifyEvidenceDigest(files, input.ZeroEvidence.SourcePath, input.ZeroEvidence.SourceSHA256, "provider account snapshot")
 	if err != nil {
 		return err
 	}

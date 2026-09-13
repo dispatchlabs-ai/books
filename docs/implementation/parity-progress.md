@@ -117,6 +117,18 @@ Direct low-level CLI calls still require extraction into the descriptor adapters
   cancellation, maximum-size cross-adapter upload and result download.
 - [x] Complete follow-up review, supported-platform gates and commit/push.
 
+## Milestone 8: existing evidence workflows — complete
+
+- [x] Reuse QuickBooks parsing/planning/apply with an authorized logical filesystem.
+- [x] Add QuickBooks inspect/plan/apply and lifecycle closure HTTP/MCP bindings.
+- [x] Preserve local CLI paths, validation, preview/commit and retry behavior.
+- [x] Retain source artifacts referenced by committed accounting evidence.
+- [x] Finish independent review and supported-platform gates; commit and push.
+
+Implementation constraint (September 13): keep the remaining work focused on
+functional CLI/API/MCP parity. Reuse existing application/ledger services and
+retry contracts; avoid redundant CLI layers or a broader framework rewrite.
+
 ## Remaining milestones
 
 | Work | State | Completion evidence required |
@@ -213,3 +225,5 @@ a background scheduler or authorize deployment of a network service.
 Milestone 6 validation (September 13): full `scripts/check` passed on macOS and Linux with Go 1.26.6, including race checks, lint, vulnerability scan and synthetic CLI smoke. Independent follow-up confirmed bounded frames, ambient-configuration isolation, remote retry keys and explicit account creation fields. The official SDK client passed actual stdio and in-memory HTTP/MCP retry tests. GUI agent clients and complete parity are not yet validated.
 
 Milestone 7 validation (September 13): full canonical gates passed on macOS and Linux, including synthetic CLI smoke, race, lint and vulnerability checks. Independent follow-up confirmed identity-bound artifact access, cancelable lock waits, interrupted chunk recovery, artifact error preservation, successful-mutation delivery fallback and read-only owner cleanup. Exact 8 MiB HTTP upload/MCP consumption and chunked large-result recovery pass. Full parity and durable operation receipts remain pending.
+
+Milestone 8 validation (September 13): full macOS/Linux gates passed. Independent follow-up confirmed file isolation, QuickBooks digest/retry behavior and retained evidence protection. Existing local workflows and new synthetic bundle/lifecycle operations pass.

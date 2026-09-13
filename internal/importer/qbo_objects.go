@@ -3,6 +3,7 @@ package importer
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -75,7 +76,7 @@ var qboTransactionFiles = []string{
 func parseQBOObjectDirectory(state *entityState, source Source) error {
 	for _, objectType := range qboTransactionFiles {
 		path := filepath.Join(source.Path, objectType+".json")
-		if _, err := os.Stat(path); err != nil {
+		if _, err := fs.Stat(state.files, path); err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
@@ -89,11 +90,11 @@ func parseQBOObjectDirectory(state *entityState, source Source) error {
 }
 
 func parseQBOObjectFile(state *entityState, source Source, objectType, path string) error {
-	rows, err := readJSONRows(path)
+	rows, err := readJSONRows(state.files, path)
 	if err != nil {
 		return err
 	}
-	fileDigest, err := fileSHA256(path)
+	fileDigest, err := fileSHA256(state.files, path)
 	if err != nil {
 		return err
 	}

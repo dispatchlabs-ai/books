@@ -55,6 +55,7 @@ type ReadRequest struct {
 	Length int    `json:"length"`
 }
 type Reference struct {
+	Retained  bool   `json:"retained"`
 	Discarded bool   `json:"discarded"`
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -417,6 +418,9 @@ func Discard(ctx context.Context, id string) (Reference, error) {
 		if err != nil {
 			return err
 		}
+		if r.Retained {
+			return apperr.New(apperr.Conflict, "ARTIFACT_RETAINED", "artifact supports accounting evidence and cannot be discarded")
+		}
 		if err = os.Remove(filepath.Join(b.root, id+".data")); err != nil && !os.IsNotExist(err) {
 			return err
 		}
@@ -455,4 +459,29 @@ func Put(ctx context.Context, name string, data []byte) (Reference, error) {
 		}
 	}
 	return Finish(ctx, ref.ID)
+}
+
+// Retain prevents temporary-file cleanup from removing accounting evidence.
+// Call before committing an operation that references these source bytes.
+func Retain(ctx context.Context, ids []string) error {
+	return locked(ctx, func(b binding) error {
+		records := make([]record, 0, len(ids))
+		for _, id := range ids {
+			r, err := readRecord(b, id)
+			if err != nil {
+				return err
+			}
+			if !r.Complete || r.Discarded {
+				return unavailable()
+			}
+			records = append(records, r)
+		}
+		for _, r := range records {
+			r.Retained = true
+			if err := save(b, r); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

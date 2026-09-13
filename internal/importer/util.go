@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -87,8 +87,8 @@ func normalizeName(value string) string {
 
 func normalizeSubtype(value string) string { return normalizeCode(value) }
 
-func fileSHA256(path string) (string, error) {
-	file, err := os.Open(path)
+func fileSHA256(files fs.FS, path string) (string, error) {
+	file, err := files.Open(path)
 	if err != nil {
 		return "", err
 	}
@@ -105,8 +105,8 @@ func bytesSHA256(value []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func readJSONRows(path string) ([]json.RawMessage, error) {
-	data, err := readImportFile(path, maxJSONImportBytes, "JSON import")
+func readJSONRows(files fs.FS, path string) ([]json.RawMessage, error) {
+	data, err := readImportFileFS(files, path, maxJSONImportBytes, "JSON import")
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,10 @@ func readJSONRows(path string) ([]json.RawMessage, error) {
 }
 
 func readImportFile(path string, limit int64, label string) ([]byte, error) {
-	file, err := os.Open(path)
+	return readImportFileFS(LocalFiles{}, path, limit, label)
+}
+func readImportFileFS(files fs.FS, path string, limit int64, label string) ([]byte, error) {
+	file, err := files.Open(path)
 	if err != nil {
 		return nil, err
 	}

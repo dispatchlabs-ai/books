@@ -180,5 +180,5 @@ func CompanyOperations() []CompanyOperation {
 		companyOp("undo", "post", "write", func(c context.Context, s *application.Service, a Access, r ReverseRequest) (application.Transaction, error) {
 			return s.ReverseTransaction(c, r.Number, r.Date, r.Description, r.Draft, true, r.DryRun, allowedJournalKinds(a)...)
 		}),
-	}, append(append(extraCompanyOperations(), companyImportOperations()...), companyArtifactOperations()...)...)
+	}, append(append(extraCompanyOperations(), companyImportOperations()...), append(companyArtifactOperations(), companyQuickBooksOperations()...)...)...)
 }

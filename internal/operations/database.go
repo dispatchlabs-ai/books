@@ -120,7 +120,7 @@ func DatabaseOperations() []DatabaseOperation {
 		databaseOp("report_profit_loss", "read", func(c context.Context, d *application.Database, _ string, r DatabaseReportRequest) (report.ProfitLossReport, error) {
 			return d.Reports().ProfitLoss(c, report.ProfitLossInput{Scope: r.scope(), FromDate: r.From, ToDate: r.To, IncludeZero: r.IncludeZero})
 		}),
-	}, append(ledgerDatabaseOperations(), append(inspectionDatabaseOperations(), databaseArtifactOperations()...)...)...)
+	}, append(ledgerDatabaseOperations(), append(inspectionDatabaseOperations(), append(databaseArtifactOperations(), precoverageDatabaseOperations()...)...)...)...)
 }
 func LookupDatabaseOperation(id string) (DatabaseOperation, bool) {
 	for _, o := range DatabaseOperations() {

@@ -28,7 +28,7 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 	delete(commands, "mcp")
 	delete(commands, "serve") // Process lifecycle, not a backend operation.
 	_, source, _, _ := runtime.Caller(0)
-	data, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../docs/schemas/books-api-v10.openapi.json"))
+	data, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../docs/schemas/books-api-v11.openapi.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
