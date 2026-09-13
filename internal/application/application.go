@@ -127,13 +127,13 @@ func (s *Service) StatementAccounts(ctx context.Context) ([]ledger.StatementAcco
 	return out, nil
 }
 func (s *Service) TrialBalance(ctx context.Context, asOf string) (report.TrialBalanceReport, error) {
-	return report.NewService(s.store).TrialBalance(ctx, report.TrialBalanceInput{Scope: report.Scope{EntityCode: s.company.Entity}, AsOfDate: asOf})
+	return s.TrialBalanceWithOptions(ctx, AsOfReportRequest{AsOf: asOf})
 }
 func (s *Service) BalanceSheet(ctx context.Context, asOf string) (report.BalanceSheetReport, error) {
-	return report.NewService(s.store).BalanceSheet(ctx, report.BalanceSheetInput{Scope: report.Scope{EntityCode: s.company.Entity}, AsOfDate: asOf})
+	return s.BalanceSheetWithOptions(ctx, AsOfReportRequest{AsOf: asOf})
 }
 func (s *Service) ProfitLoss(ctx context.Context, from, to string) (report.ProfitLossReport, error) {
-	return report.NewService(s.store).ProfitLoss(ctx, report.ProfitLossInput{Scope: report.Scope{EntityCode: s.company.Entity}, FromDate: from, ToDate: to})
+	return s.ProfitLossWithOptions(ctx, RangeReportRequest{From: from, To: to})
 }
 
 // Transactions uses the monotonic per-book journal number as its cursor. The

@@ -3,11 +3,11 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v5.openapi.json), and the small
+[OpenAPI](schemas/books-api-v6.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
-The new OpenAPI artifact is an additive contract snapshot (1.4.0); routes and
-response envelopes remain v1. The [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
+The new OpenAPI artifact is an additive contract snapshot (1.5.0); routes and
+response envelopes remain v1. The [1.4.0 snapshot](schemas/books-api-v5.openapi.json), [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
 [initial snapshot](schemas/books-api-v1.openapi.json) remain unchanged.
 
 ## Run locally
@@ -305,3 +305,15 @@ with opening balance, ordered posted journal lines, running balances and closing
 balance. It uses the same company application operation as the CLI's `gl` path.
 Consolidated general-ledger API access remains planned and is tracked separately
 in [implementation progress](implementation/parity-progress.md).
+
+## Company report options
+
+Trial balance, balance sheet and profit-loss endpoints also accept `include_zero`.
+Omitting it or passing `false` preserves the existing behavior. Passing `true`
+includes zero-balance accounts, matching the CLI's `--include-zero`. Invalid or
+repeated `include_zero` values return `REPORT_QUERY_INVALID` (HTTP 400).
+These reports use typed company application requests, also used by their normal
+company CLI paths. Raw-database and consolidated CLI reports remain supported;
+consolidated HTTP reporting is still a separate tracked gap. Existing API money
+fields retain exact minor-unit strings, including values beyond JavaScript's
+safe integer range; do not convert them to JavaScript numbers.

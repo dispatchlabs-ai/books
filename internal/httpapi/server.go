@@ -274,27 +274,8 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 			return serveTransactions(w, r, app)
 		case "reports/general-ledger":
 			return serveGeneralLedger(w, r, app)
-		case "reports/trial-balance":
-			v, e := app.TrialBalance(ctx, r.URL.Query().Get("as_of"))
-			if e != nil {
-				return e
-			}
-			writeData(w, http.StatusOK, v)
-			return nil
-		case "reports/balance-sheet":
-			v, e := app.BalanceSheet(ctx, r.URL.Query().Get("as_of"))
-			if e != nil {
-				return e
-			}
-			writeData(w, http.StatusOK, v)
-			return nil
-		case "reports/profit-loss":
-			v, e := app.ProfitLoss(ctx, r.URL.Query().Get("from"), r.URL.Query().Get("to"))
-			if e != nil {
-				return e
-			}
-			writeData(w, http.StatusOK, v)
-			return nil
+		case "reports/trial-balance", "reports/balance-sheet", "reports/profit-loss":
+			return serveCompanyReport(w, r, app, path[1])
 		}
 		if len(path) == 2 && path[0] == "imports" {
 			v, e := app.Job(ctx, path[1])

@@ -198,3 +198,31 @@ func serveGeneralLedger(w http.ResponseWriter, r *http.Request, app *application
 	writeData(w, http.StatusOK, result)
 	return nil
 }
+
+func serveCompanyReport(w http.ResponseWriter, r *http.Request, app *application.Service, kind string) error {
+	q := r.URL.Query()
+	zero := false
+	if values, ok := q["include_zero"]; ok {
+		if len(values) != 1 || (values[0] != "true" && values[0] != "false") {
+			return apperr.New(apperr.Invalid, "REPORT_QUERY_INVALID", "include_zero must occur once and be true or false")
+		}
+		zero = values[0] == "true"
+	}
+	var result any
+	var err error
+	switch kind {
+	case "trial-balance":
+		result, err = app.TrialBalanceWithOptions(r.Context(), application.AsOfReportRequest{AsOf: q.Get("as_of"), IncludeZero: zero})
+	case "balance-sheet":
+		result, err = app.BalanceSheetWithOptions(r.Context(), application.AsOfReportRequest{AsOf: q.Get("as_of"), IncludeZero: zero})
+	case "profit-loss":
+		result, err = app.ProfitLossWithOptions(r.Context(), application.RangeReportRequest{From: q.Get("from"), To: q.Get("to"), IncludeZero: zero})
+	default:
+		return apperr.New(apperr.NotFound, "REPORT_NOT_FOUND", "report is not available")
+	}
+	if err != nil {
+		return err
+	}
+	writeData(w, http.StatusOK, result)
+	return nil
+}

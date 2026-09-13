@@ -52,22 +52,15 @@ func newGLCommand(opts *options) *cobra.Command {
 				return err
 			}
 			var result report.GeneralLedgerReport
-			companyReport := false
-			if strings.TrimSpace(opts.database) == "" && databaseOverride() == "" && group == "" {
-				resolved, resolveErr := opts.resolveCompany()
-				if resolveErr != nil {
-					return resolveErr
-				}
-				if entity == resolved.Company.EntityCode {
-					app, bindErr := application.Bind(cmd.Context(), store, resolved, opts.actor)
-					if bindErr != nil {
-						return bindErr
-					}
-					result, err = app.GeneralLedger(cmd.Context(), application.GeneralLedgerRequest{From: from, To: to, Account: account, IncludeZero: zero})
-					companyReport = true
-				}
+			app, err := companyReportApplication(cmd, opts, store, entity, group)
+			if err != nil {
+				return err
 			}
-			if !companyReport {
+			if app != nil {
+				result, err = app.GeneralLedger(cmd.Context(), application.GeneralLedgerRequest{From: from, To: to, Account: account, IncludeZero: zero})
+			}
+
+			if app == nil {
 				if strings.TrimSpace(account) != "" && strings.TrimSpace(opts.database) == "" {
 					resolved, err := opts.resolveCompany()
 					if err != nil {
@@ -130,7 +123,16 @@ func newTBCommand(opts *options) *cobra.Command {
 			if err := applyHumanReportDefaults(cmd, opts, store, &entity, &group, nil, &asOf, "as-of"); err != nil {
 				return err
 			}
-			result, err := report.NewService(store).TrialBalance(cmd.Context(), report.TrialBalanceInput{Scope: scopeFrom(entity, group), AsOfDate: asOf, IncludeZero: zero})
+			app, err := companyReportApplication(cmd, opts, store, entity, group)
+			if err != nil {
+				return err
+			}
+			var result report.TrialBalanceReport
+			if app != nil {
+				result, err = app.TrialBalanceWithOptions(cmd.Context(), application.AsOfReportRequest{AsOf: asOf, IncludeZero: zero})
+			} else {
+				result, err = report.NewService(store).TrialBalance(cmd.Context(), report.TrialBalanceInput{Scope: scopeFrom(entity, group), AsOfDate: asOf, IncludeZero: zero})
+			}
 			if err != nil {
 				return err
 			}
@@ -162,7 +164,16 @@ func newPLCommand(opts *options) *cobra.Command {
 			if err := applyHumanReportDefaults(cmd, opts, store, &entity, &group, &from, &to, "pl"); err != nil {
 				return err
 			}
-			result, err := report.NewService(store).ProfitLoss(cmd.Context(), report.ProfitLossInput{Scope: scopeFrom(entity, group), FromDate: from, ToDate: to, IncludeZero: zero})
+			app, err := companyReportApplication(cmd, opts, store, entity, group)
+			if err != nil {
+				return err
+			}
+			var result report.ProfitLossReport
+			if app != nil {
+				result, err = app.ProfitLossWithOptions(cmd.Context(), application.RangeReportRequest{From: from, To: to, IncludeZero: zero})
+			} else {
+				result, err = report.NewService(store).ProfitLoss(cmd.Context(), report.ProfitLossInput{Scope: scopeFrom(entity, group), FromDate: from, ToDate: to, IncludeZero: zero})
+			}
 			if err != nil {
 				return err
 			}
@@ -201,7 +212,16 @@ func newBSCommand(opts *options) *cobra.Command {
 			if err := applyHumanReportDefaults(cmd, opts, store, &entity, &group, nil, &asOf, "as-of"); err != nil {
 				return err
 			}
-			result, err := report.NewService(store).BalanceSheet(cmd.Context(), report.BalanceSheetInput{Scope: scopeFrom(entity, group), AsOfDate: asOf, IncludeZero: zero})
+			app, err := companyReportApplication(cmd, opts, store, entity, group)
+			if err != nil {
+				return err
+			}
+			var result report.BalanceSheetReport
+			if app != nil {
+				result, err = app.BalanceSheetWithOptions(cmd.Context(), application.AsOfReportRequest{AsOf: asOf, IncludeZero: zero})
+			} else {
+				result, err = report.NewService(store).BalanceSheet(cmd.Context(), report.BalanceSheetInput{Scope: scopeFrom(entity, group), AsOfDate: asOf, IncludeZero: zero})
+			}
 			if err != nil {
 				return err
 			}
@@ -296,4 +316,20 @@ func applyHumanReportDefaults(cmd *cobra.Command, opts *options, store *storesql
 		}
 	}
 	return nil
+}
+
+// Company reports share the application contract with HTTP/MCP. Explicit
+// database or consolidation scopes retain their existing trusted-local path.
+func companyReportApplication(cmd *cobra.Command, opts *options, store *storesqlite.Store, entity, group string) (*application.Service, error) {
+	if strings.TrimSpace(opts.database) != "" || databaseOverride() != "" || group != "" {
+		return nil, nil
+	}
+	resolved, err := opts.resolveCompany()
+	if err != nil {
+		return nil, err
+	}
+	if entity != resolved.Company.EntityCode {
+		return nil, nil
+	}
+	return application.Bind(cmd.Context(), store, resolved, opts.actor)
 }

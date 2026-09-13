@@ -4,7 +4,7 @@ Updated September 13, 2026. Overall status: **in progress; full parity is not
 implemented and no MCP server ships yet.** This is the durable tracker for the
 [interface parity contract](../interface-parity.md) and [MCP design](../mcp-design.md).
 
-## Current milestone: inventory and first API gap
+## Milestone 1: inventory and first API gap — complete
 
 - [x] Record the canonical operation inventory with CLI aliases, existing HTTP
   bindings and explicit gaps in [catalog.json](../../internal/operations/catalog.json).
@@ -26,6 +26,22 @@ argument/scope parity**. Existing company-scoped report routes do not cover
 consolidated reporting. Every MCP binding is still missing. `gap` fields keep
 those limits explicit; no operation is marked fully complete merely because its
 name appears in the inventory.
+
+## Milestone 2: typed company reports — complete
+
+- [x] Add shared typed date/range and zero-account options for trial balance,
+  balance sheet and profit/loss; preserve the existing application entry points.
+- [x] Route ordinary company CLI reports through those application operations.
+- [x] Add HTTP `include_zero` with explicit boolean validation; retain default
+  behavior, existing paths and exact minor-unit strings.
+- [x] Add USD/JPY/KWD tests beyond JavaScript's safe integer range, zero-account
+  inclusion, CLI/API amount agreement and direct-database CLI fallback checks.
+- [x] Publish additive OpenAPI 1.5.0; preserve earlier snapshots.
+- [x] Complete independent review, macOS gate and Linux validation.
+- [x] Commit and push this verified slice (see this file’s Git history).
+
+This is a typed report slice, not a complete typed operation dispatcher or shared
+permission catalog. Consolidated API access and all MCP tools remain missing.
 
 ## Remaining milestones
 
@@ -49,22 +65,32 @@ implementation of accounting behavior.
 
 ## Validation ledger
 
-The new targeted tests are `TestGeneralLedgerAPI` and
+Milestone 1 targeted tests are `TestGeneralLedgerAPI` and
 `TestOperationInventoryCoversCLIAndOpenAPI`. All fixtures are synthetic and use
 disposable data. No existing company data is a fixture.
 
-September 13 validation: `./scripts/check` passed on macOS, including unit/race
+Milestone 1 validation (September 13): `./scripts/check` passed on macOS, including unit/race
 checks, vet, lint, vulnerability scan and synthetic CLI smoke. The full CLI test
 package plus application/HTTP/catalog packages passed on Linux with Go 1.26.6.
 The independent reviewer reported no actionable correctness or security findings
 and independently reran the two targeted tests. Documentation links, JSON parsing
 and diff checks passed. The optional deployment-name denylist was not supplied.
 
-Review limits: no full three-interface conformance yet; MCP is absent. The new
-endpoint-specific tests cover USD and ordinary int64 amounts, not an exhaustive
-currency/large-int64 matrix. Broader money/report tests remain in the existing
-suite. Additional scope/argument and runtime binding coverage belongs to the next
-milestones, not a completed parity claim.
+Milestone 2 validation (September 13): `./scripts/check` passed on macOS,
+including unit/race checks, vet, lint, vulnerability scan and synthetic CLI
+smoke. CLI, application, HTTP and catalog packages passed on Linux with Go
+1.26.6. Independent review found no actionable issues and reran targeted report
+and inventory tests. `TestCompanyReportOptionsAndExactAmounts` covers USD, JPY
+and KWD at 9007199254740993 minor units, zero-account inclusion, invalid/repeated
+boolean parameters and both direct-database CLI selection paths. JSON, local
+documentation links and diff checks passed. The optional deployment-name
+denylist was not supplied.
+
+Review limits: no full three-interface conformance yet; MCP is absent. Explicit
+`include_zero=false` equivalence and profit/loss/balance-sheet consolidated
+fallback are not directly covered by the new test. Broader report tests remain
+in the existing suite. Additional scope/argument and runtime binding coverage
+belongs to the remaining milestones, not a completed parity claim.
 
 The catalog audit currently compares implemented CLI names and documented HTTP
 routes. It does not prove router registration or full parameter coverage for every
