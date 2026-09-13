@@ -27,12 +27,12 @@ type Book struct {
 }
 
 type CreateEntityInput struct {
-	Code      string
-	LegalName string
-	Currency  string
-	BookCode  string
-	BookName  string
-	Basis     string
+	Code      string `json:"code"`
+	LegalName string `json:"legal_name"`
+	Currency  string `json:"currency"`
+	BookCode  string `json:"book_code"`
+	BookName  string `json:"book_name"`
+	Basis     string `json:"basis"`
 }
 
 type Group struct {
@@ -46,11 +46,11 @@ type Group struct {
 }
 
 type CreateGroupInput struct {
-	Code                string
-	Name                string
-	ParentEntity        string
-	EliminationBookCode string
-	EliminationBookName string
+	Code                string `json:"code"`
+	Name                string `json:"name"`
+	ParentEntity        string `json:"parent_entity"`
+	EliminationBookCode string `json:"elimination_book_code"`
+	EliminationBookName string `json:"elimination_book_name"`
 }
 
 type Account struct {
@@ -68,14 +68,14 @@ type Account struct {
 }
 
 type CreateAccountInput struct {
-	Code             string
-	Name             string
-	Type             string
-	Subtype          string
-	NormalBalance    string
-	StatementSection string
-	BookCodes        []string
-	ActiveFrom       string
+	Code             string   `json:"code"`
+	Name             string   `json:"name"`
+	Type             string   `json:"type"`
+	Subtype          string   `json:"subtype"`
+	NormalBalance    string   `json:"normal_balance"`
+	StatementSection string   `json:"statement_section"`
+	BookCodes        []string `json:"book_codes"`
+	ActiveFrom       string   `json:"active_from"`
 }
 
 type AccountIdentityEvidence struct {
@@ -113,9 +113,9 @@ type AccountIdentity struct {
 }
 
 type AccountIdentityFilter struct {
-	Entity       string
-	Account      string
-	SourceSystem string
+	Entity       string `json:"entity"`
+	Account      string `json:"account"`
+	SourceSystem string `json:"source_system"`
 }
 
 type Period struct {
@@ -132,12 +132,12 @@ type Period struct {
 }
 
 type CreatePeriodInput struct {
-	Code         string
-	StartDate    string
-	EndDate      string
-	FiscalYear   int
-	PeriodNumber int
-	YearEnd      bool
+	Code         string `json:"code"`
+	StartDate    string `json:"start_date"`
+	EndDate      string `json:"end_date"`
+	FiscalYear   int    `json:"fiscal_year"`
+	PeriodNumber int    `json:"period_number"`
+	YearEnd      bool   `json:"year_end"`
 }
 
 type JournalLineInput struct {

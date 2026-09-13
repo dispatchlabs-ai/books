@@ -77,6 +77,23 @@ The low-level CLI still reads its trusted database directly through the ledger
 reader/validator; its typed company/database scope extraction remains pending.
 Journal create/edit/post/reverse API completeness and MCP are separate work.
 
+## Milestone 5: whole-database runtime and API — complete
+
+- [x] Add explicit v3 database handles, UUID binding and whole-database read/manage
+  grants; preserve company and v1/v2 boundaries.
+- [x] Bind 54 typed ledger/report operations to shared runtime execution.
+- [x] Expose topology, consolidation, low-level journals, accounts, source evidence,
+  statement accounts and direct reconciliation through operation-specific routes.
+- [x] Extract shared lossless JSON codec; generate OpenAPI from typed descriptors.
+- [x] Test every database operation's wrong-handle denial and every write's
+  read-only denial; test company escalation, UUID mismatch and evidence imports.
+- [x] Complete canonical checks, Linux validation and follow-up review.
+- [x] Commit and push the verified milestone, then continue toward full parity.
+
+Database manage is deliberately whole-database bookkeeping/topology authority.
+File-based lifecycle operations, maintenance and registry are still pending.
+Direct low-level CLI calls still require extraction into the descriptor adapters.
+
 ## Remaining milestones
 
 | Work | State | Completion evidence required |
@@ -84,7 +101,7 @@ Journal create/edit/post/reverse API completeness and MCP are separate work.
 | Typed backend operation descriptors and shared authorization | Four company reports implemented; remainder pending | Typed schemas, scope/grants, effects and adapter bindings; no policy bypasses |
 | Remaining workflow extraction from CLI | Not started | Application-owned orchestration with preserved CLI behavior |
 | Detailed journals, account/evidence/lifecycle and reconciliation API gaps | Journal inspection/validation added; remaining gaps pending | Shared service routes, OpenAPI and cross-interface tests |
-| Database topology, ownership and consolidation API | Not started | Whole-scope authorization and complete report equivalence |
+| Database topology, ownership and consolidation API | Implemented through whole-database operations; acceptance pending | Whole-scope authorization and complete report equivalence |
 | Registry, migration, backup/restore administration API | Not started | Explicit admin grants, lineage, maintenance locks and crash recovery |
 | Remote file bundles, artifact transfer and durable operation receipts | Not started | Bounded transfer, authorization, replay/conflict and interruption tests |
 | Built-in stdio MCP | Not started | Policy, SDK integration, typed tools/resources; no network listener |
@@ -154,6 +171,13 @@ rollback/retry. OpenAPI additive comparison, documentation links and diff checks
 passed. Optional deployment-name denylist was unset. Concurrency is protected by
 a database transaction; this slice does not include a forced concurrent-edit test
 or complete CLI/API/MCP conformance.
+
+Milestone 5 validation: full `scripts/check` passed on macOS and Linux with
+Go 1.26.6. Independent review repairs added transactional journal reads,
+snake_case request fields and exact raw-evidence JSON decoding. Follow-up review
+and synthetic authorization/evidence import tests passed. OpenAPI is generated
+from 54 explicit typed bindings. Optional deployment denylist was unset. Full
+positive conformance of every operation across all three adapters remains pending.
 
 ## How to maintain this tracker
 

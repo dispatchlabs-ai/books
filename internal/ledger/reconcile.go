@@ -164,11 +164,11 @@ type ManualReconciliationInput struct {
 }
 
 type ReconciliationFilter struct {
-	Book             string
-	StatementAccount string
-	Status           string
-	FromDate         string
-	ToDate           string
+	Book             string `json:"book"`
+	StatementAccount string `json:"statement_account"`
+	Status           string `json:"status"`
+	FromDate         string `json:"from_date"`
+	ToDate           string `json:"to_date"`
 }
 
 type ReconciliationAllocation struct {

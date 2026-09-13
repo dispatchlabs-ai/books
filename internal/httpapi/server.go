@@ -25,6 +25,7 @@ import (
 
 type Server struct {
 	config      Config
+	databases   map[string]*application.Database
 	companies   map[string]*application.Service
 	mu          sync.Mutex
 	workerError bool
@@ -34,7 +35,15 @@ func New(ctx context.Context, booksConfig string, c Config) (*Server, error) {
 	if e := c.Validate(); e != nil {
 		return nil, e
 	}
-	s := &Server{config: c, companies: map[string]*application.Service{}}
+	s := &Server{config: c, companies: map[string]*application.Service{}, databases: map[string]*application.Database{}}
+	for key, config := range c.Databases {
+		db, err := application.OpenDatabase(ctx, key, config.Path, config.UUID)
+		if err != nil {
+			_ = s.Close()
+			return nil, err
+		}
+		s.databases[key] = db
+	}
 	keys := map[string]bool{}
 	for _, p := range c.Principals {
 		for key := range p.Companies {
@@ -53,6 +62,11 @@ func New(ctx context.Context, booksConfig string, c Config) (*Server, error) {
 }
 func (s *Server) Close() error {
 	var errs []error
+	for _, db := range s.databases {
+		if err := db.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	for _, app := range s.companies {
 		if e := app.Close(); e != nil {
 			errs = append(errs, e)
@@ -228,6 +242,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) >= 2 && parts[0] == "v1" && parts[1] == "databases" {
+		if err := s.serveDatabase(w, r, p, parts[2:]); err != nil {
+			writeError(w, err)
+		}
+		return
+	}
 	if len(parts) < 4 || parts[0] != "v1" || parts[1] != "companies" {
 		writeFailure(w, http.StatusNotFound, "ROUTE_NOT_FOUND", "API route was not found")
 		return

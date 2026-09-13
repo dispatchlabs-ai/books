@@ -282,7 +282,12 @@ func (s *Service) ReplaceDraft(ctx context.Context, journalID string, raw Create
 }
 
 func (s *Service) GetJournal(ctx context.Context, journalID string) (Journal, error) {
-	return getJournal(ctx, s.store.DB(), journalID)
+	tx, err := s.store.DB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return Journal{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	return getJournal(ctx, tx, journalID)
 }
 
 func getJournal(ctx context.Context, q queryer, journalID string) (Journal, error) {
@@ -583,7 +588,12 @@ func validateJournalQuery(ctx context.Context, q queryer, journalID string) (Jou
 }
 
 func (s *Service) ValidateJournal(ctx context.Context, journalID string) (JournalValidation, error) {
-	return validateJournalQuery(ctx, s.store.DB(), journalID)
+	tx, err := s.store.DB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return JournalValidation{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	return validateJournalQuery(ctx, tx, journalID)
 }
 
 func (s *Service) PostJournal(ctx context.Context, journalID string) (Journal, error) {

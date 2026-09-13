@@ -3,11 +3,11 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v7.openapi.json), and the small
+[OpenAPI](schemas/books-api-v8.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
-The new OpenAPI artifact is an additive contract snapshot (1.6.0); routes and
-response envelopes remain v1. The [1.5.0 snapshot](schemas/books-api-v6.openapi.json), [1.4.0 snapshot](schemas/books-api-v5.openapi.json), [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
+The new OpenAPI artifact is an additive contract snapshot (1.7.0); routes and
+response envelopes remain v1. The [1.6.0 snapshot](schemas/books-api-v7.openapi.json), [1.5.0 snapshot](schemas/books-api-v6.openapi.json), [1.4.0 snapshot](schemas/books-api-v5.openapi.json), [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
 [initial snapshot](schemas/books-api-v1.openapi.json) remain unchanged.
 
 ## Run locally
@@ -339,3 +339,12 @@ IDs and IDs belonging to another book return `JOURNAL_NOT_FOUND` (404). The
 scope check and result use one database snapshot. The existing transaction-number
 route remains supported. Low-level CLI journal reads retain their trusted local
 database scope while extraction into the typed operation layer continues.
+
+
+## Whole-database operations
+
+Server configuration v3 adds explicit database handles and grants. These expose
+low-level ledger workflows, topology and consolidated reports through typed
+backend operations. Company access never implies whole-database access. See
+[database operations](database-operations.md) for configuration, grants and the
+operation contract. The default remains no listener until `books serve` runs.

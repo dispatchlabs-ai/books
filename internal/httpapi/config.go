@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -20,14 +21,20 @@ type Principal struct {
 	ID          string              `json:"id"`
 	TokenSHA256 string              `json:"token_sha256"`
 	Companies   map[string][]string `json:"companies"`
+	Databases   map[string][]string `json:"databases,omitempty"`
+}
+type DatabaseConfig struct {
+	Path string `json:"path"`
+	UUID string `json:"uuid"`
 }
 type Config struct {
-	Schema         string      `json:"schema"`
-	Listen         string      `json:"listen"`
-	TLSCertificate string      `json:"tls_certificate,omitempty"`
-	TLSKey         string      `json:"tls_key,omitempty"`
-	AllowedOrigins []string    `json:"allowed_origins,omitempty"`
-	Principals     []Principal `json:"principals"`
+	Databases      map[string]DatabaseConfig `json:"databases,omitempty"`
+	Schema         string                    `json:"schema"`
+	Listen         string                    `json:"listen"`
+	TLSCertificate string                    `json:"tls_certificate,omitempty"`
+	TLSKey         string                    `json:"tls_key,omitempty"`
+	AllowedOrigins []string                  `json:"allowed_origins,omitempty"`
+	Principals     []Principal               `json:"principals"`
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -60,8 +67,8 @@ var principalPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
 
 func (c Config) Validate() error {
 	bad := func(message string) error { return apperr.New(apperr.Invalid, "SERVER_CONFIG_INVALID", message) }
-	if c.Schema != "books.server/v1" && c.Schema != "books.server/v2" {
-		return bad("server schema must be books.server/v1 or books.server/v2")
+	if c.Schema != "books.server/v1" && c.Schema != "books.server/v2" && c.Schema != "books.server/v3" {
+		return bad("server schema must be books.server/v1, books.server/v2 or books.server/v3")
 	}
 	host, port, e := net.SplitHostPort(c.Listen)
 	if e != nil || port == "" {
@@ -94,6 +101,14 @@ func (c Config) Validate() error {
 	if len(c.Principals) < 1 || len(c.Principals) > 100 {
 		return bad("configure between 1 and 100 principals")
 	}
+	if c.Schema != "books.server/v3" && len(c.Databases) > 0 {
+		return bad("database handles require v3")
+	}
+	for key, db := range c.Databases {
+		if !principalPattern.MatchString(key) || !filepath.IsAbs(db.Path) || !regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`).MatchString(db.UUID) {
+			return bad("database handles require a simple key, absolute path and UUID")
+		}
+	}
 	ids := map[string]bool{}
 	tokens := map[string]bool{}
 	for _, p := range c.Principals {
@@ -106,8 +121,26 @@ func (c Config) Validate() error {
 			return bad("each principal requires a unique lowercase SHA-256 credential digest")
 		}
 		tokens[p.TokenSHA256] = true
-		if len(p.Companies) == 0 {
-			return bad("each principal requires company grants")
+		if len(p.Companies) == 0 && len(p.Databases) == 0 {
+			return bad("each principal requires explicit company or database grants")
+		}
+		if c.Schema != "books.server/v3" && len(p.Databases) > 0 {
+			return bad("database grants require v3")
+		}
+		for key, grants := range p.Databases {
+			if _, ok := c.Databases[key]; !ok {
+				return bad("database grant references unknown handle")
+			}
+			found := map[string]bool{}
+			for _, grant := range grants {
+				if found[grant] || (grant != "read" && grant != "manage") {
+					return bad("database grants must be unique read or manage values")
+				}
+				found[grant] = true
+			}
+			if !found["read"] {
+				return bad("database grants require read")
+			}
 		}
 		for key, grants := range p.Companies {
 			if e := booksconfig.ValidateCompanyKey(key); e != nil {
@@ -115,7 +148,7 @@ func (c Config) Validate() error {
 			}
 			found := map[string]bool{}
 			for _, grant := range grants {
-				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && (c.Schema != "books.server/v2" || grant != "manage")) {
+				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && ((c.Schema != "books.server/v2" && c.Schema != "books.server/v3") || grant != "manage")) {
 					return bad("grants must be unique read, import, post, or (v2 only) manage values")
 				}
 				found[grant] = true

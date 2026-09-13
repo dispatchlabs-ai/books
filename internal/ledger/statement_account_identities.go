@@ -46,10 +46,10 @@ type StatementAccountIdentity struct {
 }
 
 type StatementAccountIdentityFilter struct {
-	StatementAccount string
-	Entity           string
-	SourceSystem     string
-	SourceRealm      string
+	StatementAccount string `json:"statement_account"`
+	Entity           string `json:"entity"`
+	SourceSystem     string `json:"source_system"`
+	SourceRealm      string `json:"source_realm"`
 }
 
 type statementAccountIdentityScanner interface {

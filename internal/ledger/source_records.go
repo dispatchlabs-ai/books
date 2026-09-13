@@ -11,11 +11,11 @@ import (
 )
 
 type SourceRecordFilter struct {
-	SourceAccount  string
-	Disposition    string
-	FromDate       string
-	ToDate         string
-	IncludeHistory bool
+	SourceAccount  string `json:"source_account"`
+	Disposition    string `json:"disposition"`
+	FromDate       string `json:"from_date"`
+	ToDate         string `json:"to_date"`
+	IncludeHistory bool   `json:"include_history"`
 }
 
 type SourceRecord struct {

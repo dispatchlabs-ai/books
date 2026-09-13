@@ -87,8 +87,8 @@ type StatementAccountPrecoverageClosure struct {
 }
 
 type PrecoverageClosureFilter struct {
-	StatementAccount string
-	Entity           string
+	StatementAccount string `json:"statement_account"`
+	Entity           string `json:"entity"`
 }
 
 type precoverageClosureQueryer interface {

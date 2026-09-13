@@ -18,18 +18,28 @@
     "cli": [
       "account configure"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/account_configure"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "account_create",
     "cli": [
       "account create"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/account_create"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "account_defaults_get",
@@ -60,18 +70,28 @@
     "cli": [
       "account identity add"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/account_identity_add"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "account_identity_list",
     "cli": [
       "account identity list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/account_identity_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "account_list",
@@ -83,10 +103,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/accounts"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/account_list"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "audit_list",
@@ -213,9 +237,14 @@
     "cli": [
       "book list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/book_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "capabilities",
@@ -406,36 +435,56 @@
     "cli": [
       "entity create"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/entity_create"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "entity_list",
     "cli": [
       "entity list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/entity_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "group_create",
     "cli": [
       "group create"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/group_create"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "group_list",
     "cli": [
       "group list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/group_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "health",
@@ -454,18 +503,28 @@
     "cli": [
       "import-batch list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/import_batch_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "import_batch_show",
     "cli": [
       "import-batch show"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/import_batch_show"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "import_quickbooks_apply",
@@ -511,9 +570,14 @@
     "cli": [
       "journal abandon"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_abandon"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_add",
@@ -534,63 +598,98 @@
     "cli": [
       "journal create"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_create"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_edit",
     "cli": [
       "journal edit"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_edit"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_import",
     "cli": [
       "journal import"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_import"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_list",
     "cli": [
       "journal list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_post",
     "cli": [
       "journal post"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_post"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_post_batch",
     "cli": [
       "journal post-batch"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_post_batch"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_reverse",
     "cli": [
       "journal reverse"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_reverse"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_show",
@@ -601,10 +700,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/journals/{journal}"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_show"
       }
     ],
     "mcp": "",
-    "gap": "Company HTTP uses shared typed read authorization and scoped ledger snapshots. Trusted-database CLI extraction and MCP binding remain pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "journal_validate",
@@ -615,46 +718,70 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/journals/{journal}/validation"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/journal_validate"
       }
     ],
     "mcp": "",
-    "gap": "Company HTTP uses shared typed read authorization and scoped ledger snapshots. Trusted-database CLI extraction and MCP binding remain pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "ownership_list",
     "cli": [
       "ownership list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/ownership_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "ownership_set",
     "cli": [
       "ownership set"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/ownership_set"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "period_close",
     "cli": [
       "period close"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/period_close"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "period_create",
     "cli": [
       "period create"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/period_create"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "period_list",
@@ -666,10 +793,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/periods"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/period_list"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "period_reopen",
@@ -681,19 +812,28 @@
       {
         "method": "POST",
         "path": "/v1/companies/{company}/periods/{period}/reopen"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/period_reopen"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "period_year_close",
     "cli": [
       "period year-close"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/period_year_close"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "periods_add",
@@ -728,27 +868,42 @@
     "cli": [
       "reconcile abandon"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_abandon"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_allocate",
     "cli": [
       "reconcile allocate"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_allocate"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_allocations",
     "cli": [
       "reconcile allocations"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_allocations"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_apply",
@@ -769,9 +924,14 @@
     "cli": [
       "reconcile complete"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_complete"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_list",
@@ -782,10 +942,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/reconciliations"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_list"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_plan",
@@ -810,10 +974,14 @@
       {
         "method": "POST",
         "path": "/v1/companies/{company}/reconciliations/{id}/reopen"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_reopen"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_replan",
@@ -829,9 +997,14 @@
     "cli": [
       "reconcile start"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_start"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_status",
@@ -842,19 +1015,28 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/reconciliations/{id}"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_status"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reconcile_unallocate",
     "cli": [
       "reconcile unallocate"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/reconcile_unallocate"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "report_balance_sheet",
@@ -866,10 +1048,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/reports/balance-sheet"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/report_balance_sheet"
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "report_general_ledger",
@@ -881,10 +1067,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/reports/general-ledger"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/report_general_ledger"
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "report_profit_loss",
@@ -896,10 +1086,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/reports/profit-loss"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/report_profit_loss"
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "report_trial_balance",
@@ -911,10 +1105,14 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/reports/trial-balance"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/report_trial_balance"
       }
     ],
     "mcp": "",
-    "gap": "Company CLI/HTTP uses executable typed operations with shared company read authorization. Consolidated HTTP scope and MCP binding remain pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "reverse",
@@ -935,36 +1133,56 @@
     "cli": [
       "source link-journal"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/source_link_journal"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "source_links",
     "cli": [
       "source links"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/source_links"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "source_list",
     "cli": [
       "source list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/source_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "source_show",
     "cli": [
       "source show"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/source_show"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "spend",
@@ -985,36 +1203,56 @@
     "cli": [
       "statement-account archive"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_archive"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "statement_account_create",
     "cli": [
       "statement-account create"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_create"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "statement_account_identity_add",
     "cli": [
       "statement-account identity add"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_identity_add"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "statement_account_identity_list",
     "cli": [
       "statement-account identity list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_identity_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "statement_account_lifecycle_close_before_coverage",
@@ -1030,9 +1268,14 @@
     "cli": [
       "statement-account lifecycle list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_lifecycle_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "statement_account_list",
@@ -1043,28 +1286,42 @@
       {
         "method": "GET",
         "path": "/v1/companies/{company}/statement-accounts"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_account_list"
       }
     ],
     "mcp": "",
-    "gap": "MCP binding and complete argument/scope parity pending."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "statement_import",
     "cli": [
       "statement import"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/statement_import"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "transaction_list",
     "cli": [
       "transaction list"
     ],
-    "http": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/transaction_list"
+      }
+    ],
     "mcp": "",
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "gap": "Database HTTP is bound to a typed backend operation with explicit whole-database authority. Full CLI adapter extraction and MCP binding remain pending."
   },
   {
     "id": "transfer",

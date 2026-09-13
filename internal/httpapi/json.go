@@ -2,12 +2,11 @@ package httpapi
 
 import (
 	"encoding/json"
-	"github.com/dispatchlabs-ai/books/internal/money"
+	"github.com/dispatchlabs-ai/books/internal/wire"
 	"io"
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
@@ -106,68 +105,8 @@ func serveTransactions(w http.ResponseWriter, r *http.Request, app *application.
 
 // Integer minor units and int64 cursors cross JSON as strings, so JavaScript
 // clients never round accounting values above Number.MAX_SAFE_INTEGER.
-func apiValue(v reflect.Value) any { return encodeAPIValue(v, false) }
-func encodeAPIValue(v reflect.Value, preserveNil bool) any {
-	if !v.IsValid() {
-		return nil
-	}
-	if v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			return nil
-		}
-		return encodeAPIValue(v.Elem(), preserveNil)
-	}
-	if v.Type() == reflect.TypeFor[json.RawMessage]() {
-		return v.Interface()
-	}
-	if v.Type() == reflect.TypeFor[money.Currency]() {
-		return v.Interface().(money.Currency).Code()
-	}
-	switch v.Kind() {
-	case reflect.Int64:
-		return strconv.FormatInt(v.Int(), 10)
-	case reflect.Struct:
-		out := map[string]any{}
-		typ := v.Type()
-		for i := 0; i < v.NumField(); i++ {
-			f := typ.Field(i)
-			if f.PkgPath != "" {
-				continue
-			}
-			tag := f.Tag.Get("json")
-			name, options, _ := strings.Cut(tag, ",")
-			if name == "-" {
-				continue
-			}
-			if name == "" {
-				name = f.Name
-			}
-			if strings.Contains(options, "omitempty") && v.Field(i).IsZero() {
-				continue
-			}
-			out[name] = encodeAPIValue(v.Field(i), preserveNil)
-		}
-		return out
-	case reflect.Slice, reflect.Array:
-		if preserveNil && v.Kind() == reflect.Slice && v.IsNil() {
-			return nil
-		}
-		out := make([]any, v.Len())
-		for i := range out {
-			out[i] = encodeAPIValue(v.Index(i), preserveNil)
-		}
-		return out
-	case reflect.Map:
-		out := map[string]any{}
-		it := v.MapRange()
-		for it.Next() {
-			out[it.Key().String()] = encodeAPIValue(it.Value(), preserveNil)
-		}
-		return out
-	default:
-		return v.Interface()
-	}
-}
+func apiValue(v reflect.Value) any                         { return encodeAPIValue(v, false) }
+func encodeAPIValue(v reflect.Value, preserveNil bool) any { return wire.EncodeValue(v, preserveNil) }
 
 // Company scope is bound before this handler; do not accept alternate entity or
 // group selectors that could turn a company credential into database access.

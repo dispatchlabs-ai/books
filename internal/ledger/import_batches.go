@@ -32,9 +32,9 @@ type ImportBatch struct {
 }
 
 type ImportBatchFilter struct {
-	SourceSystem string
-	Entity       string
-	Status       string
+	SourceSystem string `json:"source_system"`
+	Entity       string `json:"entity"`
+	Status       string `json:"status"`
 }
 
 const importBatchSelect = `SELECT ib.id, ib.source_system, COALESCE(e.code, ''),
