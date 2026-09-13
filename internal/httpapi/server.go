@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"github.com/dispatchlabs-ai/books/internal/artifact"
 	"mime"
 	"net"
 	"net/http"
@@ -282,7 +283,7 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 		if err := readWorkflowJSON(w, r, input); err != nil {
 			return err
 		}
-		value, err := op.Invoke(r.Context(), app, operations.CompanyAccess(p.ID, company, p.Companies[company]), input)
+		value, err := op.Invoke(artifact.WithRoot(r.Context(), s.config.ArtifactDirectory), app, operations.CompanyAccess(p.ID, company, p.Companies[company]), input)
 		if err != nil {
 			return err
 		}

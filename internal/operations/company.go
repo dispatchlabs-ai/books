@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
+	"github.com/dispatchlabs-ai/books/internal/artifact"
 	"reflect"
 	"slices"
 	"strings"
@@ -32,6 +33,7 @@ func (o companyOperation[I, O]) Invoke(ctx context.Context, app *application.Ser
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	ctx = artifact.Bind(ctx, a.actor, "company:"+app.Identity())
 	return o.run(ctx, app.AsActor(a.actor), a, *r)
 }
 func authorizeCompany(app *application.Service, a Access, grants []string) error {

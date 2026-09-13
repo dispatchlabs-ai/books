@@ -11,8 +11,9 @@ import (
 // Database binds an administrator-selected opaque handle to a verified store.
 // Clients select the handle, never a filesystem path. Authority covers all books.
 type Database struct {
-	key   string
-	store *storesqlite.Store
+	identity string
+	key      string
+	store    *storesqlite.Store
 }
 
 func BindDatabase(ctx context.Context, key string, store *storesqlite.Store, expectedUUID string) (*Database, error) {
@@ -29,7 +30,7 @@ func BindDatabase(ctx context.Context, key string, store *storesqlite.Store, exp
 	if key == "" {
 		return nil, apperr.New(apperr.Invalid, "DATABASE_REQUIRED", "database handle is required")
 	}
-	return &Database{key: key, store: store}, nil
+	return &Database{key: key, store: store, identity: uuid}, nil
 }
 func OpenDatabase(ctx context.Context, key, path, uuid string) (*Database, error) {
 	if uuid == "" {
@@ -49,3 +50,5 @@ func (d *Database) Key() string                         { return d.key }
 func (d *Database) Close() error                        { return d.store.Close() }
 func (d *Database) Ledger(actor string) *ledger.Service { return ledger.NewService(d.store, actor) }
 func (d *Database) Reports() *report.Service            { return report.NewService(d.store) }
+
+func (d *Database) Identity() string { return d.identity }

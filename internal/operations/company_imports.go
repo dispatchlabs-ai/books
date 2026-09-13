@@ -5,15 +5,17 @@ import (
 	"encoding/base64"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
+	"github.com/dispatchlabs-ai/books/internal/artifact"
 	"github.com/dispatchlabs-ai/books/internal/banking"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 )
 
 type BankUploadRequest struct {
-	Key     string          `json:"key"`
-	Name    string          `json:"name"`
-	Base64  string          `json:"base64"`
-	Options banking.Options `json:"options"`
+	Artifact string          `json:"artifact,omitempty"`
+	Key      string          `json:"key"`
+	Name     string          `json:"name"`
+	Base64   string          `json:"base64"`
+	Options  banking.Options `json:"options"`
 }
 type BankChoicesRequest struct {
 	Job     string                   `json:"job"`
@@ -30,8 +32,23 @@ type SourceContent struct {
 
 func companyImportOperations() []CompanyOperation {
 	return []CompanyOperation{
+		companyOp("bank_import_formats", "read", "read", func(_ context.Context, _ *application.Service, _ Access, _ EmptyRequest) ([]banking.FormatCapability, error) {
+			return banking.Capabilities(), nil
+		}),
 		companyOp("bank_import_upload", "import", "write", func(c context.Context, s *application.Service, a Access, r BankUploadRequest) (ledger.BankImportJob, error) {
-			data, err := base64.StdEncoding.DecodeString(r.Base64)
+			var data []byte
+			var err error
+			if r.Artifact != "" {
+				if r.Base64 != "" {
+					return ledger.BankImportJob{}, apperr.New(apperr.Invalid, "INPUT_AMBIGUOUS", "supply artifact or base64, not both")
+				}
+				data, err = artifact.Bytes(c, r.Artifact, 8<<20)
+				if err != nil {
+					return ledger.BankImportJob{}, err
+				}
+			} else {
+				data, err = base64.StdEncoding.DecodeString(r.Base64)
+			}
 			if err != nil {
 				return ledger.BankImportJob{}, apperr.New(apperr.Invalid, "INPUT_ENCODING_INVALID", "source must be valid base64")
 			}

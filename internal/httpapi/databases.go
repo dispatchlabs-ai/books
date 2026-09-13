@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"github.com/dispatchlabs-ai/books/internal/apperr"
+	"github.com/dispatchlabs-ai/books/internal/artifact"
 	"github.com/dispatchlabs-ai/books/internal/operations"
 	"net/http"
 )
@@ -26,7 +27,7 @@ func (s *Server) serveDatabase(w http.ResponseWriter, r *http.Request, p Princip
 	if err := readWorkflowJSON(w, r, input); err != nil {
 		return err
 	}
-	output, err := op.Execute(r.Context(), db, operations.ScopedDatabaseAccess(p.ID, path[0], p.Databases[path[0]]), input)
+	output, err := op.Execute(artifact.WithRoot(r.Context(), s.config.ArtifactDirectory), db, operations.ScopedDatabaseAccess(p.ID, path[0], p.Databases[path[0]]), input)
 	if err != nil {
 		return err
 	}

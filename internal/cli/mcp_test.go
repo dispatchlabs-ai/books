@@ -86,6 +86,12 @@ func TestMCPStdio(t *testing.T) {
 	if cli["data"].(map[string]any)["total_debit_cents"] != "90071992547409.93" {
 		t.Fatal("CLI/MCP mismatch")
 	}
+
+	largeMutation := call("journal_create", map[string]any{"book": "ACME", "posting_date": "2026-01-15", "period": "2026-01", "description": strings.Repeat("x", 600<<10), "lines": []any{map[string]any{"account": "1000", "debit_cents": "1"}, map[string]any{"account": "4000", "credit_cents": "1"}}})
+	delivered := largeMutation.StructuredContent.(map[string]any)
+	if delivered["delivery_warning"] == nil || delivered["result"].(map[string]any)["id"] == "" {
+		t.Fatal("large committed draft lost on artifact delivery failure")
+	}
 	denied, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "books_db_entity_list", Arguments: map[string]any{"database": "other", "input": map[string]any{}}})
 	if err != nil {
 		t.Fatal(err)

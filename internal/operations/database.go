@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
+	"github.com/dispatchlabs-ai/books/internal/artifact"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/report"
 	"reflect"
@@ -49,6 +50,7 @@ func (o databaseOperation[I, O]) Execute(ctx context.Context, db *application.Da
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	ctx = artifact.Bind(ctx, a.actor, "database:"+db.Identity())
 	return o.run(ctx, db, a.actor, *in)
 }
 func databaseOp[I, O any](id, grant string, run func(context.Context, *application.Database, string, I) (O, error)) DatabaseOperation {
@@ -56,6 +58,9 @@ func databaseOp[I, O any](id, grant string, run func(context.Context, *applicati
 	if grant != "read" {
 		effect = "write"
 	}
+	return databaseOpWithEffect(id, grant, effect, run)
+}
+func databaseOpWithEffect[I, O any](id, grant, effect string, run func(context.Context, *application.Database, string, I) (O, error)) DatabaseOperation {
 	return databaseOperation[I, O]{Descriptor{ID: id, Version: 1, Scope: "database", Grant: grant, Effect: effect, Input: reflect.TypeFor[I](), Output: reflect.TypeFor[O]()}, run}
 }
 
@@ -115,7 +120,7 @@ func DatabaseOperations() []DatabaseOperation {
 		databaseOp("report_profit_loss", "read", func(c context.Context, d *application.Database, _ string, r DatabaseReportRequest) (report.ProfitLossReport, error) {
 			return d.Reports().ProfitLoss(c, report.ProfitLossInput{Scope: r.scope(), FromDate: r.From, ToDate: r.To, IncludeZero: r.IncludeZero})
 		}),
-	}, ledgerDatabaseOperations()...)
+	}, append(ledgerDatabaseOperations(), append(inspectionDatabaseOperations(), databaseArtifactOperations()...)...)...)
 }
 func LookupDatabaseOperation(id string) (DatabaseOperation, bool) {
 	for _, o := range DatabaseOperations() {

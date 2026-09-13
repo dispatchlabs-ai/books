@@ -17,6 +17,7 @@ own declared scope and supported dry-run fields.
   "schema": "books.mcp-policy/v1",
   "actor": "bookkeeping-agent",
   "config_path": "/absolute/path/books-home/books.toml",
+  "artifact_directory": "/absolute/path/books-home/artifacts",
   "companies": {"example": ["read", "import", "post", "manage"]},
   "databases": {}
 }
@@ -36,13 +37,13 @@ every call. Mutating tool hints are conservative; annotations never grant access
 Input schemas distinguish decimal amount strings used by convenient workflows
 from exact int64 minor-unit strings used by the ledger. Results use exact int64
 strings and preserve JSON evidence numbers. Never round these through a floating
-point number. Successful results appear under `result`; tool errors set `isError`
+point number. Successful results appear under `result` or a scoped `artifact` reference; tool errors set `isError`
 and include a stable code. Check `valid`, errors and dry-run fields in results.
 Idempotency keys are part of workflows that support them; reuse the same key and
 payload after an uncertain response instead of creating another transaction.
 
 The stdio frame limit is 4 MiB and decoded operation input is bounded to 2 MiB.
-Large file transfer and bounded result resources remain implementation work.
+Bounded file transfer and large-result references are described in [artifacts](artifacts.md). Bundle and maintenance file workflows remain pending.
 No client-supplied roots, credentials, SQL, shell commands or server paths can
 expand policy. The process runs as its OS user; this is application authorization,
 not isolation from another program with that user's filesystem authority.

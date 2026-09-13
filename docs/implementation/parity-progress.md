@@ -106,6 +106,17 @@ Direct low-level CLI calls still require extraction into the descriptor adapters
 - [x] Finish independent follow-up review and supported-platform canonical checks.
 - [x] Commit and push this verified slice; continue registry, maintenance, files and final conformance.
 
+## Milestone 7: bounded files and remaining inspection bindings — complete
+
+- [x] Add database audit/status/Doctor and company format/replan contracts.
+- [x] Add bounded resumable artifact transfer, SHA-256 checks, scope/identity binding,
+  context-aware locks, quota reservations and discard tombstones.
+- [x] Preserve the full 8 MiB statement upload capacity through HTTP/MCP chunks.
+- [x] Add large MCP result references and successful-mutation delivery fallback.
+- [x] Test interrupted chunks, ownership/identity changes, limits, symlinks,
+  cancellation, maximum-size cross-adapter upload and result download.
+- [x] Complete follow-up review, supported-platform gates and commit/push.
+
 ## Remaining milestones
 
 | Work | State | Completion evidence required |
@@ -200,3 +211,5 @@ capability documentation honest during rollout. Progress tracking does not creat
 a background scheduler or authorize deployment of a network service.
 
 Milestone 6 validation (September 13): full `scripts/check` passed on macOS and Linux with Go 1.26.6, including race checks, lint, vulnerability scan and synthetic CLI smoke. Independent follow-up confirmed bounded frames, ambient-configuration isolation, remote retry keys and explicit account creation fields. The official SDK client passed actual stdio and in-memory HTTP/MCP retry tests. GUI agent clients and complete parity are not yet validated.
+
+Milestone 7 validation (September 13): full canonical gates passed on macOS and Linux, including synthetic CLI smoke, race, lint and vulnerability checks. Independent follow-up confirmed identity-bound artifact access, cancelable lock waits, interrupted chunk recovery, artifact error preservation, successful-mutation delivery fallback and read-only owner cleanup. Exact 8 MiB HTTP upload/MCP consumption and chunked large-result recovery pass. Full parity and durable operation receipts remain pending.

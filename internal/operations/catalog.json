@@ -146,22 +146,131 @@
     "gap": "Typed backend, HTTP and MCP bindings implemented for recorded scopes; full CLI adapter extraction, file/administration coverage and final conformance remain pending."
   },
   {
+    "id": "artifact_begin",
+    "cli": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/artifact_begin"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/artifact_begin"
+      }
+    ],
+    "mcp": [
+      "books_db_artifact_begin",
+      "books_company_artifact_begin"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
+  },
+  {
+    "id": "artifact_discard",
+    "cli": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/artifact_discard"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/artifact_discard"
+      }
+    ],
+    "mcp": [
+      "books_company_artifact_discard",
+      "books_db_artifact_discard"
+    ],
+    "gap": "Shared file cleanup implemented; final adapter conformance pending."
+  },
+  {
+    "id": "artifact_finish",
+    "cli": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/artifact_finish"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/artifact_finish"
+      }
+    ],
+    "mcp": [
+      "books_db_artifact_finish",
+      "books_company_artifact_finish"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
+  },
+  {
+    "id": "artifact_read",
+    "cli": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/artifact_read"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/artifact_read"
+      }
+    ],
+    "mcp": [
+      "books_db_artifact_read",
+      "books_company_artifact_read"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
+  },
+  {
+    "id": "artifact_write",
+    "cli": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/artifact_write"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/artifact_write"
+      }
+    ],
+    "mcp": [
+      "books_db_artifact_write",
+      "books_company_artifact_write"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
+  },
+  {
     "id": "audit_list",
     "cli": [
       "audit list"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/audit_list"
+      }
+    ],
+    "mcp": [
+      "books_db_audit_list"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
   },
   {
     "id": "audit_verify",
     "cli": [
       "audit verify"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/audit_verify"
+      }
+    ],
+    "mcp": [
+      "books_db_audit_verify"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
   },
   {
     "id": "bank_import_apply",
@@ -188,9 +297,16 @@
     "cli": [
       "bank-import formats"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/bank_import_formats"
+      }
+    ],
+    "mcp": [
+      "books_company_bank_import_formats"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
   },
   {
     "id": "bank_import_matches",
@@ -491,9 +607,16 @@
       "db doctor",
       "doctor"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/db_doctor"
+      }
+    ],
+    "mcp": [
+      "books_db_db_doctor"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
   },
   {
     "id": "db_init",
@@ -528,9 +651,16 @@
     "cli": [
       "db status"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/databases/{database}/operations/db_status"
+      }
+    ],
+    "mcp": [
+      "books_db_db_status"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
   },
   {
     "id": "entity_create",
@@ -1214,9 +1344,16 @@
     "cli": [
       "reconcile replan"
     ],
-    "http": [],
-    "mcp": [],
-    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/reconcile_replan"
+      }
+    ],
+    "mcp": [
+      "books_company_reconcile_replan"
+    ],
+    "gap": "Shared typed binding implemented; final CLI/API/MCP argument and scope conformance pending."
   },
   {
     "id": "reconcile_start",

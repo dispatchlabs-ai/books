@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dispatchlabs-ai/books/internal/artifact"
 	booksconfig "github.com/dispatchlabs-ai/books/internal/config"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
 	"github.com/dispatchlabs-ai/books/internal/version"
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"slices"
 	"sort"
@@ -30,11 +30,12 @@ type DatabasePolicy struct {
 	Grants []string `json:"grants"`
 }
 type Policy struct {
-	ConfigPath string                    `json:"config_path,omitempty"`
-	Companies  map[string][]string       `json:"companies,omitempty"`
-	Schema     string                    `json:"schema"`
-	Actor      string                    `json:"actor"`
-	Databases  map[string]DatabasePolicy `json:"databases"`
+	ArtifactDirectory string                    `json:"artifact_directory,omitempty"`
+	ConfigPath        string                    `json:"config_path,omitempty"`
+	Companies         map[string][]string       `json:"companies,omitempty"`
+	Schema            string                    `json:"schema"`
+	Actor             string                    `json:"actor"`
+	Databases         map[string]DatabasePolicy `json:"databases"`
 }
 
 func LoadPolicy(path string) (Policy, error) {
@@ -66,6 +67,9 @@ func (p Policy) Validate() error {
 	}
 	simple := regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	if p.ArtifactDirectory != "" && !filepath.IsAbs(p.ArtifactDirectory) {
+		return bad()
+	}
 	if p.Schema != "books.mcp-policy/v1" || !simple.MatchString(p.Actor) || (len(p.Databases) == 0 && len(p.Companies) == 0) {
 		return bad()
 	}
@@ -150,7 +154,7 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 		}
 		sort.Strings(allowed)
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + descriptor.ID, Description: fmt.Sprintf("%s on an explicitly authorized whole database. Requires %s; effect %s. Amounts are exact minor-unit strings. Check validation fields and errors in the result.", descriptor.ID, descriptor.Grant, descriptor.Effect), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"database", "input"}, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.Schema(descriptor.Input)}}, OutputSchema: map[string]any{"type": "object", "required": []string{"result"}, "properties": map[string]any{"result": wire.Schema(descriptor.Output)}, "additionalProperties": false}, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: descriptor.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + descriptor.ID, Description: fmt.Sprintf("%s on an explicitly authorized whole database. Requires %s; effect %s. Amounts are exact minor-unit strings. Check validation fields and errors in the result.", descriptor.ID, descriptor.Grant, descriptor.Effect), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"database", "input"}, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.Schema(descriptor.Input)}}, OutputSchema: resultSchema(descriptor.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: descriptor.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct {
 				Database string          `json:"database"`
 				Input    json.RawMessage `json:"input"`
@@ -166,16 +170,11 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 			if err := wire.Decode(args.Input, input); err != nil {
 				return failure(err), nil
 			}
-			value, err := op.Execute(ctx, s.databases[args.Database], operations.ScopedDatabaseAccess(p.Actor, args.Database, config.Grants), input)
+			value, err := op.Execute(artifact.WithRoot(ctx, p.ArtifactDirectory), s.databases[args.Database], operations.ScopedDatabaseAccess(p.Actor, args.Database, config.Grants), input)
 			if err != nil {
 				return failure(err), nil
 			}
-			result := map[string]any{"result": wire.EncodeValue(reflect.ValueOf(value), true)}
-			data, err := json.Marshal(result)
-			if err != nil {
-				return failure(err), nil
-			}
-			return &mcp.CallToolResult{StructuredContent: result, Content: []mcp.Content{&mcp.TextContent{Text: string(data)}}}, nil
+			return operationResult(artifact.Bind(artifact.WithRoot(ctx, p.ArtifactDirectory), p.Actor, "database:"+s.databases[args.Database].Identity()), value, descriptor.Effect)
 		})
 	}
 	return s, nil

@@ -28,13 +28,14 @@ type DatabaseConfig struct {
 	UUID string `json:"uuid"`
 }
 type Config struct {
-	Databases      map[string]DatabaseConfig `json:"databases,omitempty"`
-	Schema         string                    `json:"schema"`
-	Listen         string                    `json:"listen"`
-	TLSCertificate string                    `json:"tls_certificate,omitempty"`
-	TLSKey         string                    `json:"tls_key,omitempty"`
-	AllowedOrigins []string                  `json:"allowed_origins,omitempty"`
-	Principals     []Principal               `json:"principals"`
+	ArtifactDirectory string                    `json:"artifact_directory,omitempty"`
+	Databases         map[string]DatabaseConfig `json:"databases,omitempty"`
+	Schema            string                    `json:"schema"`
+	Listen            string                    `json:"listen"`
+	TLSCertificate    string                    `json:"tls_certificate,omitempty"`
+	TLSKey            string                    `json:"tls_key,omitempty"`
+	AllowedOrigins    []string                  `json:"allowed_origins,omitempty"`
+	Principals        []Principal               `json:"principals"`
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -67,6 +68,9 @@ var principalPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
 
 func (c Config) Validate() error {
 	bad := func(message string) error { return apperr.New(apperr.Invalid, "SERVER_CONFIG_INVALID", message) }
+	if c.ArtifactDirectory != "" && !filepath.IsAbs(c.ArtifactDirectory) {
+		return bad("artifact_directory must be absolute")
+	}
 	if c.Schema != "books.server/v1" && c.Schema != "books.server/v2" && c.Schema != "books.server/v3" {
 		return bad("server schema must be books.server/v1, books.server/v2 or books.server/v3")
 	}

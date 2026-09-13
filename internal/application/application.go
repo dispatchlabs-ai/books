@@ -5,6 +5,7 @@ package application
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"strings"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
@@ -144,4 +145,10 @@ func (s *Service) Transactions(ctx context.Context, after int64, limit int) ([]l
 
 func (s *Service) Matches(ctx context.Context, job string, choices ledger.BankImportChoices) (ledger.BankImportMatches, error) {
 	return s.ledger().MatchBankImport(ctx, s.company.Book, job, choices)
+}
+
+// Identity binds artifacts to the verified database and company book, not a reusable alias.
+func (s *Service) Identity() string {
+	data, _ := json.Marshal([]string{s.resolved.Company.DatabaseUUID, s.company.Entity, s.company.Book})
+	return string(data)
 }

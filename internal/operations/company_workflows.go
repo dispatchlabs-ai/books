@@ -117,6 +117,12 @@ func CompanyOperations() []CompanyOperation {
 		companyOp("period_reopen", "manage", "write", func(c context.Context, s *application.Service, a Access, r CompanyPeriodRequest) (application.ReopenPeriodResult, error) {
 			return s.ReopenPeriod(c, r.Period, r.Reason, r.DryRun)
 		}),
+		companyOp("reconcile_replan", "read", "read", func(c context.Context, s *application.Service, a Access, r application.ReconciliationRequest) (application.ReconciliationPlan, error) {
+			if r.TargetID == "" {
+				return application.ReconciliationPlan{}, apperr.New(apperr.Invalid, "RECONCILIATION_REQUIRED", "replan requires a reopened reconciliation ID")
+			}
+			return s.PlanReconciliation(c, r)
+		}),
 		companyOp("reconcile_plan", "read", "read", func(c context.Context, s *application.Service, a Access, r application.ReconciliationRequest) (application.ReconciliationPlan, error) {
 			return s.PlanReconciliation(c, r)
 		}),
@@ -174,5 +180,5 @@ func CompanyOperations() []CompanyOperation {
 		companyOp("undo", "post", "write", func(c context.Context, s *application.Service, a Access, r ReverseRequest) (application.Transaction, error) {
 			return s.ReverseTransaction(c, r.Number, r.Date, r.Description, r.Draft, true, r.DryRun, allowedJournalKinds(a)...)
 		}),
-	}, append(extraCompanyOperations(), companyImportOperations()...)...)
+	}, append(append(extraCompanyOperations(), companyImportOperations()...), companyArtifactOperations()...)...)
 }
