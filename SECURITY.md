@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Books is experimental. Security fixes are provided only for the latest tagged
-`0.x` release and the current `main` branch.
+Books is experimental and currently has no tagged releases. Security fixes are
+provided on the current `main` branch.
 
 ## Reporting a vulnerability
 
@@ -22,8 +22,9 @@ remediation time.
 
 ## Security boundary
 
-- Books provides a local CLI and an optional authenticated company-scoped API.
-  The API boundary is described below; it is not a hosted multi-tenant service.
+- Books provides a local CLI, an optional authenticated HTTP API, and a built-in
+  stdio MCP server. Their authorization boundaries are described below; this is
+  not a hosted multi-tenant service.
 - Databases, attachments, plans, and backups are plaintext local files. Books
   relies on operating-system permissions and, where needed, full-disk
   encryption for confidentiality.
@@ -33,8 +34,8 @@ remediation time.
 - Imports are untrusted input. Supported parsers enforce resource limits, but
   imports should still be processed in a constrained environment when their
   origin is unknown.
-- Supported writes use the Books CLI or authenticated API through shared
-  application and ledger services. Direct SQLite writes are
+- Supported writes use the Books CLI, authenticated API, or policy-bound MCP
+  tools through shared application and ledger services. Direct SQLite writes are
   unsupported and can invalidate accounting and audit guarantees.
 - Users are responsible for offline or independently protected backups and for
   professionally reviewing accounting outputs.
@@ -48,11 +49,25 @@ company record to a public issue or pull request. Use minimal synthetic evidence
 ## Headless API boundary
 
 The experimental v1 service uses operator-provisioned high-entropy bearer
-credentials stored as SHA-256 digests, with read/import/post grants per company
-and an additional manage grant in server configuration v2. Chart/default changes, reopen and period close require
-manage; year-close posting and changes to closing journals require manage and
-post. Registry creation, migrations, backup/restore and local-file imports remain
-local administrative operations.
+credentials stored as SHA-256 digests. Company permissions are `read`, `import`,
+`post`, and (configuration v2+) `manage`. Chart/default changes, reopen and period
+close require manage; year-close posting and changes to closing journals require
+manage and post.
+
+Configuration v3+ can grant whole-database `read` and `manage`, covering every
+entity and book in the selected file. Database manage includes posting and is
+broader than company manage. Configuration v4 adds separate registry read/manage
+and database admin for initialization, migration, backup and restore. Company
+access does not imply either authority. An explicit company `*` grant includes
+future registrations; exact company entries override it. Existing databases bind
+to configured UUIDs. An uninitialized target may omit its UUID only with admin;
+pin the returned identity for ongoing enforcement.
+
+Clients select configured database handles, never arbitrary server paths.
+Registry operations change only the supported preferences and registrations;
+registry readers can see registered storage paths. Restoration requires the exact
+database handle as confirmation and reuses lineage and recovery checks. See
+[administration and maintenance](docs/api.md#registry-and-database-administration).
 Grants and tokens reload on process restart. Non-loopback listeners require TLS;
 browser access requires exact configured origins. There is no cookie auth,
 public signup, OIDC, or distributed tenant isolation. All authenticated readers
@@ -64,3 +79,27 @@ Upload and parser limits constrain individual requests; operators remain
 responsible for disk capacity and authenticated-client usage. The service does
 not log bearer credentials or request bodies. Do not distribute a shared posting
 credential in a public web bundle. See [client configuration](docs/api.md).
+
+## MCP and file boundary
+
+`books mcp` communicates over stdin/stdout and opens no network listener. Its
+private operator-owned policy supplies the actor, registry path, database handles
+and explicit grants. Tool discovery filters by permission; shared execution
+checks authority again. Tool arguments cannot change policy, impersonate an actor,
+run SQL/shell commands or expand filesystem access. Restart to change policy.
+See [MCP setup](docs/mcp.md) for the implemented configuration.
+
+Artifacts require an operator-selected private directory. They bind to actor and
+verified database identity; company artifacts also bind entity/book. Transfers
+are bounded, hash-checked and accept opaque IDs rather than arbitrary paths.
+Committed accounting evidence is retained and cannot be discarded. Preserve that
+artifact directory alongside database backups. Uploaded statement sources stored
+in the ledger remain readable by authorized company readers; temporary artifact
+ownership is narrower. See [file limits and retention](docs/artifacts.md).
+
+The CLI and adapters run with their OS user's authority. Their policy is not an
+OS sandbox against another program running as that user. Maintenance locks
+coordinate Books processes under the same OS user; stop external SQLite tools
+before migration or restoration. Operations retain their documented retry
+contracts, not a universal exactly-once guarantee. An external agent's model
+provider and file permissions determine where financial information may be sent.

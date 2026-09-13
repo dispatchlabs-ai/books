@@ -38,6 +38,8 @@ Your result should include:
 The trial balance should balance, and Doctor and audit verification should pass.
 These are synthetic demo records. The [agent guide](docs/agent-workflows.md)
 provides the exact workflow and explains what these checks establish.
+[Fresh-agent validation](docs/implementation/quickstart-validation.md) records
+successful macOS and Linux runs, including prerequisite setup.
 
 Installation currently requires **Go 1.26.6 or newer, CGO, and a C compiler**.
 Your agent can check prerequisites and follow the setup guide. There is no tagged

@@ -111,6 +111,23 @@ its temporary location may be cleaned by the OS; do not silently move it into th
 user's real books. Remove only directories created for this task if the user asks
 for cleanup.
 
+The exact README prompt passed fresh-agent demo runs on macOS and Linux; see
+[results and prerequisite notes](implementation/quickstart-validation.md).
+
+## Using an MCP connection
+
+An agent with an MCP client can use Books' built-in stdio server instead of shell
+commands for bookkeeping. Follow [MCP setup](mcp.md) for the private policy,
+explicit grants, typed tools and exact amount encoding. The demo above tests the
+CLI path; it does not configure or certify a graphical MCP client.
+
+Use a configured connection when the user supplies one. Discover its available
+tools, select the authorized company or database, and follow the same evidence,
+preview, retry and verification rules below. File-based workflows use
+[scoped artifacts](artifacts.md). Company/configuration and database maintenance
+operations require their separately declared permissions. No HTTP listener is
+needed for stdio MCP.
+
 ## Working with real books
 
 Read the relevant [CLI reference](cli.md), [manual workflows](manual-workflows.md),
@@ -155,7 +172,8 @@ status; in machine mode, inspect the stable error code in the failure envelope.
 Books reads stdin only when explicitly given `--input -`. A failed plan may still
 leave a plan file for review; existence of that file does not prove success.
 
-Use only the documented CLI or authenticated API to write accounting data.
+Use only the documented CLI, authenticated API, or policy-bound MCP tools to
+write accounting data.
 Keep credentials and financial records out of source control and public issues.
 Books does not encrypt its databases, attachments, plans, or backups. An external
 agent may send information to its model provider according to its configuration;

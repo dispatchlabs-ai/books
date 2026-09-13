@@ -76,7 +76,9 @@ macOS/Linux checks and independent review before being committed and pushed:
 All test data is fresh, synthetic and disposable. No existing Books database was
 accessed. This is representative integration acceptance plus existing domain
 coverage, not a claim that every input combination was exhaustively exercised
-through every frontend or that the README prompt was certified in a GUI client.
+through every frontend. The subsequent [quickstart validation](quickstart-validation.md)
+records successful exact-prompt runs in fresh shell-capable agent sessions on
+macOS and Linux; graphical MCP clients remain outside that acceptance.
 
 Final `./scripts/check` passed on macOS and Linux with Go 1.26.6: unit and race
 tests, vet, lint (zero issues), dependency integrity, vulnerability scan (none

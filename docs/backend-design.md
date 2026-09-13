@@ -15,11 +15,11 @@ remain supported. No production database is a development fixture.
 The [interface parity contract](interface-parity.md) makes the original thin-CLI
 direction explicit: CLI, HTTP API and MCP are frontends to one complete backend.
 All accounting and administrative workflows belong in shared application services.
-The initial company-scoped API is an incremental implementation, not the final
-feature boundary. Registry, migration, backup/restore, consolidation and detailed
-evidence operations must also be exposed through authorized API and MCP bindings.
-The CLI remains usable in-process without a server. This is planned completion;
-[current API documentation](api.md) describes what is implemented today.
+The company-scoped API is complemented by explicitly authorized registry,
+maintenance, consolidation and detailed evidence operations through API and MCP.
+The CLI remains usable in-process without a server. [Current API documentation](api.md)
+and [MCP setup](mcp.md) describe implemented behavior; the
+[validation record](implementation/parity-progress.md) explains the focused scope.
 
 ## Ownership
 

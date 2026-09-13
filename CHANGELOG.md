@@ -8,6 +8,29 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Added built-in stdio MCP with typed, permission-filtered tools over the shared
+  backend; no network listener or separate HTTP server is required.
+- Completed API/MCP coverage for existing company and whole-database workflows,
+  including topology, consolidation, detailed journals, evidence, audit and health.
+- Added server configurations v3/v4 with whole-database handles, separate registry
+  and maintenance permissions, and explicit current/future company grants.
+  Earlier configurations retain their existing authority.
+- Exposed company/configuration management and database initialization, migration,
+  backup and restore. Active Books connections block exclusive maintenance;
+  adapters open per operation, and backup retry keys are scoped by database UUID.
+- Added bounded resumable artifacts for statements, QuickBooks bundles, lifecycle
+  evidence, backups and large JSON requests/results, with scope binding and
+  retention for committed evidence.
+- Published additive OpenAPI snapshots through 1.11.0. Existing v1 response
+  envelopes and database schema are unchanged by the parity work. Remote account
+  creation requires explicit code/date fields; routine transaction writes require
+  stable keys. Existing workflow retry contracts remain authoritative.
+- Added statement-account archive/identity previews and rejected unsupported
+  database reopen dry runs before mutation. Preserved read-only directory access
+  and restoration into missing directory trees.
+- Added an agent-first README demo with separate operational guidance and a
+  manual installation path.
+
 - Added company API workflows for routine transactions, journal corrections and
   reversals, reconciliation, period/year close, chart defaults and fiscal periods.
   CLI and API share application services; direct CLI use requires no server.

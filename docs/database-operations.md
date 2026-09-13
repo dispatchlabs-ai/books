@@ -34,12 +34,14 @@ also permits all registered database accounting and topology writes, including
 posting, closing and reopening. It is broader than company `manage` and requires
 `read`. A company's grants never authorize database operations, even if that
 company shares the target SQLite file. Grant database access only when whole-file
-authority is intended. Backup/restore/registry administration are still pending
-and are not silently enabled by these initial bindings.
+authority is intended. Configuration v4 adds separate database `admin` for
+initialization, migration, backup and restore, plus independent registry grants.
+Those permissions are not implied by v3 read/manage. See
+[administration](api.md#registry-and-database-administration) for setup and recovery.
 
 Invoke `POST /v1/databases/{database}/operations/{operation_id}` with a JSON body.
 Each operation has its own typed schema and required grant in the
-[OpenAPI snapshot](schemas/books-api-v8.openapi.json). Reads also use POST because
+[OpenAPI snapshot](schemas/books-api-v12.openapi.json). Reads also use POST because
 their complete typed selectors belong in the body; their descriptors mark them as
 read effects. Unknown fields, duplicate keys and query parameters are rejected.
 64-bit integers are exact canonical strings; monetary values are minor units.
@@ -61,5 +63,7 @@ OpenAPI snapshot, never financial data. Historical snapshots remain immutable.
 Current bindings include entities/books/groups/ownership, accounts and identities,
 period operations, journal drafts/posting/import, source records/links, statement
 accounts/imports, direct reconciliation and all four entity/consolidated reports.
-Lifecycle file validation, registry/maintenance, complete CLI extraction and MCP
-remain tracked in [implementation progress](implementation/parity-progress.md).
+Lifecycle evidence uses [authorized artifacts](artifacts.md); administration uses
+the explicit grants described above. The same operations are available through
+[stdio MCP](mcp.md). See [validation and scope](implementation/parity-progress.md)
+for completed coverage, transport differences and testing limits.
