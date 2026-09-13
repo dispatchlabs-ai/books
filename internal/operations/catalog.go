@@ -19,7 +19,7 @@ type Operation struct {
 	ID   string        `json:"id"`
 	CLI  []string      `json:"cli"`
 	HTTP []HTTPBinding `json:"http"`
-	MCP  string        `json:"mcp"`
+	MCP  []string      `json:"mcp"`
 	Gap  string        `json:"gap"`
 }
 

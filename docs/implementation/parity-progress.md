@@ -1,7 +1,7 @@
 # Backend, API and MCP implementation progress
 
 Updated September 13, 2026. Overall status: **in progress; full parity is not
-implemented and no MCP server ships yet.** This is the durable tracker for the
+implemented; an initial stdio MCP adapter is now present.** This is the durable tracker for the
 [interface parity contract](../interface-parity.md) and [MCP design](../mcp-design.md).
 
 ## Milestone 1: inventory and first API gap — complete
@@ -23,7 +23,7 @@ implemented and no MCP server ships yet.** This is the durable tracker for the
 The inventory currently contains 106 operation records. It inventories bindings;
 the inventory itself is **not executable dispatch, authorization, or evidence of
 complete argument/scope parity**. Existing company-scoped report routes do not cover
-consolidated reporting. Every MCP binding is still missing. `gap` fields keep
+consolidated reporting. MCP bindings now cover an implemented subset. `gap` fields keep
 those limits explicit; no operation is marked fully complete merely because its
 name appears in the inventory.
 
@@ -40,7 +40,7 @@ name appears in the inventory.
 - [x] Complete independent review, macOS gate and Linux validation.
 - [x] Commit and push this verified slice (see this file’s Git history).
 
-Consolidated API access and all MCP tools remain missing.
+Historical milestone note: consolidated API and MCP coverage were still missing at this point.
 
 ## Milestone 3: executable company report contracts — complete
 
@@ -75,7 +75,7 @@ not client input; HTTP constructs company access only after authentication.
 
 The low-level CLI still reads its trusted database directly through the ledger
 reader/validator; its typed company/database scope extraction remains pending.
-Journal create/edit/post/reverse API completeness and MCP are separate work.
+Subsequent milestones add database journal operations and MCP bindings.
 
 ## Milestone 5: whole-database runtime and API — complete
 
@@ -94,17 +94,29 @@ Database manage is deliberately whole-database bookkeeping/topology authority.
 File-based lifecycle operations, maintenance and registry are still pending.
 Direct low-level CLI calls still require extraction into the descriptor adapters.
 
+## Milestone 6: stdio MCP and company operation bindings — complete
+
+- [x] Add the official pinned SDK, private explicit policy, named typed tools,
+  copied grants and direct backend execution without an HTTP listener.
+- [x] Add 43 company operation contracts and HTTP bindings alongside 54 database
+  bindings: 97 tool names currently cover 84 inventory operations.
+- [x] Test actual compiled-binary stdio discovery/posting/reporting, exact money,
+  oversized frames, ambient-config independence and HTTP/MCP retry agreement.
+- [x] Preserve company closing/post/import grant boundaries in shared execution.
+- [x] Finish independent follow-up review and supported-platform canonical checks.
+- [x] Commit and push this verified slice; continue registry, maintenance, files and final conformance.
+
 ## Remaining milestones
 
 | Work | State | Completion evidence required |
 | --- | --- | --- |
-| Typed backend operation descriptors and shared authorization | Four company reports implemented; remainder pending | Typed schemas, scope/grants, effects and adapter bindings; no policy bypasses |
+| Typed backend operation descriptors and shared authorization | 43 company and 54 database bindings implemented; administration pending | Typed schemas, scope/grants, effects and adapter bindings; no policy bypasses |
 | Remaining workflow extraction from CLI | Not started | Application-owned orchestration with preserved CLI behavior |
 | Detailed journals, account/evidence/lifecycle and reconciliation API gaps | Journal inspection/validation added; remaining gaps pending | Shared service routes, OpenAPI and cross-interface tests |
 | Database topology, ownership and consolidation API | Implemented through whole-database operations; acceptance pending | Whole-scope authorization and complete report equivalence |
 | Registry, migration, backup/restore administration API | Not started | Explicit admin grants, lineage, maintenance locks and crash recovery |
 | Remote file bundles, artifact transfer and durable operation receipts | Not started | Bounded transfer, authorization, replay/conflict and interruption tests |
-| Built-in stdio MCP | Not started | Policy, SDK integration, typed tools/resources; no network listener |
+| Built-in stdio MCP | Initial 97-tool subset verified | Policy, SDK integration, typed tools/resources; no network listener |
 | Complete CLI/API/MCP parity | Not started | Every catalog operation and argument covered; no unexplained gaps |
 | Fresh-agent and independent frontend acceptance | Not started | Named client/platform journeys and independent security review |
 
@@ -186,3 +198,5 @@ record meaningful test/review results and blockers, and identify the next slice.
 Update catalog bindings and gaps in the same commit as an interface change. Keep
 capability documentation honest during rollout. Progress tracking does not create
 a background scheduler or authorize deployment of a network service.
+
+Milestone 6 validation (September 13): full `scripts/check` passed on macOS and Linux with Go 1.26.6, including race checks, lint, vulnerability scan and synthetic CLI smoke. Independent follow-up confirmed bounded frames, ambient-configuration isolation, remote retry keys and explicit account creation fields. The official SDK client passed actual stdio and in-memory HTTP/MCP retry tests. GUI agent clients and complete parity are not yet validated.

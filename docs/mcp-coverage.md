@@ -1,7 +1,9 @@
 # Proposed backend and MCP capability coverage
 
+Implementation update: an initial stdio adapter and typed company/database tools now exist. Full coverage is pending; see [progress](implementation/parity-progress.md) and [current usage](mcp.md). The design below remains the target contract.
+
 Design companion to [MCP server design](mcp-design.md) and the
-[interface parity contract](interface-parity.md). **Not implemented.**
+[interface parity contract](interface-parity.md). **Target coverage; implementation progress is tracked separately.**
 
 Every business or administrative operation in this table requires both HTTP API
 and MCP bindings, backed by the same application operation. The CLI column is

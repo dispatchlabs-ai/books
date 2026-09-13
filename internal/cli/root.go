@@ -114,7 +114,7 @@ func newRootCommand() (*cobra.Command, *options) {
 	root.PersistentFlags().StringVar(&opts.actor, "actor", opts.actor, "audit actor (or BOOKS_ACTOR)")
 	root.PersistentFlags().BoolVar(&opts.dryRun, "dry-run", false, "validate and preview without committing where supported")
 	root.PersistentFlags().BoolVar(&opts.noInput, "no-input", true, "never read interactive input (always true; retained for explicit automation contracts)")
-	root.AddCommand(
+	root.AddCommand(newMCPCommand(),
 		newInitCommand(opts),
 		newBankImportCommand(opts),
 		newServeCommand(opts),
@@ -181,7 +181,10 @@ func executeArgs(args []string, stdout, stderr io.Writer) error {
 	root.SetArgs(args)
 	root.SetOut(stdout)
 	root.SetErr(stderr)
-	selectEarlyOutput(opts, args)
+	command, _, _ := root.Find(args)
+	if command == nil || command.Name() != "mcp" {
+		selectEarlyOutput(opts, args)
+	}
 	err := root.Execute()
 	err = normalizeInvocationError(err)
 	if err != nil && (opts.format == "json" || opts.format == "jsonl") {

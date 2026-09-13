@@ -25,9 +25,10 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 		}
 	}
 	walk(root)
+	delete(commands, "mcp")
 	delete(commands, "serve") // Process lifecycle, not a backend operation.
 	_, source, _, _ := runtime.Caller(0)
-	data, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../docs/schemas/books-api-v8.openapi.json"))
+	data, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../docs/schemas/books-api-v9.openapi.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,6 +47,13 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 			}
 		}
 	}
+	tools := map[string]bool{}
+	for _, op := range operations.DatabaseOperations() {
+		tools["books_db_"+op.Descriptor().ID] = true
+	}
+	for _, op := range operations.CompanyOperations() {
+		tools["books_company_"+op.Descriptor().ID] = true
+	}
 	ids := map[string]bool{}
 	for _, op := range operations.Catalog() {
 		if op.ID == "" || ids[op.ID] {
@@ -54,6 +62,12 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 		ids[op.ID] = true
 		if op.Gap == "" {
 			t.Fatalf("operation %s must record its current parity gaps", op.ID)
+		}
+		for _, name := range op.MCP {
+			if !tools[name] {
+				t.Errorf("unknown or duplicate MCP binding %s", name)
+			}
+			delete(tools, name)
 		}
 		for _, cmd := range op.CLI {
 			if !commands[cmd] {
@@ -68,6 +82,9 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 			}
 			delete(routes, key)
 		}
+	}
+	for name := range tools {
+		t.Errorf("MCP operation missing from inventory: %s", name)
 	}
 	for cmd := range commands {
 		t.Errorf("CLI operation missing from inventory: %s", cmd)

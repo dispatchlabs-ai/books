@@ -14,3 +14,21 @@ source distributions and must be retained when applicable to redistribution.
 
 This inventory describes the current source tree. Review and update it whenever
 dependencies change and before distributing a later source or binary release.
+
+## MCP runtime dependencies
+
+The official MCP Go SDK is pinned to v1.7.0. Its upstream license is undergoing
+an Apache-2.0/MIT transition; the complete license and original notices are retained
+below. Books uses SDK code; no upstream documentation text is incorporated.
+
+| Package | Version | License notice |
+| --- | --- | --- |
+| `github.com/google/jsonschema-go` | v0.4.3 | [MIT](licenses/github.com_google_jsonschema-go-LICENSE.txt) |
+| `github.com/modelcontextprotocol/go-sdk` | v1.7.0 | [Apache-2.0 and MIT (transition; upstream documentation CC-BY-4.0)](licenses/github.com_modelcontextprotocol_go-sdk-LICENSE.txt) |
+| `github.com/segmentio/asm` | v1.1.3 | [MIT](licenses/github.com_segmentio_asm-LICENSE.txt) |
+| `github.com/segmentio/encoding` | v0.5.4 | [MIT](licenses/github.com_segmentio_encoding-LICENSE.txt) |
+| `github.com/yosida95/uritemplate/v3` | v3.0.2 | [BSD-3-Clause](licenses/github.com_yosida95_uritemplate_v3-LICENSE.txt) |
+| `golang.org/x/oauth2` | v0.35.0 | [BSD-3-Clause](licenses/golang.org_x_oauth2-LICENSE.txt) |
+| `golang.org/x/sync` | v0.20.0 | [BSD-3-Clause](licenses/golang.org_x_sync-LICENSE.txt) |
+| `golang.org/x/sys` | v0.44.0 | [BSD-3-Clause](licenses/golang.org_x_sys-LICENSE.txt) |
+| `golang.org/x/time` | v0.15.0 | [BSD-3-Clause](licenses/golang.org_x_time-LICENSE.txt) |

@@ -270,6 +270,25 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, company string, app *application.Service, path []string) error {
+	if len(path) == 2 && path[0] == "operations" && r.Method == http.MethodPost {
+		op, ok := operations.LookupCompanyOperation(path[1])
+		if !ok {
+			return apperr.New(apperr.NotFound, "OPERATION_NOT_FOUND", "operation was not found")
+		}
+		if r.URL.RawQuery != "" {
+			return apperr.New(apperr.Invalid, "OPERATION_QUERY_INVALID", "operation parameters belong in the JSON body")
+		}
+		input := op.NewInput()
+		if err := readWorkflowJSON(w, r, input); err != nil {
+			return err
+		}
+		value, err := op.Invoke(r.Context(), app, operations.CompanyAccess(p.ID, company, p.Companies[company]), input)
+		if err != nil {
+			return err
+		}
+		writeWorkflowData(w, http.StatusOK, value)
+		return nil
+	}
 	if handled, err := serveWorkflow(w, r, p, company, app, path); handled {
 		return err
 	}

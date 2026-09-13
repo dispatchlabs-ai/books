@@ -1,7 +1,9 @@
 # Built-in Books MCP server
 
-Status: proposed design, September 13, 2026. Not implemented; commands, policy
-fields, and schemas below describe the intended interface. Baseline:
+Implementation update: an initial stdio adapter and typed company/database tools now exist. Full coverage is pending; see [progress](implementation/parity-progress.md) and [current usage](mcp.md). The design below remains the target contract.
+
+Status: target design, September 13, 2026. Commands, policy
+fields, and schemas below describe the complete intended interface; use the current usage guide for implemented behavior. Baseline:
 `2c492eef297d778e064531eaa4448b5494890999`.
 
 ## Decision
