@@ -1,0 +1,1171 @@
+[
+  {
+    "id": "account_add",
+    "cli": [
+      "account add"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/accounts"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "account_configure",
+    "cli": [
+      "account configure"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "account_create",
+    "cli": [
+      "account create"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "account_defaults_get",
+    "cli": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/defaults"
+      }
+    ],
+    "mcp": "",
+    "gap": "CLI/MCP bindings or complete argument/scope parity pending."
+  },
+  {
+    "id": "account_defaults_set",
+    "cli": [],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/defaults"
+      }
+    ],
+    "mcp": "",
+    "gap": "CLI/MCP bindings or complete argument/scope parity pending."
+  },
+  {
+    "id": "account_identity_add",
+    "cli": [
+      "account identity add"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "account_identity_list",
+    "cli": [
+      "account identity list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "account_list",
+    "cli": [
+      "account list",
+      "accounts"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/accounts"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "audit_list",
+    "cli": [
+      "audit list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "audit_verify",
+    "cli": [
+      "audit verify"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "bank_import_apply",
+    "cli": [
+      "bank-import apply"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/import-plans/{plan}/apply"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "bank_import_formats",
+    "cli": [
+      "bank-import formats"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "bank_import_matches",
+    "cli": [
+      "bank-import matches"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/imports/{job}/matches"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "bank_import_plan",
+    "cli": [
+      "bank-import plan"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/import-plans/{plan}"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "bank_import_preview",
+    "cli": [
+      "bank-import preview"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/imports/{job}/previews"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "bank_import_process",
+    "cli": [
+      "bank-import process"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "bank_import_show",
+    "cli": [
+      "bank-import show"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/imports/{job}"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "bank_import_upload",
+    "cli": [
+      "bank-import upload"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/imports"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "book_list",
+    "cli": [
+      "book list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "capabilities",
+    "cli": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/capabilities"
+      }
+    ],
+    "mcp": "",
+    "gap": "CLI/MCP bindings or complete argument/scope parity pending."
+  },
+  {
+    "id": "close_apply",
+    "cli": [
+      "close apply"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/close/apply"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "close_plan",
+    "cli": [
+      "close plan"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/close/plan"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "company_add",
+    "cli": [
+      "company add",
+      "init"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "company_default",
+    "cli": [
+      "company default"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "company_list",
+    "cli": [
+      "companies",
+      "company list"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "config_get",
+    "cli": [
+      "config get"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "config_path",
+    "cli": [
+      "config path"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "config_set",
+    "cli": [
+      "config set"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "correct",
+    "cli": [
+      "correct"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/{number}/correct"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "dashboard",
+    "cli": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/dashboard"
+      }
+    ],
+    "mcp": "",
+    "gap": "CLI/MCP bindings or complete argument/scope parity pending."
+  },
+  {
+    "id": "db_backup",
+    "cli": [
+      "backup",
+      "db backup"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "db_doctor",
+    "cli": [
+      "db doctor",
+      "doctor"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "db_init",
+    "cli": [
+      "db init"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "db_migrate",
+    "cli": [
+      "db migrate"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "db_restore",
+    "cli": [
+      "db restore",
+      "restore"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "db_status",
+    "cli": [
+      "db status"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "entity_create",
+    "cli": [
+      "entity create"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "entity_list",
+    "cli": [
+      "entity list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "group_create",
+    "cli": [
+      "group create"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "group_list",
+    "cli": [
+      "group list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "health",
+    "cli": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/health"
+      }
+    ],
+    "mcp": "",
+    "gap": "CLI/MCP bindings or complete argument/scope parity pending."
+  },
+  {
+    "id": "import_batch_list",
+    "cli": [
+      "import-batch list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "import_batch_show",
+    "cli": [
+      "import-batch show"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "import_quickbooks_apply",
+    "cli": [
+      "import quickbooks apply"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "import_quickbooks_inspect",
+    "cli": [
+      "import quickbooks inspect"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "import_quickbooks_plan",
+    "cli": [
+      "import quickbooks plan"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "import_source_read",
+    "cli": [],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/imports/{job}/source"
+      }
+    ],
+    "mcp": "",
+    "gap": "CLI/MCP bindings or complete argument/scope parity pending."
+  },
+  {
+    "id": "journal_abandon",
+    "cli": [
+      "journal abandon"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_add",
+    "cli": [
+      "journal add"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/journals"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "journal_create",
+    "cli": [
+      "journal create"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_edit",
+    "cli": [
+      "journal edit"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_import",
+    "cli": [
+      "journal import"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_list",
+    "cli": [
+      "journal list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_post",
+    "cli": [
+      "journal post"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_post_batch",
+    "cli": [
+      "journal post-batch"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_reverse",
+    "cli": [
+      "journal reverse"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_show",
+    "cli": [
+      "journal show"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "journal_validate",
+    "cli": [
+      "journal validate"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "ownership_list",
+    "cli": [
+      "ownership list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "ownership_set",
+    "cli": [
+      "ownership set"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "period_close",
+    "cli": [
+      "period close"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "period_create",
+    "cli": [
+      "period create"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "period_list",
+    "cli": [
+      "period list",
+      "periods"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/periods"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "period_reopen",
+    "cli": [
+      "period reopen",
+      "reopen"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/periods/{period}/reopen"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "period_year_close",
+    "cli": [
+      "period year-close"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "periods_add",
+    "cli": [
+      "periods add"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/periods"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "receive",
+    "cli": [
+      "receive"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/receive"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reconcile_abandon",
+    "cli": [
+      "reconcile abandon"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "reconcile_allocate",
+    "cli": [
+      "reconcile allocate"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "reconcile_allocations",
+    "cli": [
+      "reconcile allocations"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "reconcile_apply",
+    "cli": [
+      "reconcile apply"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/reconciliations/apply"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reconcile_complete",
+    "cli": [
+      "reconcile complete"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "reconcile_list",
+    "cli": [
+      "reconcile list"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/reconciliations"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reconcile_plan",
+    "cli": [
+      "reconcile plan"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/reconciliations/plan"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reconcile_reopen",
+    "cli": [
+      "reconcile reopen"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/reconciliations/{id}/reopen"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reconcile_replan",
+    "cli": [
+      "reconcile replan"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "reconcile_start",
+    "cli": [
+      "reconcile start"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "reconcile_status",
+    "cli": [
+      "reconcile status"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/reconciliations/{id}"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reconcile_unallocate",
+    "cli": [
+      "reconcile unallocate"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "report_balance_sheet",
+    "cli": [
+      "bs",
+      "report balance-sheet"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/reports/balance-sheet"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "report_general_ledger",
+    "cli": [
+      "gl",
+      "report general-ledger"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/reports/general-ledger"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "report_profit_loss",
+    "cli": [
+      "pl",
+      "report profit-loss"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/reports/profit-loss"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "report_trial_balance",
+    "cli": [
+      "report trial-balance",
+      "tb"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/reports/trial-balance"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "reverse",
+    "cli": [
+      "reverse"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/{number}/reverse"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "source_link_journal",
+    "cli": [
+      "source link-journal"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "source_links",
+    "cli": [
+      "source links"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "source_list",
+    "cli": [
+      "source list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "source_show",
+    "cli": [
+      "source show"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "spend",
+    "cli": [
+      "spend"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/spend"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "statement_account_archive",
+    "cli": [
+      "statement-account archive"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "statement_account_create",
+    "cli": [
+      "statement-account create"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "statement_account_identity_add",
+    "cli": [
+      "statement-account identity add"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "statement_account_identity_list",
+    "cli": [
+      "statement-account identity list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "statement_account_lifecycle_close_before_coverage",
+    "cli": [
+      "statement-account lifecycle close-before-coverage"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "statement_account_lifecycle_list",
+    "cli": [
+      "statement-account lifecycle list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "statement_account_list",
+    "cli": [
+      "statement-account list"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/statement-accounts"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "statement_import",
+    "cli": [
+      "statement import"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "transaction_list",
+    "cli": [
+      "transaction list"
+    ],
+    "http": [],
+    "mcp": "",
+    "gap": "HTTP and MCP bindings pending; typed backend extraction still requires review."
+  },
+  {
+    "id": "transfer",
+    "cli": [
+      "transfer"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/transfer"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "tx_abandon",
+    "cli": [
+      "tx abandon"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/{number}/abandon"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "tx_list",
+    "cli": [
+      "tx list"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/transactions"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "tx_post",
+    "cli": [
+      "tx post"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/{number}/post"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "tx_show",
+    "cli": [
+      "tx show"
+    ],
+    "http": [
+      {
+        "method": "GET",
+        "path": "/v1/companies/{company}/transactions/{number}"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "undo",
+    "cli": [
+      "undo"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/transactions/{number}/undo"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "year_close_apply",
+    "cli": [
+      "year-close apply"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/year-close/apply"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  },
+  {
+    "id": "year_close_plan",
+    "cli": [
+      "year-close plan"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/year-close/plan"
+      }
+    ],
+    "mcp": "",
+    "gap": "MCP binding and complete argument/scope parity pending."
+  }
+]

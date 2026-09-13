@@ -4,6 +4,9 @@ Approved design direction, September 13, 2026. This refines the September 12
 headless-backend and thin-CLI direction. It specifies the target architecture;
 it does not claim that the missing API operations or MCP server are implemented.
 
+Implementation status and remaining work are tracked in
+[implementation progress](implementation/parity-progress.md).
+
 ## One backend, three frontends
 
 Every supported Books accounting and administrative operation belongs to the

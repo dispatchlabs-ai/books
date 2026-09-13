@@ -3,11 +3,11 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v4.openapi.json), and the small
+[OpenAPI](schemas/books-api-v5.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
-The new OpenAPI artifact is an additive contract snapshot (1.3.0); routes and
-response envelopes remain v1. The [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
+The new OpenAPI artifact is an additive contract snapshot (1.4.0); routes and
+response envelopes remain v1. The [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
 [initial snapshot](schemas/books-api-v1.openapi.json) remain unchanged.
 
 ## Run locally
@@ -290,3 +290,18 @@ It is not a distributed job scheduler. There is no job-list endpoint, cancellati
 progress percentage, event stream, offline posting, or multi-writer replication.
 Clients must retain returned job IDs. Cash planning, further bank dialects, richer
 client SDKs, OIDC/user provisioning, and packaging are subsequent milestones.
+
+## General ledger
+
+`GET /v1/companies/{company}/reports/general-ledger` requires company `read`
+permission. Required query parameters are `from` and `to` (inclusive ISO dates).
+Optional `account` accepts a company account code or unambiguous name;
+`include_zero` accepts exactly `true` or `false` and defaults to false. Duplicate
+and unknown parameters, including `entity` or `group` overrides, are rejected.
+
+The response uses `books.api/v1` and the existing exact minor-unit string
+encoding. It contains resolved company scope, date range and account sections
+with opening balance, ordered posted journal lines, running balances and closing
+balance. It uses the same company application operation as the CLI's `gl` path.
+Consolidated general-ledger API access remains planned and is tracked separately
+in [implementation progress](implementation/parity-progress.md).

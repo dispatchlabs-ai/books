@@ -167,3 +167,34 @@ func encodeAPIValue(v reflect.Value, preserveNil bool) any {
 		return v.Interface()
 	}
 }
+
+// Company scope is bound before this handler; do not accept alternate entity or
+// group selectors that could turn a company credential into database access.
+func serveGeneralLedger(w http.ResponseWriter, r *http.Request, app *application.Service) error {
+	q := r.URL.Query()
+	for key, values := range q {
+		switch key {
+		case "from", "to", "account", "include_zero":
+		default:
+			return apperr.New(apperr.Invalid, "REPORT_QUERY_INVALID", "unsupported general-ledger query parameter")
+		}
+		if len(values) != 1 {
+			return apperr.New(apperr.Invalid, "REPORT_QUERY_INVALID", "general-ledger query parameters must occur once")
+		}
+	}
+	zero := false
+	if values, ok := q["include_zero"]; ok {
+		if values[0] != "true" && values[0] != "false" {
+			return apperr.New(apperr.Invalid, "REPORT_QUERY_INVALID", "include_zero must be true or false")
+		}
+		zero = values[0] == "true"
+	}
+	result, err := app.GeneralLedger(r.Context(), application.GeneralLedgerRequest{
+		From: q.Get("from"), To: q.Get("to"), Account: q.Get("account"), IncludeZero: zero,
+	})
+	if err != nil {
+		return err
+	}
+	writeData(w, http.StatusOK, result)
+	return nil
+}

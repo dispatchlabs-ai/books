@@ -51,22 +51,40 @@ func newGLCommand(opts *options) *cobra.Command {
 			if err := applyHumanReportDefaults(cmd, opts, store, &entity, &group, &from, &to, "gl"); err != nil {
 				return err
 			}
-			if strings.TrimSpace(account) != "" && strings.TrimSpace(opts.database) == "" {
-				resolved, err := opts.resolveCompany()
-				if err != nil {
-					return err
+			var result report.GeneralLedgerReport
+			companyReport := false
+			if strings.TrimSpace(opts.database) == "" && databaseOverride() == "" && group == "" {
+				resolved, resolveErr := opts.resolveCompany()
+				if resolveErr != nil {
+					return resolveErr
 				}
-				accounts, err := ledger.NewService(store, opts.actor).ListAccounts(cmd.Context(), resolved.Company.BookCode)
-				if err != nil {
-					return err
+				if entity == resolved.Company.EntityCode {
+					app, bindErr := application.Bind(cmd.Context(), store, resolved, opts.actor)
+					if bindErr != nil {
+						return bindErr
+					}
+					result, err = app.GeneralLedger(cmd.Context(), application.GeneralLedgerRequest{From: from, To: to, Account: account, IncludeZero: zero})
+					companyReport = true
 				}
-				selected, err := application.ResolveAccount(accounts, account)
-				if err != nil {
-					return err
-				}
-				account = selected.Code
 			}
-			result, err := report.NewService(store).GeneralLedger(cmd.Context(), report.GeneralLedgerInput{Scope: scopeFrom(entity, group), FromDate: from, ToDate: to, AccountCode: account, IncludeZero: zero})
+			if !companyReport {
+				if strings.TrimSpace(account) != "" && strings.TrimSpace(opts.database) == "" {
+					resolved, err := opts.resolveCompany()
+					if err != nil {
+						return err
+					}
+					accounts, err := ledger.NewService(store, opts.actor).ListAccounts(cmd.Context(), resolved.Company.BookCode)
+					if err != nil {
+						return err
+					}
+					selected, err := application.ResolveAccount(accounts, account)
+					if err != nil {
+						return err
+					}
+					account = selected.Code
+				}
+				result, err = report.NewService(store).GeneralLedger(cmd.Context(), report.GeneralLedgerInput{Scope: scopeFrom(entity, group), FromDate: from, ToDate: to, AccountCode: account, IncludeZero: zero})
+			}
 			if err != nil {
 				return err
 			}

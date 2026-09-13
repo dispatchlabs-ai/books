@@ -272,6 +272,8 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 			return nil
 		case "transactions":
 			return serveTransactions(w, r, app)
+		case "reports/general-ledger":
+			return serveGeneralLedger(w, r, app)
 		case "reports/trial-balance":
 			v, e := app.TrialBalance(ctx, r.URL.Query().Get("as_of"))
 			if e != nil {
