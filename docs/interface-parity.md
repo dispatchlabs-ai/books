@@ -2,7 +2,10 @@
 
 Approved design direction, September 13, 2026. This refines the September 12
 headless-backend and thin-CLI direction. It specifies the target architecture;
-it does not claim that the missing API operations or MCP server are implemented.
+the existing operations now have API/MCP bindings. The implementation follows the
+later scope constraint: reuse the current backend and retry contracts; no broad
+framework rewrite. Universal receipts and exhaustive frontend certification in
+this original proposal are not claims about the shipped implementation.
 
 Implementation status and remaining work are tracked in
 [implementation progress](implementation/parity-progress.md).

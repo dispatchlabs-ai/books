@@ -16,15 +16,15 @@ import (
 )
 
 type CompanyCreateOptions struct {
-	Name          string
-	Key           string
-	Currency      string
-	Basis         string
-	Start         string
-	FiscalYearEnd string
-	Periods       string
-	Chart         string
-	MakeDefault   bool
+	Name          string `json:"name"`
+	Key           string `json:"key"`
+	Currency      string `json:"currency"`
+	Basis         string `json:"basis"`
+	Start         string `json:"start"`
+	FiscalYearEnd string `json:"fiscal_year_end"`
+	Periods       string `json:"periods"`
+	Chart         string `json:"chart"`
+	MakeDefault   bool   `json:"make_default"`
 }
 
 type CompanyCreateResult struct {

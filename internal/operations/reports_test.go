@@ -13,7 +13,7 @@ func TestTypedReportCatalog(t *testing.T) {
 	seen := map[string]bool{}
 	for _, d := range TypedReports() {
 		op, ok := inventory[d.ID]
-		if !ok || seen[d.ID] || len(op.CLI) == 0 || len(op.HTTP) == 0 || op.Gap == "" {
+		if !ok || seen[d.ID] || len(op.CLI) == 0 || len(op.HTTP) == 0 || op.Gap != "" {
 			t.Fatalf("missing or duplicate report binding: %s", d.ID)
 		}
 		seen[d.ID] = true

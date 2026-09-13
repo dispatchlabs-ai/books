@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 )
@@ -106,6 +107,9 @@ func ledgerDatabaseOperations() []DatabaseOperation {
 			return d.Ledger(a).ClosePeriod(c, r.Book, r.Period, r.DryRun)
 		}),
 		databaseOp("period_reopen", "manage", func(c context.Context, d *application.Database, a string, r PeriodRequest) (EmptyRequest, error) {
+			if r.DryRun {
+				return EmptyRequest{}, apperr.New(apperr.Validation, "DRY_RUN_UNSUPPORTED", "period reopen requires a committed operation")
+			}
 			err := d.Ledger(a).ReopenPeriod(c, r.Book, r.Period, r.Reason)
 			return EmptyRequest{}, err
 		}),
@@ -167,11 +171,18 @@ func ledgerDatabaseOperations() []DatabaseOperation {
 		databaseOp("statement_account_list", "read", func(c context.Context, d *application.Database, a string, r EntityRequest) ([]ledger.StatementAccount, error) {
 			return d.Ledger(a).ListStatementAccounts(c, r.Entity)
 		}),
-		databaseOp("statement_account_archive", "manage", func(c context.Context, d *application.Database, a string, r ledger.ArchiveStatementAccountInput) (ledger.StatementAccount, error) {
-			return d.Ledger(a).ArchiveStatementAccount(c, r)
+		databaseOp("statement_account_archive", "manage", func(c context.Context, d *application.Database, a string, r ArchiveStatementAccountRequest) (ledger.StatementAccount, error) {
+			if r.DryRun {
+				return d.Ledger(a).ValidateStatementAccountArchive(c, r.input())
+			}
+			return d.Ledger(a).ArchiveStatementAccount(c, r.input())
 		}),
-		databaseOp("statement_account_identity_add", "manage", func(c context.Context, d *application.Database, a string, r ledger.AddStatementAccountIdentityInput) (ledger.StatementAccountIdentity, error) {
-			return d.Ledger(a).AddStatementAccountIdentity(c, r)
+		databaseOp("statement_account_identity_add", "manage", func(c context.Context, d *application.Database, a string, r AddStatementAccountIdentityRequest) (ledger.StatementAccountIdentity, error) {
+			if r.DryRun {
+				v, err := d.Ledger(a).ValidateStatementAccountIdentity(c, r.input())
+				return ledger.StatementAccountIdentity{StatementAccount: v.StatementAccount, SourceSystem: v.SourceSystem, SourceRealm: v.SourceRealm, ExternalID: v.ExternalID, AccountNumber: v.AccountNumber, Name: v.Name, Active: v.Active, Evidence: v.Evidence}, err
+			}
+			return d.Ledger(a).AddStatementAccountIdentity(c, r.input())
 		}),
 		databaseOp("statement_account_identity_list", "read", func(c context.Context, d *application.Database, a string, r ledger.StatementAccountIdentityFilter) ([]ledger.StatementAccountIdentity, error) {
 			return d.Ledger(a).ListStatementAccountIdentities(c, r)
@@ -211,8 +222,38 @@ func ledgerDatabaseOperations() []DatabaseOperation {
 			return d.Ledger(a).AbandonReconciliation(c, r.ID, r.Reason, r.DryRun)
 		}),
 		databaseOp("reconcile_reopen", "manage", func(c context.Context, d *application.Database, a string, r IDModeRequest) (EmptyRequest, error) {
+			if r.DryRun {
+				return EmptyRequest{}, apperr.New(apperr.Validation, "DRY_RUN_UNSUPPORTED", "reconciliation reopen requires a committed operation")
+			}
 			err := d.Ledger(a).ReopenReconciliation(c, r.ID, r.Reason)
 			return EmptyRequest{}, err
 		}),
 	}
+}
+
+type ArchiveStatementAccountRequest struct {
+	Code                          string `json:"code"`
+	ReconciliationRequiredThrough string `json:"reconciliation_required_through"`
+	Reason                        string `json:"reason"`
+	DryRun                        bool   `json:"dry_run"`
+}
+
+func (r ArchiveStatementAccountRequest) input() ledger.ArchiveStatementAccountInput {
+	return ledger.ArchiveStatementAccountInput{Code: r.Code, ReconciliationRequiredThrough: r.ReconciliationRequiredThrough, Reason: r.Reason}
+}
+
+type AddStatementAccountIdentityRequest struct {
+	StatementAccount string                                  `json:"statement_account"`
+	SourceSystem     string                                  `json:"source_system"`
+	SourceRealm      string                                  `json:"source_realm"`
+	ExternalID       string                                  `json:"external_id"`
+	AccountNumber    string                                  `json:"account_number,omitempty"`
+	Name             string                                  `json:"name"`
+	Active           bool                                    `json:"active"`
+	Evidence         ledger.StatementAccountIdentityEvidence `json:"evidence"`
+	DryRun           bool                                    `json:"dry_run"`
+}
+
+func (r AddStatementAccountIdentityRequest) input() ledger.AddStatementAccountIdentityInput {
+	return ledger.AddStatementAccountIdentityInput{StatementAccount: r.StatementAccount, SourceSystem: r.SourceSystem, SourceRealm: r.SourceRealm, ExternalID: r.ExternalID, AccountNumber: r.AccountNumber, Name: r.Name, Active: r.Active, Evidence: r.Evidence}
 }

@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
@@ -30,6 +31,7 @@ type DatabasePolicy struct {
 	Grants []string `json:"grants"`
 }
 type Policy struct {
+	Registry          []string                  `json:"registry,omitempty"`
 	ArtifactDirectory string                    `json:"artifact_directory,omitempty"`
 	ConfigPath        string                    `json:"config_path,omitempty"`
 	Companies         map[string][]string       `json:"companies,omitempty"`
@@ -70,14 +72,17 @@ func (p Policy) Validate() error {
 	if p.ArtifactDirectory != "" && !filepath.IsAbs(p.ArtifactDirectory) {
 		return bad()
 	}
-	if p.Schema != "books.mcp-policy/v1" || !simple.MatchString(p.Actor) || (len(p.Databases) == 0 && len(p.Companies) == 0) {
+	if p.Schema != "books.mcp-policy/v1" || !simple.MatchString(p.Actor) || (len(p.Databases) == 0 && len(p.Companies) == 0 && len(p.Registry) == 0) {
 		return bad()
 	}
-	if len(p.Companies) > 0 && !filepath.IsAbs(p.ConfigPath) {
+	if !operations.ValidRegistryGrants(p.Registry) {
+		return bad()
+	}
+	if (len(p.Companies) > 0 || len(p.Registry) > 0) && !filepath.IsAbs(p.ConfigPath) {
 		return bad()
 	}
 	for key, grants := range p.Companies {
-		if booksconfig.ValidateCompanyKey(key) != nil {
+		if booksconfig.ValidateCompanyKey(key) != nil && key != "*" {
 			return bad()
 		}
 		seen := map[string]bool{}
@@ -92,15 +97,18 @@ func (p Policy) Validate() error {
 		}
 	}
 	for key, db := range p.Databases {
-		if !simple.MatchString(key) || !filepath.IsAbs(db.Path) || !uuid.MatchString(db.UUID) {
+		if !simple.MatchString(key) || !filepath.IsAbs(db.Path) || (db.UUID != "" && !uuid.MatchString(db.UUID)) {
 			return bad()
 		}
 		seen := map[string]bool{}
 		for _, grant := range db.Grants {
-			if seen[grant] || (grant != "read" && grant != "manage") {
+			if seen[grant] || (grant != "read" && grant != "manage" && grant != "admin") {
 				return bad()
 			}
 			seen[grant] = true
+		}
+		if db.UUID == "" && !seen["admin"] {
+			return bad()
 		}
 		if !seen["read"] {
 			return bad()
@@ -125,20 +133,28 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 	_ = json.Unmarshal(copyData, &p)
 	s := &Server{MCP: mcp.NewServer(&mcp.Implementation{Name: "books", Version: version.Identifier()}, nil), databases: map[string]*application.Database{}, companies: map[string]*application.Service{}}
 	for key := range p.Companies {
+		if key == "*" {
+			continue
+		}
 		app, err := application.Open(ctx, p.ConfigPath, key, p.Actor, storesqlite.ReadWrite)
 		if err != nil {
 			_ = s.Close()
 			return nil, err
 		}
 		s.companies[key] = app
+		_ = app.Close()
 	}
 	s.registerCompanies(p)
 	for key, config := range p.Databases {
-		db, err := application.OpenDatabase(ctx, key, config.Path, config.UUID)
+		db, err := application.NewDatabaseTarget(key, config.Path, config.UUID).Open(ctx)
 		if err != nil {
+			if slices.Contains(config.Grants, "admin") && application.PendingDatabase(config.Path, err) {
+				continue
+			}
 			_ = s.Close()
 			return nil, err
 		}
+		_ = db.Close()
 		s.databases[key] = db
 	}
 	for _, op := range operations.DatabaseOperations() {
@@ -154,7 +170,7 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 		}
 		sort.Strings(allowed)
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + descriptor.ID, Description: fmt.Sprintf("%s on an explicitly authorized whole database. Requires %s; effect %s. Amounts are exact minor-unit strings. Check validation fields and errors in the result.", descriptor.ID, descriptor.Grant, descriptor.Effect), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"database", "input"}, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.Schema(descriptor.Input)}}, OutputSchema: resultSchema(descriptor.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: descriptor.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + descriptor.ID, Description: fmt.Sprintf("%s on an explicitly authorized whole database. Requires %s; effect %s. Amounts are exact minor-unit strings. Check validation fields and errors in the result.", descriptor.ID, descriptor.Grant, descriptor.Effect), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"database", "input"}, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.OperationInputSchema(descriptor.Input)}}, OutputSchema: resultSchema(descriptor.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: descriptor.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct {
 				Database string          `json:"database"`
 				Input    json.RawMessage `json:"input"`
@@ -167,16 +183,31 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 				return failure(apperr.New(apperr.NotFound, "DATABASE_NOT_FOUND", "database is not available")), nil
 			}
 			input := op.NewInput()
-			if err := wire.Decode(args.Input, input); err != nil {
-				return failure(err), nil
+			target := application.NewDatabaseTarget(args.Database, config.Path, config.UUID)
+			var db *application.Database
+			var err error
+			if strings.HasPrefix(descriptor.ID, "artifact_") {
+				db, err = target.OpenArtifactScope(ctx)
+			} else {
+				db, err = target.Open(ctx)
 			}
-			value, err := op.Execute(artifact.WithRoot(ctx, p.ArtifactDirectory), s.databases[args.Database], operations.ScopedDatabaseAccess(p.Actor, args.Database, config.Grants), input)
 			if err != nil {
 				return failure(err), nil
 			}
-			return operationResult(artifact.Bind(artifact.WithRoot(ctx, p.ArtifactDirectory), p.Actor, "database:"+s.databases[args.Database].Identity()), value, descriptor.Effect)
+			defer func() { _ = db.Close() }()
+			if err := wire.DecodeOperation(artifact.Bind(artifact.WithRoot(ctx, p.ArtifactDirectory), p.Actor, "database:"+db.Identity()), args.Input, input); err != nil {
+				return failure(err), nil
+			}
+			value, err := op.Execute(artifact.WithRoot(ctx, p.ArtifactDirectory), db, operations.ScopedDatabaseAccess(p.Actor, args.Database, config.Grants), input)
+			if err != nil {
+				return failure(err), nil
+			}
+			return operationResult(artifact.Bind(artifact.WithRoot(ctx, p.ArtifactDirectory), p.Actor, "database:"+db.Identity()), value, descriptor.Effect)
 		})
 	}
+	s.registerMaintenance(p)
+	s.registerRegistry(p)
+	s.registerMetadata()
 	return s, nil
 }
 func failure(err error) *mcp.CallToolResult {

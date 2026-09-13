@@ -1,6 +1,10 @@
 # Built-in Books MCP server
 
-Implementation update: an initial stdio adapter and typed company/database tools now exist. Full coverage is pending; see [progress](implementation/parity-progress.md) and [current usage](mcp.md). The design below remains the target contract.
+Implementation update: existing operation coverage is implemented; see
+[validation and scope](implementation/parity-progress.md) and [current usage](mcp.md).
+The historical proposal below includes broader ideas not adopted for this focused
+parity implementation: owner-profile shortcuts, arbitrary roots, universal receipts,
+and client setup helpers. Its proposed tool names and policy are not launch instructions.
 
 Status: target design, September 13, 2026. Commands, policy
 fields, and schemas below describe the complete intended interface; use the current usage guide for implemented behavior. Baseline:

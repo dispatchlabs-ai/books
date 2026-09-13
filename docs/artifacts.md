@@ -46,12 +46,18 @@ own generated results when finished.
 If artifact delivery fails after a mutation succeeds, MCP returns the successful
 result inline with `delivery_warning`, even if it exceeds the normal inline limit.
 Do not repeat that mutation. This preserves its result rather than misreporting a
-successful write as failed. Durable operation receipts for process/network loss
-remain separate implementation work; current operations retain their existing
-idempotency and retry contracts.
+successful write as failed. Operations retain their existing idempotency and retry contracts; there is no
+universal receipt framework for process/network loss.
 
-Bundles, maintenance backup streaming and explicit authorized local-path mappings
-remain pending; this initial transfer layer does not yet imply full file parity.
+For a large company/database JSON operation, upload its complete JSON request,
+then pass `{"input_artifact":"<id>"}` in place of the typed request object (inside
+`input` for MCP). The artifact must belong to that actor and verified scope.
+Unknown/duplicate fields, nesting limits and exact integer validation still apply.
+Only one reference is resolved; recursive references and mixed inline fields are
+rejected. Inline JSON remains limited to 2 MiB; artifact input is at most 256 MiB.
+
+Database backups and restores also use this transfer layer. Clients download or
+upload bytes using opaque IDs; arbitrary server-path import/export is not exposed.
 
 ## Existing evidence workflows
 

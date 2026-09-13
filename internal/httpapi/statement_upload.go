@@ -11,13 +11,6 @@ import (
 	"github.com/dispatchlabs-ai/books/internal/banking"
 )
 
-func statementFormatNames() []string {
-	var names []string
-	for _, f := range banking.Capabilities() {
-		names = append(names, f.Format)
-	}
-	return names
-}
 func readStatementUpload(w http.ResponseWriter, r *http.Request) ([]byte, string, banking.Options, error) {
 	var options banking.Options
 	name := r.URL.Query().Get("name")

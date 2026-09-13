@@ -69,8 +69,9 @@ See [working with real books](docs/agent-workflows.md#working-with-real-books).
 - **Preserve history.** Posted journals stay immutable; corrections create linked
   reversals. Reconciliation and close workflows retain evidence for inspection.
 - **Build on the same engine.** Agents can use the noninteractive CLI; client
-  applications can use the optional authenticated, company-scoped HTTP API.
-  Both use shared accounting services.
+  applications can use the authenticated HTTP API, and agents can use the built-in
+  [stdio MCP server](docs/mcp.md). All three use shared accounting services,
+  including explicitly authorized company and database administration.
 
 Balanced entries and passing checks do not prove that a classification is correct.
 Books is not accounting advice; have accounting outputs reviewed before relying
@@ -104,6 +105,7 @@ in a public issue.
 | Use Books through my agent | [Agent workflows](docs/agent-workflows.md) |
 | Install and operate Books manually | [Manual workflows](docs/manual-workflows.md) |
 | Look up commands and automation behavior | [CLI reference](docs/cli.md) |
+| Connect an MCP agent | [MCP setup and permissions](docs/mcp.md) |
 | Build a client or import statements through the API | [API](docs/api.md) |
 | Understand supported statement data | [Formats](docs/statement-formats.md) · [Banking data](docs/banking-data.md) |
 | Back up or recover a company | [Operations](docs/operations.md) |

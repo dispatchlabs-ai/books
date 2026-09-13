@@ -59,7 +59,7 @@ func TestMCPStdio(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tools.Tools) != len(operations.DatabaseOperations()) {
+	if len(tools.Tools) != len(operations.DatabaseOperations())+2 {
 		t.Fatalf("tools %d", len(tools.Tools))
 	}
 	call := func(name string, input any) *mcp.CallToolResult {
@@ -136,6 +136,9 @@ func TestMCPStdio(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tool := range listed.Tools {
+		if tool.Name == "books_health" || tool.Name == "books_capabilities" {
+			continue
+		}
 		op, ok := operations.LookupDatabaseOperation(strings.TrimPrefix(tool.Name, "books_db_"))
 		if !ok || op.Descriptor().Grant != "read" {
 			t.Fatal("write tool exposed")

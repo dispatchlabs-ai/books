@@ -10,11 +10,14 @@ import (
 
 // DecodeRequest rejects ambiguous duplicate keys as well as unknown fields and
 // trailing values. Both CLI and HTTP previews use this contract.
-func DecodeRequest(data []byte, v any) error {
+func DecodeRequest(data []byte, v any) error { return DecodeRequestLimit(data, v, 2<<20) }
+
+// DecodeRequestLimit is used for already bounded artifact contents.
+func DecodeRequestLimit(data []byte, v any, limit int) error {
 	bad := func() error {
 		return apperr.New(apperr.Input, "REQUEST_JSON_INVALID", "request must be one JSON object with known, nonduplicate fields")
 	}
-	if len(data) > 2<<20 {
+	if limit < 1 || len(data) > limit {
 		return bad()
 	}
 	tokens := json.NewDecoder(bytes.NewReader(data))

@@ -163,7 +163,14 @@ func TestBankImportSchemaUpgradeAndRollback(t *testing.T) {
 	if err = s.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_schema WHERE name='bank_import_jobs'`).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("migration leaked schema: %d %v", count, err)
 	}
+	if err = s.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err = Migrate(ctx, path); err != nil {
+		t.Fatal(err)
+	}
+	s, err = Open(ctx, path, ReadWrite)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if err = s.VerifySchema(ctx); err != nil {

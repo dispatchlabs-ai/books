@@ -12,12 +12,13 @@ import (
 	"strings"
 )
 
-func Decode(data []byte, value any) error {
+func Decode(data []byte, value any) error { return decodeLimit(data, value, 2<<20) }
+func decodeLimit(data []byte, value any, limit int) error {
 	var err error
 	// Validate duplicate keys, nesting and trailing content before materializing
 	// a map; otherwise JSON decoding would silently discard ambiguous fields.
 	var raw json.RawMessage
-	if err = application.DecodeRequest(data, &raw); err != nil {
+	if err = application.DecodeRequestLimit(data, &raw, limit); err != nil {
 		return err
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -35,7 +36,7 @@ func Decode(data []byte, value any) error {
 	if err != nil {
 		return err
 	}
-	return application.DecodeRequest(data, value)
+	return application.DecodeRequestLimit(data, value, limit)
 }
 func decodeValue(value any, typ reflect.Type) (any, error) {
 	bad := func() (any, error) {

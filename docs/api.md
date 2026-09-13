@@ -3,10 +3,10 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v11.openapi.json), and the small
+[OpenAPI](schemas/books-api-v12.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
-The new OpenAPI artifact is an additive contract snapshot (1.10.0); routes and
+The new OpenAPI artifact is an additive contract snapshot (1.11.0); routes and
 response envelopes remain v1. The [1.7.0 snapshot](schemas/books-api-v8.openapi.json), [1.6.0 snapshot](schemas/books-api-v7.openapi.json), [1.5.0 snapshot](schemas/books-api-v6.openapi.json), [1.4.0 snapshot](schemas/books-api-v5.openapi.json), [1.3.0 snapshot](schemas/books-api-v4.openapi.json), [1.2.0 snapshot](schemas/books-api-v3.openapi.json), [1.1.0 snapshot](schemas/books-api-v2.openapi.json) and
 [initial snapshot](schemas/books-api-v1.openapi.json) remain unchanged.
 
@@ -303,8 +303,8 @@ The response uses `books.api/v1` and the existing exact minor-unit string
 encoding. It contains resolved company scope, date range and account sections
 with opening balance, ordered posted journal lines, running balances and closing
 balance. It uses the same company application operation as the CLI's `gl` path.
-Consolidated general-ledger API access remains planned and is tracked separately
-in [implementation progress](implementation/parity-progress.md).
+Consolidated reporting is available through the explicit whole-database operation
+routes below.
 
 ## Company report options
 
@@ -359,3 +359,59 @@ retain import/post separation. See [MCP usage](mcp.md) for the current tool surf
 Typed operation routes now include scoped [artifact transfer](artifacts.md), database audit/status/Doctor, bank format discovery and explicit reconciliation replan. Configure `artifact_directory` to enable bounded uploads and downloads.
 
 QuickBooks inspect/plan/apply and precoverage lifecycle closure now accept [authorized evidence files](artifacts.md#existing-evidence-workflows). Existing parsers, validation, dry runs and import retry behavior are shared with the CLI.
+
+## Registry and database administration
+
+`books.server/v4` adds explicit principal `registry` grants (`read`, optionally
+`manage`) and database `admin` alongside `read`/`manage`. Previous server schema
+versions retain their existing authority. Registry routes are
+`POST /v1/admin/registry/operations/{operation_id}` for `company_add`,
+`company_default`, `company_list`, `config_get`, `config_path`, and `config_set`.
+Their request schemas are in [OpenAPI 1.11.0](schemas/books-api-v12.openapi.json).
+Registry paths are operator configuration, never request arguments.
+
+A v4 principal may opt into `companies: {"*": ["read", "import", "post", "manage"]}`
+for existing and future registrations. Exact entries override `*`. Each operation
+still requires its own grants. Startup validates named companies; wildcard
+registrations are resolved per request. The HTTP import worker discovers new
+registered companies under the same explicit wildcard authority.
+
+Whole-database `db_init`, `db_migrate`, `db_backup`, and `db_restore` use
+`POST /v1/databases/{database}/operations/{operation_id}` and require `admin` plus
+`read`. For a missing target, v4 permits an empty UUID only for principals with
+`admin`; pin the identity returned by initialization for routine operation.
+The service can start against an admin-authorized missing or migration-required
+database. Existing identity mismatches still fail closed.
+
+Backup uses a stable `key` (1–64 ASCII letters, digits, dots, underscores or
+hyphens, starting with a letter/digit), keeps a native verified backup under
+`backups/<database-uuid>/<key>.backup` beside the database, and returns an artifact.
+The same key returns the same snapshot and receipt. A new snapshot requires a new
+key. Keep the dedicated artifact directory and retained source files alongside
+independent backups. The 256 MiB artifact transfer limit also applies to backups.
+
+Restore takes a completed backup `artifact` and `dry_run`. A real restore also
+requires `confirm` equal to the configured database handle. Existing lineage,
+staging, verification, pre-restore backup and rollback protections are reused.
+A recovery-artifact delivery failure is reported as a warning after a successful
+restore; it does not undo the restore or delete the server's recovery backup.
+Migration supports `dry_run`; initialization refuses an existing target.
+
+HTTP and MCP open database connections per operation. Migration/restore require
+exclusive maintenance access; active Books connections return `DATABASE_BUSY`.
+Idle adapters do not block maintenance. The CLI participates in the same locks.
+Locks live in private `/tmp/books-locks-<uid>` on supported macOS/Linux systems,
+so read-only database directories remain readable. Coordination covers Books
+processes running as the same OS user, not arbitrary SQLite tools or other users;
+stop those before maintenance. Do not delete active runtime lock files.
+
+Use existing operation-specific retry contracts. Company creation reports
+`COMPANY_EXISTS` on a repeated registration; inspect it before continuing. Restore
+and migration do not have universal exactly-once receipts: after a lost response,
+inspect database identity, health and audit history before repeating. No global
+receipt framework or new bookkeeping functionality is part of this parity work.
+
+`dry_run:true` previews statement-account archival and source-identity creation.
+These operation routes commit when `dry_run` is omitted/false; this represents the
+CLI's `--commit` mode explicitly. Database period/reconciliation reopen rejects
+`dry_run:true` with `DRY_RUN_UNSUPPORTED`, matching the low-level CLI safeguard.

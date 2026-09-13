@@ -43,3 +43,13 @@ func operationResult(ctx context.Context, value any, effect string) (*mcp.CallTo
 	}
 	return &mcp.CallToolResult{StructuredContent: result, Content: []mcp.Content{&mcp.TextContent{Text: string(data)}}}, nil
 }
+
+// Registry metadata has no database artifact scope and remains inline.
+func inlineOperationResult(value any) (*mcp.CallToolResult, error) {
+	result := map[string]any{"result": wire.EncodeValue(reflect.ValueOf(value), true)}
+	data, err := json.Marshal(result)
+	if err != nil {
+		return failure(err), nil
+	}
+	return &mcp.CallToolResult{StructuredContent: result, Content: []mcp.Content{&mcp.TextContent{Text: string(data)}}}, nil
+}

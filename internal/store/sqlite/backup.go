@@ -304,7 +304,18 @@ func requireExpectedRestoreIdentity(source restoreDatabaseIdentity, expected Res
 	return nil
 }
 
-func Restore(ctx context.Context, target, backup, actor string, expected RestoreExpectation) (result RestoreResult, returnErr error) {
+func Restore(ctx context.Context, target, backup, actor string, expected RestoreExpectation) (result RestoreResult, err error) {
+	if _, err = ValidateRestore(ctx, target, backup, expected); err != nil {
+		return result, err
+	}
+	err = WithMaintenance(ctx, target, func(ctx context.Context) error {
+		var e error
+		result, e = restore(ctx, target, backup, actor, expected)
+		return e
+	})
+	return result, err
+}
+func restore(ctx context.Context, target, backup, actor string, expected RestoreExpectation) (result RestoreResult, returnErr error) {
 	actor, err := normalizeMutationActor(actor)
 	if err != nil {
 		return RestoreResult{}, err

@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"github.com/dispatchlabs-ai/books/internal/artifact"
+	booksconfig "github.com/dispatchlabs-ai/books/internal/config"
 	"mime"
 	"net"
 	"net/http"
@@ -17,14 +19,13 @@ import (
 
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
-	"github.com/dispatchlabs-ai/books/internal/banking"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
-	"github.com/dispatchlabs-ai/books/internal/money"
 	"github.com/dispatchlabs-ai/books/internal/operations"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
 )
 
 type Server struct {
+	booksConfig string
 	config      Config
 	databases   map[string]*application.Database
 	companies   map[string]*application.Service
@@ -36,18 +37,37 @@ func New(ctx context.Context, booksConfig string, c Config) (*Server, error) {
 	if e := c.Validate(); e != nil {
 		return nil, e
 	}
-	s := &Server{config: c, companies: map[string]*application.Service{}, databases: map[string]*application.Database{}}
+	copyData, _ := json.Marshal(c)
+	var frozen Config
+	_ = json.Unmarshal(copyData, &frozen)
+	c = frozen
+	s := &Server{booksConfig: booksConfig, config: c, companies: map[string]*application.Service{}, databases: map[string]*application.Database{}}
 	for key, config := range c.Databases {
-		db, err := application.OpenDatabase(ctx, key, config.Path, config.UUID)
+		db, err := application.NewDatabaseTarget(key, config.Path, config.UUID).Open(ctx)
 		if err != nil {
+			admin := false
+			for _, p := range c.Principals {
+				for _, grant := range p.Databases[key] {
+					if grant == "admin" {
+						admin = true
+					}
+				}
+			}
+			if admin && application.PendingDatabase(config.Path, err) {
+				continue
+			}
 			_ = s.Close()
 			return nil, err
 		}
+		_ = db.Close()
 		s.databases[key] = db
 	}
 	keys := map[string]bool{}
 	for _, p := range c.Principals {
 		for key := range p.Companies {
+			if key == "*" {
+				continue
+			}
 			keys[key] = true
 		}
 	}
@@ -58,6 +78,7 @@ func New(ctx context.Context, booksConfig string, c Config) (*Server, error) {
 			return nil, e
 		}
 		s.companies[key] = app
+		_ = app.Close()
 	}
 	return s, nil
 }
@@ -131,12 +152,29 @@ func (s *Server) work(ctx context.Context) {
 }
 func (s *Server) ProcessPending(ctx context.Context) {
 	failed := false
-	for _, app := range s.companies {
+	keys := map[string]bool{}
+	for _, p := range s.config.Principals {
+		visible, err := s.companyKeys(p)
+		if err != nil {
+			failed = true
+			continue
+		}
+		for _, key := range visible {
+			keys[key] = true
+		}
+	}
+	for key := range keys {
 		if ctx.Err() != nil {
 			return
 		}
+		app, e := application.Open(ctx, s.booksConfig, key, "books-import-worker", storesqlite.ReadWrite)
+		if e != nil {
+			failed = true
+			continue
+		}
 		ids, e := app.Pending(ctx)
 		if e != nil {
+			_ = app.Close()
 			failed = true
 			continue
 		}
@@ -145,6 +183,7 @@ func (s *Server) ProcessPending(ctx context.Context) {
 				failed = true
 			}
 		}
+		_ = app.Close()
 	}
 	s.mu.Lock()
 	s.workerError = failed
@@ -171,7 +210,7 @@ func (s *Server) principal(r *http.Request) (Principal, bool) {
 	return found, ok
 }
 func granted(p Principal, company, permission string) bool {
-	for _, g := range p.Companies[company] {
+	for _, g := range operations.CompanyGrants(p.Companies, company) {
 		if g == permission {
 			return true
 		}
@@ -215,19 +254,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet && r.URL.Path == "/v1/capabilities" {
-		writeData(w, http.StatusOK, map[string]any{"api": "books.api/v1", "formats": statementFormatNames(), "format_profiles": banking.Capabilities(), "parser": banking.StatementParserVersion, "supported_parsers": []string{banking.ParserVersion, banking.StatementParserVersion}, "sgml_versions": []string{"102", "103", "160"}, "xml": "OFX 2 bank/card subset", "currency": money.SupportedCurrencies(), "single_currency_per_entity": true, "currency_conversion": false, "max_upload_bytes": banking.MaxBytes, "durable_imports": true, "atomic_apply": true, "workflows": []string{"transactions", "corrections", "reconciliation", "period-close", "year-close", "accounts", "periods", "defaults"}, "local_administration": []string{"company-registry", "backup-restore", "quickbooks", "retained-lifecycle-evidence", "consolidation"}, "offline_posting": false, "change_feed": false, "posting_contra_types": []string{"REVENUE", "EXPENSE", "EQUITY"}})
+		writeData(w, http.StatusOK, application.Capabilities())
 		return
 	}
 	if r.Method == http.MethodGet && r.URL.Path == "/v1/companies" {
-		keys := []string{}
-		for k := range p.Companies {
-			keys = append(keys, k)
+		keys, err := s.companyKeys(p)
+		if err != nil {
+			writeError(w, err)
+			return
 		}
-		sort.Strings(keys)
 		values := []application.Company{}
 		for _, k := range keys {
-			values = append(values, s.companies[k].Company())
+			app, err := application.Open(r.Context(), s.booksConfig, k, p.ID, storesqlite.ReadOnly)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			values = append(values, app.Company())
+			_ = app.Close()
 		}
+
 		writeData(w, http.StatusOK, values)
 		return
 	}
@@ -242,6 +288,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeData(w, http.StatusOK, map[string]any{"status": "ready"})
 		return
 	}
+	if strings.HasPrefix(r.URL.Path, "/v1/admin/registry/operations/") {
+		if err := s.serveRegistry(w, r, p); err != nil {
+			writeError(w, err)
+		}
+		return
+	}
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) >= 2 && parts[0] == "v1" && parts[1] == "databases" {
 		if err := s.serveDatabase(w, r, p, parts[2:]); err != nil {
@@ -254,12 +306,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	company := parts[2]
-	app, exists := s.companies[company]
-	if !exists || !granted(p, company, "read") {
+	if booksconfig.ValidateCompanyKey(company) != nil || !granted(p, company, "read") {
 		writeFailure(w, http.StatusNotFound, "COMPANY_NOT_FOUND", "company is not available to this principal")
 		return
 	}
-	app = app.AsActor(p.ID)
+	app, openErr := application.Open(r.Context(), s.booksConfig, company, p.ID, storesqlite.ReadWrite)
+	if openErr != nil {
+		writeError(w, openErr)
+		return
+	}
+	defer func() { _ = app.Close() }()
 	isMatches := len(parts) == 6 && parts[3] == "imports" && parts[5] == "matches"
 	isImport := parts[3] == "imports" || parts[3] == "import-plans"
 	if r.Method == http.MethodPost && isImport && !isMatches && !granted(p, company, "import") {
@@ -280,10 +336,10 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 			return apperr.New(apperr.Invalid, "OPERATION_QUERY_INVALID", "operation parameters belong in the JSON body")
 		}
 		input := op.NewInput()
-		if err := readWorkflowJSON(w, r, input); err != nil {
+		if err := readOperationJSON(w, r.WithContext(artifact.Bind(artifact.WithRoot(r.Context(), s.config.ArtifactDirectory), p.ID, "company:"+app.Identity())), input); err != nil {
 			return err
 		}
-		value, err := op.Invoke(artifact.WithRoot(r.Context(), s.config.ArtifactDirectory), app, operations.CompanyAccess(p.ID, company, p.Companies[company]), input)
+		value, err := op.Invoke(artifact.WithRoot(r.Context(), s.config.ArtifactDirectory), app, operations.CompanyAccess(p.ID, company, operations.CompanyGrants(p.Companies, company)), input)
 		if err != nil {
 			return err
 		}
@@ -314,15 +370,15 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 		case "transactions":
 			return serveTransactions(w, r, app)
 		case "reports/general-ledger":
-			return serveGeneralLedger(w, r, app, operations.CompanyAccess(p.ID, company, p.Companies[company]))
+			return serveGeneralLedger(w, r, app, operations.CompanyAccess(p.ID, company, operations.CompanyGrants(p.Companies, company)))
 		case "reports/trial-balance", "reports/balance-sheet", "reports/profit-loss":
-			return serveCompanyReport(w, r, app, operations.CompanyAccess(p.ID, company, p.Companies[company]), path[1])
+			return serveCompanyReport(w, r, app, operations.CompanyAccess(p.ID, company, operations.CompanyGrants(p.Companies, company)), path[1])
 		}
 		if path[0] == "journals" && (len(path) == 2 || (len(path) == 3 && path[2] == "validation")) {
 			if r.URL.RawQuery != "" {
 				return apperr.New(apperr.Invalid, "JOURNAL_QUERY_INVALID", "journal reads do not accept query parameters")
 			}
-			access := operations.CompanyAccess(p.ID, company, p.Companies[company])
+			access := operations.CompanyAccess(p.ID, company, operations.CompanyGrants(p.Companies, company))
 			input := application.JournalReadRequest{ID: path[1]}
 			var value any
 			var err error
@@ -438,4 +494,25 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, p Principal, comp
 	}
 	writeFailure(w, http.StatusNotFound, "ROUTE_NOT_FOUND", "API route was not found")
 	return nil
+}
+
+func (s *Server) companyKeys(p Principal) ([]string, error) {
+	keys := []string{}
+	if len(p.Companies["*"]) > 0 {
+		cfg, err := booksconfig.Load(s.booksConfig)
+		if err != nil {
+			return nil, application.ConfigMutationError("list companies", err)
+		}
+		for _, k := range cfg.CompanyKeys() {
+			if granted(p, k, "read") {
+				keys = append(keys, k)
+			}
+		}
+	} else {
+		for k := range p.Companies {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	return keys, nil
 }

@@ -79,6 +79,25 @@ func TestDatabaseAPI(t *testing.T) {
 	call("entity_create", `{"code":"NO","path":"/tmp/escape"}`, owner, 400)
 	call("entity_list", `{"unknown":1}`, reader, 400)
 	call("entity_list", `{"unknown":1,"unknown":2}`, reader, 400)
+	accounts := call("statement_account_list", `{"entity":"ACME"}`, owner, 200)["data"].([]any)
+	code := accounts[0].(map[string]any)["code"].(string)
+	identity := map[string]any{"statement_account": code, "source_system": "BANK", "source_realm": "EXAMPLE", "external_id": "account-1", "name": "Checking", "active": true, "evidence": map[string]any{"source_kind": "TEST", "source_path": "synthetic.json", "source_sha256": strings.Repeat("a", 64), "locator": "account-1"}, "dry_run": true}
+	raw, _ := json.Marshal(identity)
+	call("statement_account_identity_add", string(raw), owner, 200)
+	identities, _ := call("statement_account_identity_list", `{}`, owner, 200)["data"].([]any)
+	if len(identities) != 0 {
+		t.Fatal("identity preview committed")
+	}
+	identity["dry_run"] = false
+	raw, _ = json.Marshal(identity)
+	call("statement_account_identity_add", string(raw), owner, 200)
+	archive := map[string]any{"code": code, "reconciliation_required_through": "2026-01-31", "reason": "Synthetic preview", "dry_run": true}
+	raw, _ = json.Marshal(archive)
+	call("statement_account_archive", string(raw), owner, 200)
+	accounts = call("statement_account_list", `{"entity":"ACME"}`, owner, 200)["data"].([]any)
+	if accounts[0].(map[string]any)["status"] != "ACTIVE" {
+		t.Fatal("archive preview committed")
+	}
 	// Typed policy rejects every write for a read-only grant before domain input.
 	db, err := application.OpenDatabase(context.Background(), "example", resolved.Database, resolved.Company.DatabaseUUID)
 	if err != nil {

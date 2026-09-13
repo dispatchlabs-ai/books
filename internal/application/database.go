@@ -46,8 +46,13 @@ func OpenDatabase(ctx context.Context, key, path, uuid string) (*Database, error
 	}
 	return db, err
 }
-func (d *Database) Key() string                         { return d.key }
-func (d *Database) Close() error                        { return d.store.Close() }
+func (d *Database) Key() string { return d.key }
+func (d *Database) Close() error {
+	if d.store == nil {
+		return nil
+	}
+	return d.store.Close()
+}
 func (d *Database) Ledger(actor string) *ledger.Service { return ledger.NewService(d.store, actor) }
 func (d *Database) Reports() *report.Service            { return report.NewService(d.store) }
 

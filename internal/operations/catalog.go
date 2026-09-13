@@ -1,5 +1,5 @@
-// Package operations records interface coverage and implements typed, authorized
-// company report operations. The remaining inventory is not executable policy.
+// Package operations defines typed, authorized backend bindings and records
+// CLI, HTTP and MCP coverage. The inventory itself never grants authority.
 package operations
 
 import (

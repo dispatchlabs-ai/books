@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/dispatchlabs-ai/books/internal/operations"
 	"io"
 	"net"
 	"net/url"
@@ -18,6 +19,7 @@ import (
 )
 
 type Principal struct {
+	Registry    []string            `json:"registry,omitempty"`
 	ID          string              `json:"id"`
 	TokenSHA256 string              `json:"token_sha256"`
 	Companies   map[string][]string `json:"companies"`
@@ -71,8 +73,8 @@ func (c Config) Validate() error {
 	if c.ArtifactDirectory != "" && !filepath.IsAbs(c.ArtifactDirectory) {
 		return bad("artifact_directory must be absolute")
 	}
-	if c.Schema != "books.server/v1" && c.Schema != "books.server/v2" && c.Schema != "books.server/v3" {
-		return bad("server schema must be books.server/v1, books.server/v2 or books.server/v3")
+	if c.Schema != "books.server/v1" && c.Schema != "books.server/v2" && c.Schema != "books.server/v3" && c.Schema != "books.server/v4" {
+		return bad("server schema must be books.server/v1, v2, v3 or v4")
 	}
 	host, port, e := net.SplitHostPort(c.Listen)
 	if e != nil || port == "" {
@@ -105,11 +107,11 @@ func (c Config) Validate() error {
 	if len(c.Principals) < 1 || len(c.Principals) > 100 {
 		return bad("configure between 1 and 100 principals")
 	}
-	if c.Schema != "books.server/v3" && len(c.Databases) > 0 {
+	if (c.Schema != "books.server/v3" && c.Schema != "books.server/v4") && len(c.Databases) > 0 {
 		return bad("database handles require v3")
 	}
 	for key, db := range c.Databases {
-		if !principalPattern.MatchString(key) || !filepath.IsAbs(db.Path) || !regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`).MatchString(db.UUID) {
+		if !principalPattern.MatchString(key) || !filepath.IsAbs(db.Path) || (db.UUID != "" && !regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`).MatchString(db.UUID)) || (db.UUID == "" && c.Schema != "books.server/v4") {
 			return bad("database handles require a simple key, absolute path and UUID")
 		}
 	}
@@ -125,10 +127,13 @@ func (c Config) Validate() error {
 			return bad("each principal requires a unique lowercase SHA-256 credential digest")
 		}
 		tokens[p.TokenSHA256] = true
-		if len(p.Companies) == 0 && len(p.Databases) == 0 {
+		if !operations.ValidRegistryGrants(p.Registry) || (len(p.Registry) > 0 && c.Schema != "books.server/v4") {
+			return bad("registry read/manage grants require v4")
+		}
+		if len(p.Companies) == 0 && len(p.Databases) == 0 && len(p.Registry) == 0 {
 			return bad("each principal requires explicit company or database grants")
 		}
-		if c.Schema != "books.server/v3" && len(p.Databases) > 0 {
+		if (c.Schema != "books.server/v3" && c.Schema != "books.server/v4") && len(p.Databases) > 0 {
 			return bad("database grants require v3")
 		}
 		for key, grants := range p.Databases {
@@ -137,22 +142,25 @@ func (c Config) Validate() error {
 			}
 			found := map[string]bool{}
 			for _, grant := range grants {
-				if found[grant] || (grant != "read" && grant != "manage") {
+				if found[grant] || (grant != "read" && grant != "manage" && (grant != "admin" || c.Schema != "books.server/v4")) {
 					return bad("database grants must be unique read or manage values")
 				}
 				found[grant] = true
+			}
+			if c.Databases[key].UUID == "" && !found["admin"] {
+				return bad("uninitialized database targets require admin authority")
 			}
 			if !found["read"] {
 				return bad("database grants require read")
 			}
 		}
 		for key, grants := range p.Companies {
-			if e := booksconfig.ValidateCompanyKey(key); e != nil {
+			if e := booksconfig.ValidateCompanyKey(key); e != nil && (key != "*" || c.Schema != "books.server/v4") {
 				return bad("invalid company key in grants")
 			}
 			found := map[string]bool{}
 			for _, grant := range grants {
-				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && ((c.Schema != "books.server/v2" && c.Schema != "books.server/v3") || grant != "manage")) {
+				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && ((c.Schema != "books.server/v2" && c.Schema != "books.server/v3" && c.Schema != "books.server/v4") || grant != "manage")) {
 					return bad("grants must be unique read, import, post, or (v2 only) manage values")
 				}
 				found[grant] = true

@@ -27,3 +27,14 @@ func readWorkflowJSON(w http.ResponseWriter, r *http.Request, value any) error {
 	}
 	return wire.Decode(data, value)
 }
+
+func readOperationJSON(w http.ResponseWriter, r *http.Request, value any) error {
+	if r.Header.Get("Content-Type") != "application/json" {
+		return apperr.New(apperr.Input, "CONTENT_TYPE_INVALID", "Content-Type must be application/json")
+	}
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 2<<20))
+	if err != nil {
+		return apperr.New(apperr.Input, "REQUEST_TOO_LARGE", "JSON request exceeds the limit")
+	}
+	return wire.DecodeOperation(r.Context(), data, value)
+}

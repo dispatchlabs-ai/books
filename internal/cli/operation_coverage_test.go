@@ -28,7 +28,7 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 	delete(commands, "mcp")
 	delete(commands, "serve") // Process lifecycle, not a backend operation.
 	_, source, _, _ := runtime.Caller(0)
-	data, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../docs/schemas/books-api-v11.openapi.json"))
+	data, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../docs/schemas/books-api-v12.openapi.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,13 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 			}
 		}
 	}
-	tools := map[string]bool{}
+	tools := map[string]bool{"books_health": true, "books_capabilities": true}
+	for _, op := range operations.MaintenanceOperations() {
+		tools["books_db_"+op.Descriptor().ID] = true
+	}
+	for _, op := range operations.RegistryOperations() {
+		tools["books_registry_"+op.Descriptor().ID] = true
+	}
 	for _, op := range operations.DatabaseOperations() {
 		tools["books_db_"+op.Descriptor().ID] = true
 	}
@@ -60,8 +66,8 @@ func TestOperationInventoryCoversCLIAndOpenAPI(t *testing.T) {
 			t.Fatalf("invalid or duplicate operation %q", op.ID)
 		}
 		ids[op.ID] = true
-		if op.Gap == "" {
-			t.Fatalf("operation %s must record its current parity gaps", op.ID)
+		if op.Gap != "" || len(op.HTTP) == 0 || len(op.MCP) == 0 {
+			t.Fatalf("operation %s has an unresolved interface gap: %s", op.ID, op.Gap)
 		}
 		for _, name := range op.MCP {
 			if !tools[name] {

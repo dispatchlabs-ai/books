@@ -121,6 +121,22 @@ type inspectedMigrationTarget struct {
 }
 
 func Migrate(ctx context.Context, path string) error {
+	// Reject unrelated files without creating a sidecar. Repeat the authoritative
+	// inspection after acquiring exclusive maintenance access.
+	names, err := leaseNames(path)
+	if err != nil {
+		return err
+	}
+	owned := map[string]bool{}
+	for _, name := range names {
+		owned[name] = true
+	}
+	if _, err = inspectMigrationTarget(context.WithValue(ctx, maintenanceKey{}, owned), path); err != nil {
+		return err
+	}
+	return WithMaintenance(ctx, path, func(ctx context.Context) error { return migrate(ctx, path) })
+}
+func migrate(ctx context.Context, path string) error {
 	target, err := inspectMigrationTarget(ctx, path)
 	if err != nil {
 		return err

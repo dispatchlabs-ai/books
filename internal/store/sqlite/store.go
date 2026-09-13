@@ -30,9 +30,10 @@ const (
 )
 
 type Store struct {
-	db   *sql.DB
-	path string
-	mode Mode
+	lease *fileLease
+	db    *sql.DB
+	path  string
+	mode  Mode
 }
 
 func Open(ctx context.Context, path string, mode Mode) (*Store, error) {
@@ -43,6 +44,21 @@ func Open(ctx context.Context, path string, mode Mode) (*Store, error) {
 	if err != nil {
 		return nil, apperr.Wrap(apperr.Invalid, "DATABASE_PATH_INVALID", "resolve database path", err)
 	}
+	if mode == Create {
+		if err := os.MkdirAll(filepath.Dir(abs), 0700); err != nil {
+			return nil, err
+		}
+	}
+	lease, err := acquireLease(ctx, abs, false)
+	if err != nil {
+		return nil, err
+	}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			_ = lease.Close()
+		}
+	}()
 	created := false
 	if mode == Create {
 		if err := os.MkdirAll(filepath.Dir(abs), 0o700); err != nil {
@@ -104,7 +120,7 @@ func Open(ctx context.Context, path string, mode Mode) (*Store, error) {
 		cleanupCreate()
 		return nil, mapSQLiteError("open database", err)
 	}
-	s := &Store{db: db, path: abs, mode: mode}
+	s := &Store{db: db, path: abs, mode: mode, lease: lease}
 	if err := s.verifyConnection(ctx); err != nil {
 		_ = db.Close()
 		cleanupCreate()
@@ -117,6 +133,7 @@ func Open(ctx context.Context, path string, mode Mode) (*Store, error) {
 			return nil, apperr.Wrap(apperr.Unavailable, "DATABASE_PERMISSIONS_FAILED", "secure database file", err)
 		}
 	}
+	handedOff = true
 	return s, nil
 }
 
@@ -175,7 +192,7 @@ func (s *Store) Begin(ctx context.Context) (*sql.Tx, error) {
 	return tx, nil
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) Close() error { return errors.Join(s.db.Close(), s.lease.Close()) }
 
 func UTCNow() string { return time.Now().UTC().Format(time.RFC3339Nano) }
 

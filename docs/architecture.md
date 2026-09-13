@@ -6,10 +6,10 @@ See [single-currency rules](currencies.md) for setup, precision, import boundari
 
 Books is a headless backend. The CLI, HTTP API and MCP are frontends to shared
 application services; the CLI owns argument parsing, presentation and exit codes,
-not reusable accounting workflows. Full interface parity is the target, including
+not reusable accounting workflows. Existing operations include API/MCP bindings for
 authorized administration. See the [interface parity contract](interface-parity.md)
-and [proposed MCP design](mcp-design.md). Current API gaps and MCP implementation
-remain delivery work; these documents do not claim they are already complete.
+and [MCP usage](mcp.md). The [progress record](implementation/parity-progress.md)
+describes tested workflows, scope decisions and validation limits.
 
 ## Ledger model
 
