@@ -107,8 +107,11 @@ provider and file permissions determine where financial information may be sent.
 ## Experimental web client
 
 The optional [web client](web/README.md) runs a loopback-only single-operator
-facade with server-held read credentials and an explicit route allowlist. It
-does not provide network-user authentication and must not be exposed publicly.
+facade with server-held read credentials and an explicit route allowlist. Hosted mode requires an exact HTTPS origin and strong proxy token; the
+loopback TLS proxy must authenticate every request, replace the proxy-token
+header, and enforce the intended network boundary. The Node listener must never
+be exposed directly. Every authenticated user receives the same configured
+read-only company scope.
 AI requests go only to an explicitly configured adapter; that adapter owns tool
 scope enforcement and authorization. Demo data and browser-local plans are
 synthetic. Live forecasts and financial execution are not implemented.

@@ -156,3 +156,64 @@ test("configuration fails closed instead of downgrading to demo", () => {
     }),
   );
 });
+
+test("hosted mode requires authenticated proxy and exact HTTPS origin", async () => {
+  const config = {
+    publicOrigin: "https://books.example",
+    proxyToken: "p".repeat(48),
+    upstream: "https://api.example",
+    token: "read-token",
+  };
+  await fixture(config, async (url) => {
+    const send = (headers) =>
+      new Promise((resolve) => {
+        const req = httpRequest(url + "/api/config", { headers }, (res) => {
+          let body = "";
+          res.on("data", (c) => (body += c));
+          res.on("end", () =>
+            resolve({ status: res.statusCode, body: JSON.parse(body) }),
+          );
+        });
+        req.end();
+      });
+    assert.equal((await send({ Host: "books.example" })).status, 403);
+    assert.equal(
+      (await send({ Host: "books.example", "X-Books-Proxy-Token": "wrong" }))
+        .status,
+      403,
+    );
+    assert.equal(
+      (
+        await send({
+          Host: "attacker.example",
+          "X-Books-Proxy-Token": config.proxyToken,
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await send({
+          Host: "books.example",
+          "X-Books-Proxy-Token": config.proxyToken,
+          Origin: "https://attacker.example",
+        })
+      ).status,
+      403,
+    );
+    assert.deepEqual(
+      await send({
+        Host: "books.example",
+        "X-Books-Proxy-Token": config.proxyToken,
+        Origin: config.publicOrigin,
+      }),
+      { status: 200, body: { demo: false, agent: false } },
+    );
+  });
+  assert.throws(() =>
+    createBooksWebServer({ publicOrigin: config.publicOrigin }),
+  );
+  assert.throws(() =>
+    createBooksWebServer({ ...config, upstream: undefined, token: undefined }),
+  );
+});

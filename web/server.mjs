@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { resolve, extname } from "node:path";
@@ -12,6 +13,8 @@ const json = (res, status, data) => {
 };
 export function createBooksWebServer(config = {}) {
   const {
+    publicOrigin,
+    proxyToken,
     upstream,
     token,
     agentURL,
@@ -21,6 +24,22 @@ export function createBooksWebServer(config = {}) {
   } = config;
   if (Boolean(upstream) !== Boolean(token))
     throw new Error("Set both BOOKS_API_URL and BOOKS_API_TOKEN_FILE.");
+  if (Boolean(publicOrigin) !== Boolean(proxyToken))
+    throw new Error(
+      "Hosted mode requires both a public origin and a proxy token.",
+    );
+  if (publicOrigin) {
+    const origin = new URL(publicOrigin);
+    if (
+      origin.protocol !== "https:" ||
+      origin.origin !== publicOrigin ||
+      !upstream ||
+      proxyToken.length < 32
+    )
+      throw new Error(
+        "Hosted mode requires an exact HTTPS origin, connected API, and strong proxy token.",
+      );
+  }
   for (const value of [upstream, agentURL].filter(Boolean)) {
     const url = new URL(value);
     if (
@@ -46,22 +65,35 @@ export function createBooksWebServer(config = {}) {
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     );
     try {
-      // This server is loopback-only. Reject DNS rebinding and cross-origin callers.
-      if (
-        !/^((localhost|127\.0\.0\.1)(:\d+)?|\[::1\](:\d+)?)$/.test(
-          req.headers.host ?? "",
+      // Hosted traffic must pass through an authenticated, loopback TLS proxy.
+      if (publicOrigin) {
+        const supplied = Buffer.from(req.headers["x-books-proxy-token"] ?? "");
+        const expected = Buffer.from(proxyToken);
+        if (
+          req.headers.host !== new URL(publicOrigin).host ||
+          supplied.length !== expected.length ||
+          !timingSafeEqual(supplied, expected)
         )
-      )
-        return json(res, 403, { error: "Host not allowed." });
-      if (
-        req.headers.origin &&
-        ![
-          `http://${req.headers.host}`,
-          "http://127.0.0.1:5173",
-          "http://localhost:5173",
-        ].includes(req.headers.origin)
-      )
-        return json(res, 403, { error: "Origin not allowed." });
+          return json(res, 403, { error: "Authenticated proxy required." });
+        if (req.headers.origin && req.headers.origin !== publicOrigin)
+          return json(res, 403, { error: "Origin not allowed." });
+      } else {
+        if (
+          !/^((localhost|127\.0\.0\.1)(:\d+)?|\[::1\](:\d+)?)$/.test(
+            req.headers.host ?? "",
+          )
+        )
+          return json(res, 403, { error: "Host not allowed." });
+        if (
+          req.headers.origin &&
+          ![
+            `http://${req.headers.host}`,
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+          ].includes(req.headers.origin)
+        )
+          return json(res, 403, { error: "Origin not allowed." });
+      }
       const url = new URL(req.url, "http://localhost");
       if (url.pathname === "/api/config" && req.method === "GET")
         return json(res, 200, {
@@ -214,6 +246,8 @@ if (
       ? (await readFile(process.env[name], "utf8")).trim()
       : undefined;
   const server = createBooksWebServer({
+    publicOrigin: process.env.BOOKS_WEB_ORIGIN,
+    proxyToken: await secret("BOOKS_WEB_PROXY_TOKEN_FILE"),
     upstream: process.env.BOOKS_API_URL,
     token: await secret("BOOKS_API_TOKEN_FILE"),
     agentURL: process.env.BOOKS_AGENT_URL,

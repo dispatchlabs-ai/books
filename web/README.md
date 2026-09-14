@@ -39,10 +39,15 @@ These variables are read only by the Node server; never use `VITE_` variables
 for credentials. The browser receives neither the token nor upstream URLs.
 Remote API connections require HTTPS. The web server itself listens only on
 loopback, validates Host/Origin, uses a same-origin CSP, disables caching, and
-allows only entity listing and two read-only report routes. It is a local
-single-operator client, not an authenticated multi-user hosting service. Do not
-expose it through a reverse proxy until a separate authenticated hosting design
-has been implemented. This change does not deploy a network site.
+allows only entity listing and two read-only report routes. It is a single-operator client. For hosted use, set `BOOKS_WEB_ORIGIN` to the exact
+HTTPS origin and `BOOKS_WEB_PROXY_TOKEN_FILE` to a private random token of at least
+32 characters. Hosted mode requires a connected API and rejects every request
+without the configured Host and proxy token. The trusted loopback reverse proxy
+must authenticate users before forwarding any path, replace `X-Books-Proxy-Token`
+with that secret, preserve Host, and strip browser Authorization. It must serve
+HTTPS with a valid certificate and enforce the intended network boundary. Never
+publish the Node listener directly. This does not implement multi-user accounting
+permissions: every authorized website user sees the web principal's entities.
 
 Connected views read the general ledger and profit/loss API, defaulting to the
 current month. Expand **Period** to inspect earlier history. All balances and
