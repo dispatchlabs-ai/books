@@ -8,6 +8,11 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Added an experimental shadcn web interface for personal and business overview,
+  account activity, and scoped AI-adapter conversations, with an isolated demo.
+  Read-only API credentials stay server-side; cash forecasts and planning are
+  explicitly demo-only until connected services exist.
+
 - Added built-in stdio MCP with typed, permission-filtered tools over the shared
   backend; no network listener or separate HTTP server is required.
 - Completed API/MCP coverage for existing company and whole-database workflows,

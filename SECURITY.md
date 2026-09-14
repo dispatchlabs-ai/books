@@ -103,3 +103,12 @@ coordinate Books processes under the same OS user; stop external SQLite tools
 before migration or restoration. Operations retain their documented retry
 contracts, not a universal exactly-once guarantee. An external agent's model
 provider and file permissions determine where financial information may be sent.
+
+## Experimental web client
+
+The optional [web client](web/README.md) runs a loopback-only single-operator
+facade with server-held read credentials and an explicit route allowlist. It
+does not provide network-user authentication and must not be exposed publicly.
+AI requests go only to an explicitly configured adapter; that adapter owns tool
+scope enforcement and authorization. Demo data and browser-local plans are
+synthetic. Live forecasts and financial execution are not implemented.

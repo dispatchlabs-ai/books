@@ -15,7 +15,9 @@ clear evidence are welcome. Large speculative rewrites are not.
 ## Development
 
 Books requires Go 1.26.6 or newer, CGO, a C compiler, a POSIX shell, and
-[ripgrep](https://github.com/BurntSushi/ripgrep#installation) (`rg`) on `PATH`. Maintainer-directed
+[ripgrep](https://github.com/BurntSushi/ripgrep#installation) (`rg`) on `PATH`. The web checks also require Node.js 26.5+ and npm; browser checks
+require an installed Playwright Chromium (see [web checks](web/README.md#checks)).
+Maintainer-directed
 work defaults to committing and pushing directly to `main`; agents open pull
 requests only when explicitly asked. External contributors use a branch and
 pull request. Run the checks locally:

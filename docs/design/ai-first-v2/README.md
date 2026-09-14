@@ -8,7 +8,7 @@ AI handles importing, classification, posting, reconciliation, and routine
 maintenance. The interface helps people understand their finances, inspect
 evidence, set intent, and resolve meaningful choices.
 
-These are imagegen design concepts, not an implemented frontend. All names
+These are the approved imagegen design concepts. The initial [web implementation](../../../web/README.md) now follows this direction. All names
 and amounts are synthetic. This direction supersedes the navigation in the
 [v1 operation atlas](../screens-v1/README.md); that atlas remains API coverage
 reference material.

@@ -59,4 +59,18 @@ go build -trimpath -o "$check_bin" ./cmd/books
 "$check_bin" --company example --json doctor >/dev/null
 "$check_bin" --company example --json audit verify >/dev/null
 
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  echo "Web checks require Node.js 26.5+ and npm; see web/README.md." >&2
+  exit 1
+fi
+(
+  cd web
+  npm ci
+  npm run lint
+  npm test
+  npm run build
+  npm audit --audit-level=high
+  npm run test:integration
+)
+
 echo "Books repository checks passed."

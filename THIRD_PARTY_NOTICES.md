@@ -32,3 +32,12 @@ below. Books uses SDK code; no upstream documentation text is incorporated.
 | `golang.org/x/sync` | v0.20.0 | [BSD-3-Clause](licenses/golang.org_x_sync-LICENSE.txt) |
 | `golang.org/x/sys` | v0.44.0 | [BSD-3-Clause](licenses/golang.org_x_sys-LICENSE.txt) |
 | `golang.org/x/time` | v0.15.0 | [BSD-3-Clause](licenses/golang.org_x_time-LICENSE.txt) |
+
+## Web interface
+
+The optional React/shadcn interface has its dependency versions pinned in
+[web/package-lock.json](web/package-lock.json). Full installed upstream license
+texts and notices, including font and icon notices, are retained in
+[web/public/THIRD_PARTY_NOTICES.txt](web/public/THIRD_PARTY_NOTICES.txt) and copied
+into built static assets. See [web maintenance](web/README.md#components-and-maintenance)
+for necessity, security and update procedures.

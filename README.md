@@ -88,7 +88,9 @@ reports, period and year close, consolidation, and optional initial QuickBooks
 migration. See [statement formats and limits](docs/statement-formats.md) and
 [currency rules](docs/currencies.md).
 
-Books does not include a chat app, model, web interface, automatic bank feeds,
+Books includes an experimental [shadcn web interface](web/README.md) for
+overview, account activity and an optional AI adapter. Its synthetic demo also
+shows proposed cash planning. Books does not include a model, automatic bank feeds,
 invoicing or A/R and A/P workflows, bill pay, payroll processing, inventory, or
 tax filing. Multiple currencies within an entity, currency translation, and
 partial ownership are unsupported. Cash planning and offline synchronization
