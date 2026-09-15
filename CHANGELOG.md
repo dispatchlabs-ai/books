@@ -8,6 +8,9 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Fixed hosted form login and logout rejecting browser submissions by preserving
+  same-origin referrer information while keeping strict Origin validation.
+
 - Added optional hosted HTML sign-in with expiring, revocable sessions and
   protected feedback notes with stale-save rejection.
 
