@@ -83,16 +83,26 @@ Set `BOOKS_FORECAST_PLANS_FILE` on the web server to an operator-owned JSON file
 
 Entities with configured plans get an **Outlook** page. It first answers whether
 expected income covers planned spending in each full calendar month, then shows
-how reserve transfers change what is left, which bank accounts fall below their
-floor, and the daily per-account balances with movements, evidence, assumptions
+how reserve balance changes and transfer timing affect other balances, which
+bank accounts fall below their floor, and the daily per-account balances with movements, evidence, assumptions
 and actual-versus-expected differences. The Overview links to it with a short
 summary that stays separate from posted accounting.
 
-In that summary, income is every inflow and spending is every outflow, including
-card purchases; card payments and other transfers are never spending. Reserve
-figures are the change in reserved bank accounts. Partial months are shown but
-excluded from averages. The [Outlook design](design/forward-outlook/README.md)
-defines each term; these are views of the same result, not a separate budget.
+In that summary, income is every bank inflow. Spending is every outflow,
+including card purchases, less card refunds/credits; card payments and other
+transfers within the plan are never spending. Money leaving for an account
+outside the plan is an outflow and counts as spending. Reserve figures are net
+balance changes, including reserve-paid expenses, not contribution totals.
+Transfers use departure for the source and arrival for the destination; the
+change in transit reconciles monthly surplus to reserve and other balances.
+Partial, ended and unplanned months are visible but excluded from the answer
+and averages. The [Outlook design](design/forward-outlook/README.md) defines each
+term; these are views of the same result, not a separate budget.
+
+Full reserve-goal affordability is not established by proposed funding. The v1
+plan has no structured reserve targets, contribution schedules or cap rules;
+Outlook prominently states this limitation in every scenario. Personal targets
+must not be hardcoded into the generic interface.
 
 `/api/config` lists each entity's scenario names so the interface knows where a
 plan exists. The web server reads only the configured file paths and invokes the

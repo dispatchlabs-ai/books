@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { request } from "@/lib/books";
+import { request, today } from "@/lib/books";
 import { summarizeOutlook, type Forecast, type Outlook } from "@/lib/forecast";
 
 export type ForecastState = {
+  /** The scenario requested. */
   scenario: string;
+  /** The scenario whose data is on screen; it differs while another loads. */
+  shown: string;
   data?: Forecast;
   outlook?: Outlook;
   error: string;
@@ -11,14 +14,15 @@ export type ForecastState = {
   retry: () => void;
 };
 
+type Loaded = { data: Forecast; outlook: Outlook; scenario: string };
+
 // Loads one scenario at a time. The last good result stays on screen while
 // another scenario loads, so switching doesn't collapse the page.
 export function useForecast(company: string, scenario: string): ForecastState {
-  const cache = useRef(new Map<string, { data: Forecast; outlook: Outlook }>());
+  const cache = useRef(new Map<string, Loaded>());
   const [state, setState] = useState<{
     key: string;
-    data?: Forecast;
-    outlook?: Outlook;
+    loaded?: Loaded;
     error: string;
   }>({ key: "", error: "" });
   const [attempt, setAttempt] = useState(0);
@@ -27,7 +31,7 @@ export function useForecast(company: string, scenario: string): ForecastState {
     if (!scenario) return;
     const cached = cache.current.get(key);
     if (cached) {
-      setState({ key, ...cached, error: "" });
+      setState({ key, loaded: cached, error: "" });
       return;
     }
     const controller = new AbortController();
@@ -37,9 +41,13 @@ export function useForecast(company: string, scenario: string): ForecastState {
     )
       .then((data) => {
         if (controller.signal.aborted) return;
-        const value = { data, outlook: summarizeOutlook(data) };
-        cache.current.set(key, value);
-        setState({ key, ...value, error: "" });
+        const loaded = {
+          data,
+          outlook: summarizeOutlook(data, today()),
+          scenario,
+        };
+        cache.current.set(key, loaded);
+        setState({ key, loaded, error: "" });
       })
       .catch((e) => {
         if (!controller.signal.aborted)
@@ -55,8 +63,9 @@ export function useForecast(company: string, scenario: string): ForecastState {
   const current = state.key === key;
   return {
     scenario,
-    data: state.data,
-    outlook: state.outlook,
+    shown: state.loaded?.scenario ?? scenario,
+    data: state.loaded?.data,
+    outlook: state.loaded?.outlook,
     error: current ? state.error : "",
     loading: !current,
     retry,

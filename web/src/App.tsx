@@ -803,13 +803,12 @@ function Workspace({
               snapshot={snapshot}
               onBack={() => navigate("overview")}
               onAsk={() => openAsk()}
-              onOutlook={
-                forecast.data?.plan.accounts.some(
-                  (a) => a.kind === "bank" && a.code === account.code,
-                )
-                  ? () => openOutlook(account.code)
-                  : undefined
+              planKind={
+                forecast.data?.plan.accounts.find(
+                  (a) => a.code === account.code,
+                )?.kind
               }
+              onOutlook={openOutlook}
             />
           ) : (
             <div className="mx-auto max-w-3xl">
@@ -1010,13 +1009,15 @@ function AccountView({
   snapshot,
   onBack,
   onAsk,
+  planKind,
   onOutlook,
 }: {
   account: Account;
   snapshot: Snapshot;
   onBack: () => void;
   onAsk: () => void;
-  onOutlook?: () => void;
+  planKind?: "bank" | "card";
+  onOutlook: (account?: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const matches = account.movements
@@ -1132,17 +1133,23 @@ function AccountView({
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {snapshot.demo
                 ? "The household overview includes an illustrative cash projection. Account forecasts are not connected."
-                : onOutlook
+                : planKind === "bank"
                   ? "This account is in the saved cash plan. Outlook shows its estimated end-of-day balances, floor and any shortfall."
-                  : "This account isn’t in a connected cash plan. Its recorded balance is available in Activity."}
+                  : planKind === "card"
+                    ? "This card is in the saved cash plan. In Outlook its purchases count as spending, and payments to it are transfers, not spending."
+                    : "This account isn’t in a connected cash plan. Its recorded balance is available in Activity."}
             </p>
-            {onOutlook && (
+            {planKind && (
               <Button
                 variant="outline"
                 className="mt-4 h-11"
-                onClick={onOutlook}
+                onClick={() =>
+                  onOutlook(planKind === "bank" ? account.code : undefined)
+                }
               >
-                View daily balances in Outlook
+                {planKind === "bank"
+                  ? "View daily balances in Outlook"
+                  : "Open outlook"}
                 <ArrowRight />
               </Button>
             )}

@@ -102,7 +102,52 @@ try {
       a.code,
     ]);
   const planFiles = {};
-  for (const [scenario, plan] of Object.entries(syntheticHousehold())) {
+  const plans = syntheticHousehold();
+  plans.timing = structuredClone(plans.funded);
+  const leg = (
+    id,
+    date,
+    arrival,
+    account,
+    to_account,
+    amount,
+    status = "estimated",
+  ) => ({
+    id,
+    name: "Synthetic timing",
+    date,
+    arrival,
+    account,
+    to_account,
+    amount,
+    status,
+    kind: "transfer",
+    evidence: "Invented cross-month timing",
+  });
+  plans.timing.events.push(
+    leg(
+      "opening-transit",
+      "2026-09-13",
+      "2026-10-01",
+      "1000",
+      "1050",
+      "700",
+      "actual",
+    ),
+    leg("reserve-arrival", "2026-10-31", "2026-11-02", "1000", "1050", "30000"),
+    leg(
+      "reserve-withdrawal",
+      "2026-10-31",
+      "2026-11-03",
+      "1050",
+      "1000",
+      "4000",
+    ),
+    leg("between-reserves", "2026-11-30", "2026-12-02", "1050", "1060", "2500"),
+    leg("card-transit", "2026-11-30", "2026-12-02", "1000", "2100", "1100"),
+    leg("beyond-horizon", "2026-12-31", "2027-01-04", "1000", "1050", "900"),
+  );
+  for (const [scenario, plan] of Object.entries(plans)) {
     planFiles[scenario] = join(dir, `${scenario}.json`);
     await writeFile(planFiles[scenario], JSON.stringify(plan), { mode: 0o600 });
   }
@@ -158,7 +203,10 @@ try {
     return r.json();
   };
   const companies = await get("/books/companies");
-  assert.deepEqual(companies.map((c) => c.key).sort(), ["maple", "web-example"]);
+  assert.deepEqual(companies.map((c) => c.key).sort(), [
+    "maple",
+    "web-example",
+  ]);
   const ledger = await get(
     "/books/companies/web-example/reports/general-ledger?from=2026-09-01&to=2026-09-13&include_zero=true",
   );
@@ -181,11 +229,11 @@ try {
   // Point-forward outlook from the real forecast engine through the web facade.
   const dollars = (v) => (Number(v) / 100).toFixed(2);
   const outlooks = {};
-  for (const scenario of ["baseline", "funded"]) {
+  for (const scenario of ["baseline", "funded", "timing"]) {
     const forecast = await get(
       `/books/companies/maple/cash-forecast?scenario=${scenario}`,
     );
-    const o = (outlooks[scenario] = summarizeOutlook(forecast));
+    const o = (outlooks[scenario] = summarizeOutlook(forecast, "2026-09-15"));
     assert.deepEqual(
       o.months.map((m) => [
         m.month,
@@ -230,13 +278,35 @@ try {
         m.month,
       );
       assert.equal(reserved(m.to) - reserved(start), m.toReserves, m.month);
+      assert.equal(
+        m.leftOver,
+        m.toReserves + m.inTransit + m.afterReserves,
+        m.month,
+      );
+      for (const reserve of m.reserves) {
+        const balance = (date) =>
+          BigInt(
+            forecast.days.find(
+              (d) => d.date === date && d.account === reserve.code,
+            ).closing,
+          );
+        assert.equal(
+          balance(m.to) - balance(start),
+          reserve.amount,
+          `${m.month}/${reserve.code}`,
+        );
+      }
     }
   }
+  assert.deepEqual(
+    outlooks.timing.months.map((m) => m.inTransit),
+    [0n, 33300n, -30400n, -2700n],
+  );
   assert.equal(outlooks.baseline.reserveActivity, false);
   assert.equal(outlooks.baseline.gaps.length, 4);
   const funded = outlooks.funded;
   assert.deepEqual(
-    funded.complete.map((m) => [
+    funded.counted.map((m) => [
       dollars(m.toReserves),
       dollars(m.afterReserves),
     ]),
@@ -258,7 +328,9 @@ try {
     [["Kids Activities", "2026-12-14", "2026-12-14", "924.38", 17]],
   );
   const config = await get("/config");
-  assert.deepEqual(config.forecasts, { maple: ["baseline", "funded"] });
+  assert.deepEqual(config.forecasts, {
+    maple: ["baseline", "funded", "timing"],
+  });
   run(["--company", "web-example", "doctor"]);
   run(["--company", "web-example", "audit", "verify"]);
   console.log(

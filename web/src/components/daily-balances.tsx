@@ -30,6 +30,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { dateLabel, dayLabel, money, rangeLabel, scale } from "@/lib/books";
 import type { Forecast, ForecastDay, Outlook } from "@/lib/forecast";
 
@@ -70,17 +75,27 @@ export const DailyBalances = forwardRef<
   const names = new Map(forecast.plan.accounts.map((a) => [a.code, a.name]));
   const gaps = new Map(outlook.gaps.map((g) => [g.code, g]));
   const active = banks.find((a) => a.code === account) ?? banks[0];
-  const [selected, setSelected] = useState<string>();
-  const [limit, setLimit] = useState(PAGE);
+  // Expanded day and paging belong to one account; another account starts fresh.
+  const [view, setView] = useState<{
+    account: string;
+    selected?: string;
+    limit: number;
+  }>({ account: "", limit: PAGE });
   // Includes the opening snapshot day, as the engine's lows do.
   const rows = forecast.days.filter((d) => d.account === active?.code);
   if (!active) return null;
+  const { selected, limit } =
+    view.account === active.code ? view : { selected: undefined, limit: PAGE };
+  const setSelected = (date: string | undefined) =>
+    setView({ account: active.code, selected: date, limit });
+  const setLimit = (value: number) =>
+    setView({ account: active.code, selected, limit: value });
   const short = rows.filter((d) => BigInt(d.shortfall) > 0n);
   const activity = rows.filter((d) => d.movements.length > 0);
-  const view: DayFilter =
+  const shown: DayFilter =
     filter ?? (short.length ? "short" : activity.length ? "activity" : "all");
   const listed =
-    view === "short" ? short : view === "activity" ? activity : rows;
+    shown === "short" ? short : shown === "activity" ? activity : rows;
   // Nothing chosen opens the first listed day; an empty string means all closed.
   const open =
     selected === ""
@@ -94,8 +109,6 @@ export const DailyBalances = forwardRef<
   const choose = (code: string) => {
     onAccountChange(code);
     onFilterChange(undefined);
-    setSelected(undefined);
-    setLimit(PAGE);
   };
   return (
     <section
@@ -125,7 +138,7 @@ export const DailyBalances = forwardRef<
           <SelectTrigger
             id="daily-account"
             aria-label="Bank account"
-            className="mt-2 h-11 w-full bg-background @xl:w-96"
+            className="mt-2 w-full bg-background data-[size=default]:h-11 @xl:w-96"
           >
             <SelectValue />
           </SelectTrigger>
@@ -208,30 +221,31 @@ export const DailyBalances = forwardRef<
           type="single"
           variant="outline"
           spacing={0}
-          value={view}
+          value={shown}
           onValueChange={(v) => {
             if (!v) return;
             onFilterChange(v as DayFilter);
-            setSelected(undefined);
-            setLimit(PAGE);
+            setView({ account: active.code, limit: PAGE });
           }}
           aria-label="Days to show"
           className="w-full @xl:w-auto"
         >
           {(
             [
-              ["short", "Below floor", short.length],
-              ["activity", "With activity", activity.length],
-              ["all", "All days", rows.length],
+              ["short", "Below floor", "Short", short.length],
+              ["activity", "With activity", "Activity", activity.length],
+              ["all", "All days", "All", rows.length],
             ] as const
-          ).map(([value, label, count]) => (
+          ).map(([value, label, brief, count]) => (
             <ToggleGroupItem
               key={value}
               value={value}
               disabled={value === "short" && !count}
-              className="h-10 flex-1 px-3 font-normal data-[state=on]:font-medium @xl:flex-none"
+              aria-label={`${label}, ${count} ${count === 1 ? "day" : "days"}`}
+              className="h-11 min-w-0 flex-1 gap-1.5 px-2 font-normal data-[state=on]:font-medium @xl:flex-none @xl:px-3"
             >
-              {label}
+              <span className="@md:hidden">{brief}</span>
+              <span className="hidden @md:inline">{label}</span>
               <span className="text-muted-foreground tabular-nums">
                 {count}
               </span>
@@ -270,7 +284,7 @@ export const DailyBalances = forwardRef<
                   <TableCell className="pl-2">
                     <Button
                       variant="ghost"
-                      className="h-10 gap-1.5 px-2 font-normal"
+                      className="h-11 gap-1.5 px-2 font-normal"
                       aria-expanded={expanded}
                       aria-controls={`movements-${d.date}`}
                       onClick={(e) => {
@@ -280,10 +294,12 @@ export const DailyBalances = forwardRef<
                     >
                       <ChevronDown
                         className={`size-4 text-muted-foreground transition-transform ${expanded ? "" : "-rotate-90"}`}
+                        aria-hidden
                       />
                       <span>{dayLabel(d.date)}</span>
                       <span className="sr-only">
-                        {d.movements.length} movements
+                        {d.movements.length}{" "}
+                        {d.movements.length === 1 ? "movement" : "movements"}
                       </span>
                     </Button>
                   </TableCell>
@@ -358,21 +374,25 @@ export const DailyBalances = forwardRef<
         )}
       </div>
       {forecast.variances.length > 0 && (
-        <details className="mt-4 text-sm">
-          <summary className="flex min-h-11 w-fit cursor-pointer items-center text-muted-foreground">
+        <Collapsible className="mt-4 text-sm">
+          <CollapsibleTrigger className="group flex min-h-11 items-center gap-2 text-muted-foreground">
             Actual versus expected ({forecast.variances.length})
-          </summary>
-          <ul className="space-y-2 rounded-lg border bg-card p-4 leading-6">
+            <ChevronDown
+              className="size-4 transition-transform group-data-[state=closed]:-rotate-90"
+              aria-hidden
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2 rounded-lg border bg-card p-4 leading-6">
             {forecast.variances.map((v) => (
-              <li key={v.actual.id}>
+              <p key={v.actual.id}>
                 {v.expected.name}: expected {dateLabel(v.expected.date)}{" "}
                 {money(v.expected.amount, currency)}; actual{" "}
                 {dateLabel(v.actual.date)} {money(v.actual.amount, currency)};
                 difference {money(v.amount_difference, currency)}.
-              </li>
+              </p>
             ))}
-          </ul>
-        </details>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </section>
   );
@@ -408,7 +428,7 @@ function Movements({
                 </p>
                 {e.to_account && (
                   <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <ArrowRightLeft className="size-3 shrink-0" />
+                    <ArrowRightLeft className="size-3 shrink-0" aria-hidden />
                     {names.get(e.account) ?? e.account} →{" "}
                     {names.get(e.to_account) ?? e.to_account}
                     {" · "}leaves {dateLabel(e.date)}, arrives{" "}
@@ -428,12 +448,18 @@ function Movements({
                 </p>
               </div>
             </div>
-            <details className="mt-1 text-xs">
-              <summary className="w-fit cursor-pointer py-1 text-muted-foreground underline-offset-2 hover:underline">
+            <Collapsible className="text-xs">
+              <CollapsibleTrigger className="group -ml-1 flex min-h-11 items-center gap-1 px-1 text-muted-foreground underline-offset-2 hover:underline">
                 Evidence
-              </summary>
-              <p className="leading-5">Evidence: {e.evidence}</p>
-            </details>
+                <ChevronDown
+                  className="size-3.5 transition-transform group-data-[state=closed]:-rotate-90"
+                  aria-hidden
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="leading-5">Evidence: {e.evidence}</p>
+              </CollapsibleContent>
+            </Collapsible>
           </li>
         );
       })}
@@ -488,6 +514,7 @@ function BalanceChart({
         className="aspect-auto h-44 w-full sm:h-60"
       >
         <LineChart
+          accessibilityLayer={false}
           data={data}
           margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
         >

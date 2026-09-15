@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   average,
+  monthSpan,
   scenarioLabel,
+  spentShare,
   summarizeOutlook,
   verdict,
   type Forecast,
@@ -139,6 +141,78 @@ describe("point-forward outlook", () => {
     expect(o.reserveActivity).toBe(true);
   });
 
+  it("uses each transfer leg's month, including opening transit and arrivals beyond the horizon", () => {
+    const o = summarizeOutlook(
+      forecast(
+        [
+          event("2026-09-13", "transfer", "1000", 700, {
+            to_account: "1010",
+            arrival: "2026-10-01",
+            status: "actual",
+          }),
+          event("2026-10-31", "transfer", "1000", 30000, {
+            to_account: "1010",
+            arrival: "2026-11-02",
+          }),
+          event("2026-10-31", "transfer", "1010", 4000, {
+            to_account: "1000",
+            arrival: "2026-11-03",
+          }),
+          event("2026-11-29", "transfer", "1000", 800, {
+            to_account: "1010",
+            arrival: "2026-11-30",
+          }),
+        ],
+        [],
+        { as_of: "2026-09-14", through: "2026-11-29" },
+      ),
+    );
+    expect(
+      o.months.map((m) => [m.toReserves, m.inTransit, m.afterReserves]),
+    ).toEqual([
+      [0n, 0n, 0n],
+      [-3300n, 33300n, -30000n],
+      [30000n, -33200n, 3200n],
+    ]);
+  });
+
+  it("retains zero-net activity and both accounts in reserve-to-reserve transfers", () => {
+    const f = forecast([
+      event("2026-10-01", "inflow", "1010", 4000),
+      event("2026-10-02", "outflow", "1010", 4000),
+    ]);
+    const netZero = summarizeOutlook(f);
+    expect(netZero.reserveActivity).toBe(true);
+    expect(netZero.months[1].reserves[0].amount).toBe(0n);
+    f.plan.accounts.push(account("1020", "Other reserve", { reserved: true }));
+    f.plan.events!.push(
+      event("2026-10-31", "transfer", "1010", 3000, {
+        to_account: "1020",
+        arrival: "2026-11-02",
+      }),
+    );
+    const o = summarizeOutlook(f);
+    expect(o.months[1].reserves).toEqual([
+      { code: "1010", name: "Medical Reserve", amount: -3000n },
+    ]);
+    expect(o.months[2].reserves).toEqual([
+      { code: "1020", name: "Other reserve", amount: 3000n },
+    ]);
+    expect(o.months[1].afterReserves).toBe(0n);
+    expect(o.months[2].afterReserves).toBe(0n);
+  });
+
+  it("does not format net card credits as a negative spending percentage", () => {
+    const o = summarizeOutlook(
+      forecast([
+        event("2026-10-01", "inflow", "1000", 10000),
+        event("2026-10-02", "inflow", "2100", 500),
+      ]),
+    );
+    expect(o.months[1].spending).toBe(-500n);
+    expect(spentShare(o.months[1])).toBeUndefined();
+  });
+
   it("suppresses replaced expectations and ignores activity already in the opening snapshot", () => {
     const expected = event("2026-10-03", "outflow", "1000", 20643, {
       id: "expected",
@@ -246,5 +320,90 @@ describe("point-forward outlook", () => {
       text: "This plan doesn’t cover a full month yet.",
     });
     expect(scenarioLabel("funded_with-savings")).toBe("Funded with savings");
+  });
+
+  it("leaves empty and already-ended months out of the answer", () => {
+    const plan = forecast(
+      [
+        event("2026-10-15", "inflow", "1000", 1000),
+        event("2026-10-20", "outflow", "1000", 400),
+        event("2026-12-15", "inflow", "1000", 1000),
+        event("2026-12-20", "outflow", "1000", 900),
+      ],
+      [],
+      { as_of: "2026-09-30", through: "2026-12-31" },
+    );
+    const o = summarizeOutlook(plan);
+    expect(o.months.map((m) => [m.month, m.planned, m.excluded])).toEqual([
+      ["2026-10", true, undefined],
+      ["2026-11", false, "unplanned"],
+      ["2026-12", true, undefined],
+    ]);
+    expect(o.averageLeftOver).toBe(350n);
+    expect(o.tightest?.month).toBe("2026-12");
+    expect(monthSpan(o.counted)).toBe("Oct and Dec");
+
+    const later = summarizeOutlook(plan, "2026-12-02");
+    expect(later.months.map((m) => [m.month, m.ended, m.excluded])).toEqual([
+      ["2026-10", true, "ended"],
+      ["2026-11", true, "ended"],
+      ["2026-12", false, undefined],
+    ]);
+    expect(later.averageLeftOver).toBe(100n);
+    expect(verdict(later).text).toBe(
+      "Expected income covers planned spending in its one full month.",
+    );
+    expect(verdict(summarizeOutlook(plan, "2027-01-01"))).toEqual({
+      tone: "none",
+      text: "The full months in this plan have already ended. Update the plan to see what’s ahead.",
+    });
+    const empty = summarizeOutlook(forecast([]));
+    expect(empty.counted).toEqual([]);
+    expect(verdict(empty)).toEqual({
+      tone: "none",
+      text: "This plan has no income or spending in a full month.",
+    });
+  });
+
+  it("nets card refunds against spending instead of counting them as income", () => {
+    const o = summarizeOutlook(
+      forecast([
+        event("2026-10-05", "outflow", "2100", 50000, { category: "Shopping" }),
+        event("2026-10-09", "inflow", "2100", 20000, { category: "Shopping" }),
+        event("2026-10-15", "inflow", "1000", 100000),
+      ]),
+    );
+    const october = o.months[1];
+    expect([october.income, october.spending, october.leftOver]).toEqual([
+      100000n,
+      30000n,
+      70000n,
+    ]);
+    expect(october.categories).toEqual([{ name: "Shopping", amount: 30000n }]);
+  });
+
+  it("counts a reserve paying a card as money taken from reserves", () => {
+    const o = summarizeOutlook(
+      forecast([
+        event("2026-10-05", "outflow", "2100", 30000, { category: "Medical" }),
+        event("2026-10-25", "transfer", "1010", 30000, {
+          to_account: "2100",
+          arrival: "2026-10-25",
+        }),
+      ]),
+    );
+    const october = o.months[1];
+    expect(october.spending).toBe(30000n);
+    expect(october.toReserves).toBe(-30000n);
+    expect(october.afterReserves).toBe(0n);
+  });
+
+  it("states spending as a share of income without floating point", () => {
+    const m = (income: bigint, spending: bigint) =>
+      ({ income, spending }) as Parameters<typeof spentShare>[0];
+    expect(spentShare(m(1680000n, 1675000n))).toBe("99.7%");
+    expect(spentShare(m(1790964n, 1693025n))).toBe("94.5%");
+    expect(spentShare(m(100n, 150n))).toBe("150.0%");
+    expect(spentShare(m(0n, 150n))).toBeUndefined();
   });
 });

@@ -15,9 +15,11 @@ In order of the page:
 1. **The answer.** One sentence, the average left over (or short) per full
    month, the tightest month, and each full month's income, spending and left
    over with a bar showing spending as a share of income.
-2. **Reserves.** How reserve transfers in the selected scenario change what's
-   left, per month, per reserve account. The page says plainly that these are
-   the scenario's transfers, not proof that reserve targets are met.
+2. **Reserves.** How net reserve balance changes and transfer timing affect
+   other bank and card balances, per month and per reserve account. A prominent
+   notice in both scenarios explains that full reserve goals cannot be assessed
+   without structured targets, contribution schedules and cap rules. Scenario
+   funding must never be described as full-goal affordability.
 3. **Account gaps.** Accounts that fall below their floor, from which date, for
    how many days and how far. A balanced household can still run one account
    short on the wrong day.
@@ -39,13 +41,13 @@ and the balance identities below.
 
 | Term | Definition |
 | --- | --- |
-| Horizon | Events dated after `as_of` through `through`, excluding expectations replaced by an actual. |
-| Income | Every `inflow`. |
-| Spending | Every `outflow`, from bank accounts **and cards**. Card purchases count once; bank-to-card payments and all transfers are never spending. |
-| To reserves | Change in reserved bank accounts: transfers in, less transfers out and spending paid from a reserve. |
-| After reserves | Left over less to reserves. Equals the change in non-reserve bank and card money for the month. |
-| Month | Calendar month of the event date (transfers use departure). A month is **full** only if the plan covers its first and last day. |
-| Averages | Full months only, rounded half away from zero to a minor unit. Partial months are shown collapsed and labelled as excluded. |
+| Horizon | Movement legs after `as_of` through `through`, including arrivals from opening transit and excluding expectations replaced by an actual. |
+| Income | Every bank-account `inflow`. |
+| Spending | Every `outflow`, from bank accounts **and cards**, less card refunds/credits. Card purchases count once; bank-to-card payments and all transfers are never spending. Outflows to accounts outside the plan count here. |
+| Reserve balance change | Net change in reserved bank accounts: deposits on arrival, less withdrawals on departure and reserve-paid expenses. Includes each leg between reserves and retains zero-net activity. |
+| Change in other balances | Left over less reserve balance change and net increase in transit. Equals the monthly change in non-reserve bank and card balances; this is not a contribution total or full-goal affordability verdict. |
+| Month | Calendar month of each movement; transfers use departure for the source and arrival for the destination. Opening transit and arrivals beyond the horizon are respected. A month is **full** only if the plan covers its first and last day. |
+| Averages | Full months with income/spending activity that have not ended, rounded half away from zero to a minor unit. Partial, ended and unplanned months remain visible with their exclusion reason. Income, spending and surplus averages are independently rounded from exact totals. |
 | Account gap | A bank account with shortfall on any day from the opening snapshot: first date, days short, lowest balance and shortfall at the lowest point. |
 
 Accounts left out of a plan (for example excluded owners, trusts or
@@ -109,8 +111,9 @@ some figures differ from the implementation.
 Prompts: [Outlook](prompts/01-outlook.txt), [daily balances](prompts/02-daily-balances.txt).
 
 Deliberate differences from the concepts: the hero number is not green; the
-amber "thin month" treatment and percentage labels were replaced by a neutral
-*Tightest* badge and the bar; daily balances stay open with a day filter; gap
+amber "thin month" treatment was replaced by a neutral
+*Tightest* badge; bars have exact spent-share labels, with net card credits
+identified instead of a negative percentage; daily balances stay open with a day filter; gap
 rows also state the first date and days short; and month rows expand to
 spending by category.
 
@@ -136,3 +139,26 @@ real Books engine and web facade).
 Not checked: dark theme (the app has no theme switch yet), screen readers
 beyond Chromium's accessibility tree, Safari/WebKit, and live refresh behavior,
 which does not exist.
+
+## Continuation review and verification
+
+The saved implementation and all follow-up refinements were retained. The first
+independent review found empty months counted as covered, ended months in the
+answer, mismatched scenario labels while loading, card credits shown as income,
+missing card-plan links and partial-month reserves, and several mobile and
+accessibility defects. The refinements address these through the existing
+components. A fresh independent review confirmed the resulting implementation with no unresolved material findings.
+
+Additional regression coverage verifies each account's reserve change and the
+identity `surplus = reserve change + transit change + other balance change`
+against the real engine. Synthetic cases include opening transit, month-end
+reserve deposits and withdrawals, transfers between reserves, card payoffs,
+and arrivals beyond the horizon. Zero-net reserve activity and excess card
+credits have focused tests.
+
+Full-target affordability remains a data limitation: `books.cash-plan/v1`
+contains explicit movements and assumptions, not structured funding targets or
+cap policies. No personal goals are embedded in the UI. This limitation appears
+before reserve figures in both scenarios and next to the operating average.
+
+Final evidence and check results are recorded in [verification](verification.md).

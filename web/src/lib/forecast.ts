@@ -60,12 +60,21 @@ export type MonthOutlook = {
   month: string;
   from: string;
   to: string;
+  /** The plan covers the month's first and last day. */
   complete: boolean;
+  /** Any income or spending is planned in the month. */
+  planned: boolean;
+  /** The month ended before today; its figures are old estimates. */
+  ended: boolean;
+  /** Why the month is left out of averages and the answer, if it is. */
+  excluded?: "ended" | "partial" | "unplanned";
   income: bigint;
   spending: bigint;
   leftOver: bigint;
   toReserves: bigint;
   afterReserves: bigint;
+  /** Net increase in money between departure and arrival. */
+  inTransit: bigint;
   reserves: { code: string; name: string; amount: bigint }[];
   categories: { name: string; amount: bigint }[];
 };
@@ -84,7 +93,8 @@ export type Outlook = {
   asOf: string;
   through: string;
   months: MonthOutlook[];
-  complete: MonthOutlook[];
+  /** Full, planned months that haven't ended: the basis of the answer. */
+  counted: MonthOutlook[];
   averageLeftOver?: bigint;
   averageToReserves?: bigint;
   averageAfterReserves?: bigint;
@@ -118,23 +128,30 @@ export function average(values: bigint[]): bigint | undefined {
 }
 
 /**
- * Groups the scenario's future events by the calendar month money moves.
- * Income is every inflow. Spending is every outflow, including purchases on
- * cards; card payments and transfers are never counted as spending again.
- * Net to reserves is the change in reserved bank balances: transfers in, less
- * transfers out and spending paid from a reserve. Left over less net to
- * reserves is therefore the change in non-reserved money. A month is complete
- * only when the plan covers its first and last day; partial months are shown
- * but excluded from averages.
+ * Groups the scenario's future events by the calendar month money leaves (or
+ * arrives, for income). Income is every inflow to a bank account. Spending is
+ * every outflow, including purchases on cards, less credits on cards; card
+ * payments and transfers are never spending. Reserve balance changes use each
+ * transfer leg's actual date, including transfers between reserves. Subtracting
+ * reserve changes and the change in transit from surplus gives the change in
+ * other bank and card balances, even across month boundaries.
+ *
+ * Only full, planned months that haven't ended before `today` count toward the
+ * answer and averages; the rest stay visible with the reason they're excluded.
  */
-export function summarizeOutlook(forecast: Forecast): Outlook {
+export function summarizeOutlook(forecast: Forecast, today = ""): Outlook {
   const { plan } = forecast;
   const accounts = new Map(plan.accounts.map((a) => [a.code, a]));
   const replaced = new Set(
     (plan.events ?? []).flatMap((e) => (e.replaces ? [e.replaces] : [])),
   );
   const horizon = (plan.events ?? []).filter(
-    (e) => !replaced.has(e.id) && e.date > plan.as_of && e.date <= plan.through,
+    (e) =>
+      !replaced.has(e.id) &&
+      ((e.date > plan.as_of && e.date <= plan.through) ||
+        (e.kind === "transfer" &&
+          e.arrival! > plan.as_of &&
+          e.arrival! <= plan.through)),
   );
   const months = new Map<string, MonthOutlook>();
   const start = new Date(plan.as_of + "T00:00:00Z");
@@ -150,11 +167,14 @@ export function summarizeOutlook(forecast: Forecast): Outlook {
       from,
       to,
       complete: from === `${cursor}-01` && to === lastDay(cursor),
+      planned: false,
+      ended: Boolean(today) && to < today,
       income: 0n,
       spending: 0n,
       leftOver: 0n,
       toReserves: 0n,
       afterReserves: 0n,
+      inTransit: 0n,
       reserves: [],
       categories: [],
     });
@@ -181,14 +201,48 @@ export function summarizeOutlook(forecast: Forecast): Outlook {
     proposed: 0,
     actual: 0,
   };
+  const reserved = (a?: ForecastAccount) => a?.kind === "bank" && a.reserved;
+  const reserveLeg = (
+    month: MonthOutlook,
+    a: ForecastAccount,
+    amount: bigint,
+  ) => {
+    if (!reserved(a)) return;
+    month.toReserves += amount;
+    bump(reserveTotals, month.month, a.code, amount);
+  };
   for (const e of horizon) {
     counts[e.status]++;
-    const month = months.get(e.date.slice(0, 7));
+    const month =
+      e.date > plan.as_of && e.date <= plan.through
+        ? months.get(e.date.slice(0, 7))
+        : undefined;
     const source = accounts.get(e.account);
-    if (!month || !source) continue;
+    if (!source) continue;
     const amount = BigInt(e.amount);
-    const reserved = (a?: ForecastAccount) => a?.kind === "bank" && a.reserved;
-    if (e.kind === "inflow") {
+    if (e.kind === "transfer") {
+      if (month) {
+        month.inTransit += amount;
+        reserveLeg(month, source, -amount);
+      }
+      const arrival =
+        e.arrival! > plan.as_of && e.arrival! <= plan.through
+          ? months.get(e.arrival!.slice(0, 7))
+          : undefined;
+      const destination = accounts.get(e.to_account ?? "");
+      if (arrival && destination) {
+        arrival.inTransit -= amount;
+        reserveLeg(arrival, destination, amount);
+      }
+      continue;
+    }
+    if (!month) continue;
+    month.planned = true;
+    if (e.kind === "inflow" && source.kind === "card") {
+      // A refund or credit on a card offsets spending; it isn't income.
+      month.spending -= amount;
+      bump(categoryTotals, month.month, e.category || "Card credits", -amount);
+    } else if (e.kind === "inflow") {
       month.income += amount;
       if (reserved(source)) {
         month.toReserves += amount;
@@ -201,31 +255,31 @@ export function summarizeOutlook(forecast: Forecast): Outlook {
         month.toReserves -= amount;
         bump(reserveTotals, month.month, source.code, -amount);
       }
-    } else {
-      const destination = accounts.get(e.to_account ?? "");
-      if (reserved(source) === reserved(destination)) continue;
-      const signed = reserved(destination) ? amount : -amount;
-      const code = reserved(destination) ? destination!.code : source.code;
-      month.toReserves += signed;
-      bump(reserveTotals, month.month, code, signed);
     }
   }
   const list = [...months.values()].map((m) => {
     m.leftOver = m.income - m.spending;
-    m.afterReserves = m.leftOver - m.toReserves;
-    m.reserves = [...(reserveTotals.get(m.month) ?? new Map())]
-      .filter(([, amount]) => amount !== 0n)
-      .map(([code, amount]) => ({
+    m.excluded = m.ended
+      ? "ended"
+      : !m.complete
+        ? "partial"
+        : !m.planned
+          ? "unplanned"
+          : undefined;
+    m.afterReserves = m.leftOver - m.toReserves - m.inTransit;
+    m.reserves = [...(reserveTotals.get(m.month) ?? new Map())].map(
+      ([code, amount]) => ({
         code,
         name: accounts.get(code)?.name ?? code,
         amount,
-      }));
+      }),
+    );
     m.categories = [...(categoryTotals.get(m.month) ?? new Map())]
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0));
     return m;
   });
-  const complete = list.filter((m) => m.complete);
+  const counted = list.filter((m) => !m.excluded);
   const gaps: AccountGap[] = [];
   for (const account of plan.accounts) {
     if (account.kind !== "bank") continue;
@@ -256,15 +310,15 @@ export function summarizeOutlook(forecast: Forecast): Outlook {
     asOf: plan.as_of,
     through: plan.through,
     months: list,
-    complete,
-    averageLeftOver: average(complete.map((m) => m.leftOver)),
-    averageToReserves: average(complete.map((m) => m.toReserves)),
-    averageAfterReserves: average(complete.map((m) => m.afterReserves)),
-    tightest: complete.reduce<MonthOutlook | undefined>(
+    counted,
+    averageLeftOver: average(counted.map((m) => m.leftOver)),
+    averageToReserves: average(counted.map((m) => m.toReserves)),
+    averageAfterReserves: average(counted.map((m) => m.afterReserves)),
+    tightest: counted.reduce<MonthOutlook | undefined>(
       (a, m) => (!a || m.leftOver < a.leftOver ? m : a),
       undefined,
     ),
-    shortMonths: complete.filter((m) => m.leftOver < 0n),
+    shortMonths: counted.filter((m) => m.leftOver < 0n),
     reserveActivity: list.some((m) => m.reserves.length > 0),
     gaps,
     counts,
@@ -294,22 +348,48 @@ export function scenarioLabel(key: string) {
   const words = key.replace(/[-_]+/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
-export const monthSpan = (months: MonthOutlook[]) =>
-  months.length === 1
-    ? monthName(months[0].month, "short")
-    : `${monthName(months[0].month, "short")}–${monthName(months.at(-1)!.month, "short")}`;
+// Spending as a share of income, to one decimal place, without floating point.
+export function spentShare(m: MonthOutlook): string | undefined {
+  if (m.income <= 0n) return undefined;
+  if (m.spending < 0n) return undefined;
+  const tenths = (m.spending * 1000n + m.income / 2n) / m.income;
+  return `${tenths / 10n}.${tenths % 10n}%`;
+}
 const list = (names: string[]) =>
   names.length < 3
     ? names.join(" and ")
     : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-
+const nextMonth = (month: string) => {
+  const [y, m] = month.split("-").map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+};
+// "Oct–Dec" for consecutive months; otherwise each month is named.
+export function monthSpan(months: MonthOutlook[]) {
+  if (!months.length) return "";
+  const names = months.map((m) => monthName(m.month, "short"));
+  const consecutive = months.every(
+    (m, i) => i === 0 || nextMonth(months[i - 1].month) === m.month,
+  );
+  return consecutive && months.length > 1
+    ? `${names[0]}–${names.at(-1)}`
+    : list(names);
+}
 // The one-sentence answer shared by the Outlook page and the overview card.
 export function verdict(o: Outlook): {
   tone: "covered" | "short" | "none";
   text: string;
 } {
-  if (!o.complete.length)
-    return { tone: "none", text: "This plan doesn’t cover a full month yet." };
+  if (!o.counted.length) {
+    const full = o.months.filter((m) => m.complete);
+    return {
+      tone: "none",
+      text: full.some((m) => m.ended)
+        ? "The full months in this plan have already ended. Update the plan to see what’s ahead."
+        : full.length
+          ? "This plan has no income or spending in a full month."
+          : "This plan doesn’t cover a full month yet.",
+    };
+  }
   if (o.averageLeftOver! < 0n)
     return {
       tone: "short",
@@ -323,8 +403,8 @@ export function verdict(o: Outlook): {
   return {
     tone: "covered",
     text:
-      o.complete.length === 1
-        ? "Expected income covers planned spending this full month."
+      o.counted.length === 1
+        ? "Expected income covers planned spending in its one full month."
         : "Expected income covers planned spending in every full month.",
   };
 }

@@ -334,6 +334,11 @@ const baselineEvents = [
 ];
 const funded = [
   ...baselineEvents,
+  e("Home Reserve Sep", "2026-09-30", "transfer", "1000", 20000, {
+    to_account: "1050",
+    arrival: "2026-09-30",
+    status: "proposed",
+  }),
   e("Home Reserve Oct", "2026-10-15", "transfer", "1000", 60000, {
     to_account: "1050",
     arrival: "2026-10-15",
@@ -352,8 +357,18 @@ const householdForecast = {
 
 async function connectedHousehold(
   page: import("@playwright/test").Page,
-  failFunded = false,
+  {
+    failFunded = false,
+    today = "2026-09-30",
+    holdFunded,
+  }: {
+    failFunded?: boolean;
+    today?: string;
+    holdFunded?: Promise<void>;
+  } = {},
 ) {
+  // Month inclusion depends on today's date, so the browser clock is fixed.
+  await page.clock.setFixedTime(new Date(`${today}T12:00:00`));
   const company = {
     key: "example",
     name: "Example Household",
@@ -388,6 +403,17 @@ async function connectedHousehold(
                 closing_balance: { consolidated_cents: "30000" },
                 lines: [],
               },
+              {
+                account: {
+                  id: "card",
+                  code: "2100",
+                  name: "Everyday Card",
+                  subtype: "CREDIT_CARD",
+                },
+                opening_balance: { consolidated_cents: "0" },
+                closing_balance: { consolidated_cents: "0" },
+                lines: [],
+              },
             ],
           }
         : {
@@ -398,18 +424,23 @@ async function connectedHousehold(
     }),
   );
   let failures = failFunded ? 2 : 0;
-  await page.route("**/api/books/companies/example/cash-forecast?**", (r) => {
-    const scenario = new URL(r.request().url()).searchParams.get("scenario") as
-      "baseline" | "funded";
-    if (scenario === "funded" && failures > 0) {
-      failures--;
-      return r.fulfill({
-        status: 404,
-        json: { error: "Scenario unavailable" },
-      });
-    }
-    return r.fulfill({ json: householdForecast[scenario] });
-  });
+  await page.route(
+    "**/api/books/companies/example/cash-forecast?**",
+    async (r) => {
+      const scenario = new URL(r.request().url()).searchParams.get(
+        "scenario",
+      ) as "baseline" | "funded";
+      if (scenario === "funded" && holdFunded) await holdFunded;
+      if (scenario === "funded" && failures > 0) {
+        failures--;
+        return r.fulfill({
+          status: 404,
+          json: { error: "Scenario unavailable" },
+        });
+      }
+      return r.fulfill({ json: householdForecast[scenario] });
+    },
+  );
 }
 const noPageScroll = (page: import("@playwright/test").Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -450,7 +481,7 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
   ).toBeVisible();
   await expect(
     months.getByRole("button", {
-      name: /^November: income \$5,000\.00, spending \$5,250\.00, short \$250\.00/,
+      name: /^November, tightest month: income \$5,000\.00, spending \$5,250\.00, short \$250\.00/,
     }),
   ).toBeVisible();
   await expect(
@@ -462,12 +493,11 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
   await expect(
     page.getByText("Sep 30 · Partial month, not included in the average"),
   ).toBeVisible();
-  await months.getByRole("button", { name: /^November:/ }).click();
+  await expect(months.getByText("105.0% of income spent")).toBeVisible();
+  await months.getByRole("button", { name: /^November,/ }).click();
   await expect(months.getByText("Kids activities")).toBeVisible();
   await expect(
-    page.getByText(
-      "This scenario doesn’t move money into or out of reserve accounts.",
-    ),
+    page.getByText("This scenario has no reserve account activity."),
   ).toBeVisible();
   await expect(
     page.getByText(/Baseline includes no proposed transfers/),
@@ -476,13 +506,19 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
   await page.getByRole("radio", { name: "Funded" }).click();
   await expect(page.getByText("Example — proposed funding")).toBeVisible();
   await expect(
-    page.getByText(/draw on existing balances: −\$175\.00 a month on average/),
+    page.getByText(
+      /other bank and card balances decrease by \$175\.00 a month on average/,
+    ),
   ).toBeVisible();
   await expect(
-    page.getByText("They don’t show whether full reserve targets are met.", {
+    page.getByText("Full reserve goals aren’t assessed.", {
       exact: false,
     }),
   ).toBeVisible();
+  // The partial month's reserve transfer is shown, outside the average.
+  await expect(
+    page.getByText("Sep 30 · Partial month, not included in the average"),
+  ).toHaveCount(2);
   const gap = page.getByRole("button", {
     name: "View daily balances for Kids Activities",
   });
@@ -497,11 +533,11 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
     page.getByRole("combobox", { name: "Bank account" }),
   ).toContainText("Kids Activities");
   await expect(
-    page.getByRole("radio", { name: /Below floor 11/ }),
+    page.getByRole("radio", { name: "Below floor, 11 days" }),
   ).toBeChecked();
   const day = page.getByRole("button", { name: /Fri, Nov 20/ });
   await expect(day).toHaveAttribute("aria-expanded", "true");
-  await page.getByText("Evidence", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Evidence" }).first().click();
   await expect(
     page.getByText("Evidence: Synthetic evidence for Team registration"),
   ).toBeVisible();
@@ -514,10 +550,10 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
   await page.getByRole("combobox", { name: "Bank account" }).click();
   await page.getByRole("option", { name: /Home Reserve/ }).click();
   await expect(
-    page.getByRole("radio", { name: /With activity 2/ }),
+    page.getByRole("radio", { name: "With activity, 3 days" }),
   ).toBeChecked();
   await expect(
-    page.getByRole("radio", { name: /Below floor 0/ }),
+    page.getByRole("radio", { name: "Below floor, 0 days" }),
   ).toBeDisabled();
 
   // Scenario and account survive leaving and returning.
@@ -539,7 +575,7 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
 test("outlook recovers from a failed scenario and links from account detail", async ({
   page,
 }) => {
-  await connectedHousehold(page, true);
+  await connectedHousehold(page, { failFunded: true });
   await page.goto("/");
   await page
     .getByRole("button", { name: "Outlook", exact: true })
@@ -576,5 +612,69 @@ test("outlook recovers from a failed scenario and links from account detail", as
   await expect(
     page.getByRole("combobox", { name: "Bank account" }),
   ).toContainText("Kids Activities");
+
+  // A card is in the plan but has no daily balance; say how it counts.
+  await page
+    .getByRole("button", { name: "Overview", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole("button", { name: /Everyday Card/ }).click();
+  await page.getByRole("tab", { name: "Outlook" }).click();
+  await expect(
+    page.getByText(/This card is in the saved cash plan/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Open outlook" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Will income cover spending?" }),
+  ).toBeVisible();
   expect(await noPageScroll(page)).toBe(true);
+});
+
+test("outlook labels the scenario on screen while another loads", async ({
+  page,
+}) => {
+  let release = () => {};
+  const holdFunded = new Promise<void>((resolve) => (release = resolve));
+  await connectedHousehold(page, { holdFunded });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Outlook", exact: true })
+    .filter({ visible: true })
+    .click();
+  await expect(page.getByText("Example — baseline")).toBeVisible();
+  await page.getByRole("radio", { name: "Funded" }).click();
+  await expect(page.getByText("Loading Funded…")).toBeVisible();
+  // Baseline's figures stay labelled Baseline; its comparison prompt waits.
+  await expect(page.getByText(/End-of-day estimates · Baseline/)).toBeVisible();
+  await expect(page.getByText(/includes no proposed transfers/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Compare/ })).toHaveCount(0);
+  release();
+  await expect(page.getByText("Example — proposed funding")).toBeVisible();
+  await expect(page.getByText(/End-of-day estimates · Funded/)).toBeVisible();
+});
+
+test("an older plan leaves ended months out of the answer", async ({
+  page,
+}) => {
+  await connectedHousehold(page, { today: "2026-11-05" });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Outlook", exact: true })
+    .filter({ visible: true })
+    .click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Planned spending is more than expected income on average.",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("−$250.00", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/2 months in this plan have already ended/),
+  ).toBeVisible();
+  await expect(
+    page.getByText("October · Already ended, not included"),
+  ).toBeVisible();
+  await expect(page.getByText(/37 days ago/)).toBeVisible();
 });

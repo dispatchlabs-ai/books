@@ -159,7 +159,7 @@ browser flows are checked in desktop and mobile Chromium profiles.
 ## Daily cash projections
 
 Entities with a configured cash plan get **Outlook**: whether expected income
-covers planned spending by full month, reserve transfers, accounts that run
+covers planned spending by full month, net reserve balance changes, accounts that run
 short and daily per-account balances by scenario. Configure
 `BOOKS_FORECAST_PLANS_FILE` with company/scenario plan paths; see
 [cash projections](../docs/cash-projections.md) and the
