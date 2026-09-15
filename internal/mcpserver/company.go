@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
 	"github.com/dispatchlabs-ai/books/internal/artifact"
@@ -42,7 +41,7 @@ func (s *Server) registerCompanies(p Policy) {
 			companySchema["description"] = "Registered company key; operator explicitly granted all companies"
 		}
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_company_" + d.ID, Description: fmt.Sprintf("%s for a registered company. Requires %s. Amounts use the schema's exact string representation; inspect validation results.", d.ID, d.Grant), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"company", "input"}, "properties": map[string]any{"company": companySchema, "input": wire.OperationInputSchema(d.Input)}}, OutputSchema: resultSchema(d.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: d.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_company_" + d.ID, Description: toolDescription(d), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"company", "input"}, "properties": map[string]any{"company": companySchema, "input": wire.OperationInputSchema(d.Input)}}, OutputSchema: resultSchema(d.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: d.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct {
 				Company string          `json:"company"`
 				Input   json.RawMessage `json:"input"`

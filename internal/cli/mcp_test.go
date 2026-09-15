@@ -55,6 +55,9 @@ func TestMCPStdio(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = session.Close() }()
+	if instructions := session.InitializeResult().Instructions; !strings.Contains(instructions, "Use books_company_*") || !strings.Contains(instructions, "Never infer rollback") {
+		t.Fatal("missing workflow instructions at initialization")
+	}
 	tools, err := session.ListTools(ctx, nil)
 	if err != nil {
 		t.Fatal(err)

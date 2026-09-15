@@ -99,3 +99,46 @@ same key for the same snapshot; use a new key for a new snapshot. Restore takes
 database handle for a real restore. Preserve its returned recovery artifact and
 all retained source evidence. See [administration](api.md#registry-and-database-administration)
 for maintenance coordination and retry limits.
+
+## Agent workflow guidance
+
+Initialization includes server-wide instructions. The opening explains company
+versus database scope and safe retry behavior; each tool has an operation-specific
+purpose, effects and distinctions from similar tools. Prefer company tools for
+routine bookkeeping for a company or person. Database grants cover the entire
+file, including other entities, and remain necessary for low-level operations,
+consolidation and maintenance. Registry access alone grants neither scope.
+
+Keep continuous bookkeeping and reporting separate from optional period locks.
+Statement upload, parsing, preview, posting and reconciliation remain distinct
+steps. Use returned IDs, validation and unchanged plan digests. A timeout does not
+prove rollback; inspect durable workflow state and follow that operation's retry
+contract. Books does not implement universal mutation idempotency.
+
+The complete authorized typed catalog remains available. Books does not implement
+a generic execute tool or require a particular host's deferred-discovery feature.
+Hosts may select definitions on demand; catalog bytes do not establish model
+context tokens or task accuracy. See the [evaluation protocol](mcp-evaluation.md).
+
+### Result size and retrieval
+
+Filter queries using supported account, date and status fields. Read results over
+32 KiB try artifact delivery; this is a presentation target, not a hard limit.
+The artifact retains the **complete original result envelope**, including exact
+amounts, IDs, validation and errors. Its reference gives byte size, SHA-256 and
+completion state. Read it through the same scope's `artifact_read`, starting at
+`offset: "0"`, `length: 16384`. Decode the returned base64 and advance offset by
+the number of decoded bytes until `eof` is true. Concatenate bytes before decoding
+JSON; chunks can split UTF-8 characters and JSON tokens. There is no row cursor
+or automatic report summary; narrow the original query when possible.
+
+Artifact chunks remain inline, including the existing default 256 KiB chunk.
+If artifact storage is disabled or unavailable, reads up to 512 KiB retain the
+inline compatibility behavior; larger reads return an explicit error. Registry
+metadata has no artifact scope and stays inline.
+
+Mutation results keep the existing 512 KiB artifact threshold. If artifact delivery
+fails after a successful mutation, the complete result stays inline with
+`delivery_warning`. Inspect that result; do not repeat the mutation because of a
+delivery warning. Neither threshold permits dropping validation, truncating rows,
+or treating an artifact reference as proof that accounting is complete.

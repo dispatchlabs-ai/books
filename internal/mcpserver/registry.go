@@ -17,7 +17,7 @@ func (s *Server) registerRegistry(p Policy) {
 			continue
 		}
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_registry_" + d.ID, Description: "Operate the explicitly authorized company registry. Company creation uses operator-owned storage. Registry access does not grant posting authority.", InputSchema: map[string]any{"type": "object", "required": []string{"input"}, "additionalProperties": false, "properties": map[string]any{"input": wire.Schema(d.Input)}}, OutputSchema: resultSchema(d.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: d.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_registry_" + d.ID, Description: toolDescription(d), InputSchema: map[string]any{"type": "object", "required": []string{"input"}, "additionalProperties": false, "properties": map[string]any{"input": wire.Schema(d.Input)}}, OutputSchema: resultSchema(d.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: d.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct {
 				Input json.RawMessage `json:"input"`
 			}

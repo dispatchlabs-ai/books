@@ -8,6 +8,12 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Added operation-specific MCP descriptions and initialization workflow guidance
+  for company/database scope, continuous bookkeeping, planning and retry recovery.
+  Large reads prefer complete scoped artifacts above 32 KiB; artifact chunks and
+  mutation receipts preserve existing compatibility and delivery guarantees.
+  Published a controlled agent-evaluation protocol; model performance is unmeasured.
+
 - Added an experimental shadcn web interface for personal and business overview,
   account activity, and scoped AI-adapter conversations, with an isolated demo.
   Read-only API credentials stay server-side; cash forecasts and planning are

@@ -27,7 +27,7 @@ func (s *Server) registerMaintenance(p Policy) {
 		}
 		sort.Strings(allowed)
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + d.ID, Description: "Administer an explicitly configured whole database. Restore requires exact handle confirmation. Close other active Books connections before maintenance.", InputSchema: map[string]any{"type": "object", "required": []string{"database", "input"}, "additionalProperties": false, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.Schema(d.Input)}}, OutputSchema: resultSchema(d.Output), Annotations: &mcp.ToolAnnotations{OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + d.ID, Description: toolDescription(d), InputSchema: map[string]any{"type": "object", "required": []string{"database", "input"}, "additionalProperties": false, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.Schema(d.Input)}}, OutputSchema: resultSchema(d.Output), Annotations: &mcp.ToolAnnotations{OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct {
 				Database string          `json:"database"`
 				Input    json.RawMessage `json:"input"`

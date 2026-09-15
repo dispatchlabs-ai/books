@@ -11,6 +11,10 @@ import (
 
 const inlineResultLimit = 512 << 10
 
+// Prefer small read responses without changing the complete result envelope.
+// The larger compatibility threshold still applies if artifact storage fails.
+const inlineReadTarget = 32 << 10
+
 func resultSchema(typ reflect.Type) map[string]any {
 	return map[string]any{"type": "object", "oneOf": []any{
 		map[string]any{"required": []string{"result"}, "properties": map[string]any{"result": wire.Schema(typ), "delivery_warning": map[string]any{"type": "string"}}, "additionalProperties": false},
@@ -23,11 +27,22 @@ func operationResult(ctx context.Context, value any, effect string) (*mcp.CallTo
 	if err != nil {
 		return failure(err), nil
 	}
-	if len(data) > inlineResultLimit {
+	limit := inlineResultLimit
+	if effect == "read" {
+		// Artifact chunks are already bounded and must not recursively spill to artifacts.
+		if _, chunk := value.(artifact.Chunk); !chunk {
+			limit = inlineReadTarget
+		}
+	}
+	if len(data) > limit {
 		ref, err := artifact.Put(ctx, "result.json", data)
 		if err != nil {
 			if effect == "read" {
-				return failure(err), nil
+				if len(data) > inlineResultLimit {
+					return failure(err), nil
+				}
+				// Preserve clients whose policy does not configure artifact storage.
+				return &mcp.CallToolResult{StructuredContent: result, Content: []mcp.Content{&mcp.TextContent{Text: string(data)}}}, nil
 			}
 			// The operation already succeeded. Preserve its result; never report a
 			// bookkeeping failure merely because optional result-file delivery failed.

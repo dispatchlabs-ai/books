@@ -9,7 +9,7 @@ import (
 func (s *Server) registerMetadata() {
 	for _, id := range []string{"health", "capabilities"} {
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_" + id, Description: "Read Books implementation capabilities or MCP process readiness. Use tools/list to discover authorized operations; database health is checked with db_doctor.", InputSchema: map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{}}, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_" + id, Description: metadataDescriptions[id], InputSchema: map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{}}, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct{}
 			if err := application.DecodeRequest(req.Params.Arguments, &args); err != nil {
 				return failure(err), nil

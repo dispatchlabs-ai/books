@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/dispatchlabs-ai/books/internal/artifact"
 	booksconfig "github.com/dispatchlabs-ai/books/internal/config"
 	storesqlite "github.com/dispatchlabs-ai/books/internal/store/sqlite"
@@ -131,7 +130,7 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 	copyData, _ := json.Marshal(policy)
 	var p Policy
 	_ = json.Unmarshal(copyData, &p)
-	s := &Server{MCP: mcp.NewServer(&mcp.Implementation{Name: "books", Version: version.Identifier()}, nil), databases: map[string]*application.Database{}, companies: map[string]*application.Service{}}
+	s := &Server{MCP: mcp.NewServer(&mcp.Implementation{Name: "books", Version: version.Identifier()}, &mcp.ServerOptions{Instructions: serverInstructions}), databases: map[string]*application.Database{}, companies: map[string]*application.Service{}}
 	for key := range p.Companies {
 		if key == "*" {
 			continue
@@ -170,7 +169,7 @@ func New(ctx context.Context, policy Policy) (*Server, error) {
 		}
 		sort.Strings(allowed)
 		closed := false
-		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + descriptor.ID, Description: fmt.Sprintf("%s on an explicitly authorized whole database. Requires %s; effect %s. Amounts are exact minor-unit strings. Check validation fields and errors in the result.", descriptor.ID, descriptor.Grant, descriptor.Effect), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"database", "input"}, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.OperationInputSchema(descriptor.Input)}}, OutputSchema: resultSchema(descriptor.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: descriptor.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		s.MCP.AddTool(&mcp.Tool{Name: "books_db_" + descriptor.ID, Description: toolDescription(descriptor), InputSchema: map[string]any{"type": "object", "additionalProperties": false, "required": []string{"database", "input"}, "properties": map[string]any{"database": map[string]any{"type": "string", "enum": allowed}, "input": wire.OperationInputSchema(descriptor.Input)}}, OutputSchema: resultSchema(descriptor.Output), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: descriptor.Effect == "read", OpenWorldHint: &closed}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct {
 				Database string          `json:"database"`
 				Input    json.RawMessage `json:"input"`
