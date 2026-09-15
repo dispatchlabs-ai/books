@@ -3,6 +3,10 @@ test("overview, account search, scoped conversation, entity reset and planning",
   page,
 }) => {
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Your money, in view" }),
   ).toBeVisible();
@@ -33,6 +37,10 @@ test("overview, account search, scoped conversation, entity reset and planning",
     .filter({ visible: true })
     .click();
   await page.getByRole("menuitem", { name: "Example Studio" }).click();
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByText("Business overview", { exact: true }),
   ).toBeVisible();
@@ -42,6 +50,10 @@ test("overview, account search, scoped conversation, entity reset and planning",
     .filter({ visible: true })
     .click();
   await page.getByRole("menuitem", { name: "Maple Household" }).click();
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   await page.getByRole("button", { name: /Planning the home repair/ }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("radio", { name: /This week/ }).check();
@@ -50,6 +62,10 @@ test("overview, account search, scoped conversation, entity reset and planning",
     page.getByText("Repair plan saved", { exact: true }),
   ).toBeVisible();
   await page.reload();
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   await expect(
     page.getByText("Repair plan saved", { exact: true }),
   ).toBeVisible();
@@ -124,6 +140,10 @@ test("connected history and conversations keep account scopes separate", async (
     });
   });
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   await page.getByText(/^Period:/).click();
   await page.getByLabel("Period start").fill("2024-06-01");
   await page.getByLabel("Period end").fill("2024-06-30");
@@ -133,6 +153,21 @@ test("connected history and conversations keep account scopes separate", async (
       reportURLs.some((url) => url.includes("from=2024-06-01&to=2024-06-30")),
     )
     .toBe(true);
+  await page
+    .getByRole("button", { name: "Cash", exact: true })
+    .filter({ visible: true })
+    .click();
+  await expect
+    .poll(() =>
+      reportURLs.some((url) =>
+        url.includes("to=" + new Date().toISOString().slice(0, 10)),
+      ),
+    )
+    .toBe(true);
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   await page.getByRole("button", { name: /Checking Cash account/ }).click();
   await page.getByRole("button", { name: "Ask about this account" }).click();
   await page
@@ -143,7 +178,7 @@ test("connected history and conversations keep account scopes separate", async (
     page.getByText("Answer for 1000", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Overview", exact: true })
+    .getByRole("button", { name: "Accounts", exact: true })
     .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: /Savings Cash account/ }).click();
@@ -392,6 +427,20 @@ async function connectedHousehold(
       json: r.request().url().includes("general-ledger")
         ? {
             accounts: [
+              ...[
+                { id: "legacy", code: "1000", name: "Checking", subtype: "" },
+                {
+                  id: "extra",
+                  code: "1099",
+                  name: "Extra bank",
+                  subtype: "BANK",
+                },
+              ].map((account) => ({
+                account,
+                opening_balance: { consolidated_cents: "77700" },
+                closing_balance: { consolidated_cents: "77700" },
+                lines: [],
+              })),
               {
                 account: {
                   id: "kids",
@@ -450,6 +499,10 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
 }, testInfo) => {
   await connectedHousehold(page);
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
   const summary = page
     .getByText("Looking ahead", { exact: true })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
@@ -558,7 +611,7 @@ test("point-forward outlook answers coverage, reserves and account gaps", async 
 
   // Scenario and account survive leaving and returning.
   await page
-    .getByRole("button", { name: "Overview", exact: true })
+    .getByRole("button", { name: "Accounts", exact: true })
     .filter({ visible: true })
     .click();
   await page
@@ -578,6 +631,10 @@ test("outlook recovers from a failed scenario and links from account detail", as
   await connectedHousehold(page, { failFunded: true });
   await page.goto("/");
   await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page
     .getByRole("button", { name: "Outlook", exact: true })
     .filter({ visible: true })
     .click();
@@ -596,7 +653,7 @@ test("outlook recovers from a failed scenario and links from account detail", as
   await expect(page.getByText("Example — proposed funding")).toBeVisible();
 
   await page
-    .getByRole("button", { name: "Overview", exact: true })
+    .getByRole("button", { name: "Accounts", exact: true })
     .filter({ visible: true })
     .click();
   await page
@@ -615,7 +672,7 @@ test("outlook recovers from a failed scenario and links from account detail", as
 
   // A card is in the plan but has no daily balance; say how it counts.
   await page
-    .getByRole("button", { name: "Overview", exact: true })
+    .getByRole("button", { name: "Accounts", exact: true })
     .filter({ visible: true })
     .click();
   await page.getByRole("button", { name: /Everyday Card/ }).click();
@@ -638,6 +695,10 @@ test("outlook labels the scenario on screen while another loads", async ({
   await connectedHousehold(page, { holdFunded });
   await page.goto("/");
   await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page
     .getByRole("button", { name: "Outlook", exact: true })
     .filter({ visible: true })
     .click();
@@ -659,6 +720,10 @@ test("an older plan leaves ended months out of the answer", async ({
   await connectedHousehold(page, { today: "2026-11-05" });
   await page.goto("/");
   await page
+    .getByRole("button", { name: "Accounts", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page
     .getByRole("button", { name: "Outlook", exact: true })
     .filter({ visible: true })
     .click();
@@ -677,4 +742,61 @@ test("an older plan leaves ended months out of the answer", async ({
     page.getByText("October · Already ended, not included"),
   ).toBeVisible();
   await expect(page.getByText(/37 days ago/)).toBeVisible();
+});
+
+test("Cash is the default with bounded horizons and bank-only rows", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Cash", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Month", exact: true }),
+  ).toHaveAttribute("data-state", "active");
+  await expect(
+    page
+      .getByText("Lowest balance", { exact: true })
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Checking 1000/ }),
+  ).toContainText("$777.00");
+  await page.getByRole("tab", { name: "Year", exact: true }).click();
+  await expect(
+    page.getByText(/The forecast does not cover this entire period/),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Stays at or above zero", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("tab", { name: "Week", exact: true }).click();
+  await expect(
+    page.getByRole("tab", { name: "Week", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  expect(await noPageScroll(page)).toBe(true);
+  await page.screenshot({
+    path: "/tmp/books-cash-" + page.viewportSize()!.width + ".png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: /Extra bank.*Not included in forecast/ })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Extra bank", exact: true }),
+  ).toBeVisible();
+});
+
+test("Cash shows a failed ledger load and can retry", async ({ page }) => {
+  await connectedHousehold(page);
+  await page.route("**/api/books/companies/example/reports/**", (r) =>
+    r.fulfill({ status: 503, json: { error: "Ledger offline" } }),
+  );
+  await page.goto("/");
+  await expect(page.getByRole("alert")).toContainText("Ledger offline");
+  await expect(
+    page.getByRole("button", { name: "Retry balances" }),
+  ).toBeVisible();
+  await expect(page.getByText("Loading bank accounts…")).toHaveCount(0);
 });

@@ -39,6 +39,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { OutlookPage, OutlookSummary } from "@/components/outlook";
 import type { DayFilter } from "@/components/daily-balances";
+import { Cash } from "@/components/cash";
 import { CashChart } from "@/components/cash-chart";
 import { Decision } from "@/components/decision";
 import {
@@ -57,7 +58,7 @@ import {
 import { demoCompanies, demoSnapshot } from "@/lib/demo";
 import { useForecast } from "@/lib/use-forecast";
 
-type Page = "overview" | "outlook" | "ask" | "account";
+type Page = "cash" | "overview" | "outlook" | "ask" | "account";
 type Config = {
   session?: boolean;
   demo: boolean;
@@ -65,11 +66,13 @@ type Config = {
   forecasts?: Record<string, string[]>;
 };
 const pageNames = {
-  overview: "Overview",
+  cash: "Cash",
+  overview: "Accounts",
   outlook: "Outlook",
   ask: "Ask Books",
 };
 const pageIcons = {
+  cash: Landmark,
   overview: Home,
   outlook: CalendarRange,
   ask: MessageCircle,
@@ -187,7 +190,7 @@ function Workspace({
     from: today().slice(0, 7) + "-01",
     to: today(),
   });
-  const [page, setPage] = useState<Page>("overview");
+  const [page, setPage] = useState<Page>("cash");
   const [accountID, setAccountID] = useState<string>();
   const [decision, setDecision] = useState(false);
   const scenarios = config.demo ? [] : (config.forecasts?.[company.key] ?? []);
@@ -196,7 +199,7 @@ function Workspace({
   const [outlookAccount, setOutlookAccount] = useState("");
   const [dayFilter, setDayFilter] = useState<DayFilter>();
   const [focusDaily, setFocusDaily] = useState(false);
-  const pages = (["overview", "outlook", "ask"] as const).filter(
+  const pages = (["cash", "overview", "outlook", "ask"] as const).filter(
     (p) => p !== "outlook" || scenarios.length > 0,
   );
   const [plan, setPlan] = useState(() => {
@@ -218,15 +221,25 @@ function Workspace({
   useEffect(() => {
     const controller = new AbortController();
     if (!config.demo)
-      loadSnapshot(company, controller.signal, range)
+      loadSnapshot(
+        company,
+        controller.signal,
+        range,
+        forecast.data?.plan.accounts
+          .filter((a) => a.kind === "bank")
+          .map((a) => a.code),
+      )
         .then((s) => {
-          if (!controller.signal.aborted) setSnapshot(s);
+          if (!controller.signal.aborted) {
+            setSnapshot(s);
+            setError("");
+          }
         })
         .catch((e) => {
           if (!controller.signal.aborted) setError(e.message);
         });
     return () => controller.abort();
-  }, [company, config.demo, revision, range]);
+  }, [company, config.demo, revision, range, forecast.data]);
   useEffect(() => () => askController.current?.abort(), []);
   useEffect(() => {
     if (page === "ask" && messages.length)
@@ -243,6 +256,11 @@ function Workspace({
     setAskError("");
   };
   const navigate = (next: Page) => {
+    if (next === "cash" && range.to !== today()) {
+      setError("");
+      setSnapshot(undefined);
+      setRange({ from: today().slice(0, 7) + "-01", to: today() });
+    }
     setPage(next);
     if (next === "overview" && accountID) {
       resetConversation();
@@ -381,7 +399,7 @@ function Workspace({
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            navigate("overview");
+            navigate("cash");
           }}
           className="mb-9 px-2 text-2xl font-semibold tracking-tight"
         >
@@ -425,7 +443,7 @@ function Workspace({
       <div className="md:ml-60">
         <header className="flex items-center justify-between border-b bg-white px-5 py-4 md:hidden">
           <button
-            onClick={() => navigate("overview")}
+            onClick={() => navigate("cash")}
             className="text-xl font-semibold"
           >
             Books.
@@ -442,7 +460,7 @@ function Workspace({
             />
             {config.demo
               ? "Demo · Synthetic data · Sep 13, 2026"
-              : page === "outlook"
+              : page === "outlook" || page === "cash"
                 ? "Forecast · Estimates from a saved cash plan"
                 : "Posted accounting · Source coverage may be incomplete"}
           </div>
@@ -468,7 +486,7 @@ function Workspace({
             <RefreshCw className="size-3.5" />
           </Button>
         </div>
-        {!config.demo && page !== "outlook" && (
+        {!config.demo && page !== "outlook" && page !== "cash" && (
           <details className="mx-auto max-w-6xl px-5 pt-3 text-xs text-muted-foreground sm:px-10">
             <summary className="w-fit cursor-pointer py-2">
               Period: {dateLabel(range.from)} – {dateLabel(range.to)}
@@ -532,7 +550,27 @@ function Workspace({
           id="main"
           className="mx-auto max-w-6xl px-5 pb-28 pt-5 sm:px-10 md:pb-10 md:pt-10"
         >
-          {page === "outlook" && scenarios.length ? (
+          {page === "cash" ? (
+            <Cash
+              ledgerError={error}
+              retryLedger={() => {
+                setError("");
+                setRevision((v) => v + 1);
+              }}
+              forecast={forecast}
+              snapshot={snapshot}
+              onAccount={(code) => {
+                const found = snapshot?.accounts.find((a) => a.code === code);
+                if (
+                  forecast.data?.plan.accounts.some(
+                    (a) => a.code === code && a.kind === "bank",
+                  )
+                )
+                  openOutlook(code);
+                else if (found) openAccount(found.id);
+              }}
+            />
+          ) : page === "outlook" && scenarios.length ? (
             <OutlookPage
               scenarios={scenarios}
               onScenario={setScenario}

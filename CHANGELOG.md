@@ -8,6 +8,9 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Added a Cash home screen with week, month, and year bank-account forecasts,
+  first negative dates, exact projected lows, and explicit incomplete coverage.
+
 - Fixed hosted form login and logout rejecting browser submissions by preserving
   same-origin referrer information while keeping strict Origin validation.
 

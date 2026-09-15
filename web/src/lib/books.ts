@@ -138,16 +138,21 @@ export function fromLedger(
   performance: Performance,
   from: string,
   to: string,
+  plannedBanks: string[] = [],
 ): Snapshot {
   const accounts = (ledger.accounts ?? [])
-    .filter((a) =>
-      ["BANK", "CREDIT_CARD", "INVESTMENT", "LOAN"].includes(a.account.subtype),
+    .filter(
+      (a) =>
+        ["BANK", "CREDIT_CARD", "INVESTMENT", "LOAN"].includes(
+          a.account.subtype,
+        ) ||
+        (!a.account.subtype && plannedBanks.includes(a.account.code)),
     )
     .map((a) => ({
       id: a.account.id,
       code: a.account.code,
       name: a.account.name,
-      kind: a.account.subtype,
+      kind: a.account.subtype || "BANK",
       balance: a.closing_balance.consolidated_cents,
       opening: a.opening_balance.consolidated_cents,
       movements: (a.lines ?? []).map((l) => ({
@@ -189,6 +194,7 @@ export async function loadSnapshot(
   company: Company,
   signal: AbortSignal,
   range?: { from: string; to: string },
+  plannedBanks: string[] = [],
 ): Promise<Snapshot> {
   const to = range?.to ?? today(),
     from = range?.from ?? to.slice(0, 7) + "-01",
@@ -203,7 +209,7 @@ export async function loadSnapshot(
       signal,
     ),
   ]);
-  return fromLedger(company, ledger, performance, from, to);
+  return fromLedger(company, ledger, performance, from, to, plannedBanks);
 }
 
 export function conversationContext(

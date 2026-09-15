@@ -75,6 +75,11 @@ migration and does not add a planning database or background scheduler.
 
 ## Web interface
 
+The default **Cash** screen shows bank accounts with Week / Month / Year tabs,
+first negative dates, lowest projected balances, and small balance trends.
+[Cash semantics and design](design/cash/README.md) define the rolling horizons,
+posted balance provenance, and incomplete-forecast treatment.
+
 Set `BOOKS_FORECAST_PLANS_FILE` on the web server to an operator-owned JSON file:
 
 ```json
