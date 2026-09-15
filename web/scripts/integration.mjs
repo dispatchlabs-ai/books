@@ -6,6 +6,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:net";
 import assert from "node:assert/strict";
 import { createBooksWebServer } from "../server.mjs";
+import { summarizeOutlook } from "../src/lib/forecast.ts";
+import {
+  householdAccounts,
+  syntheticHousehold,
+} from "./synthetic-household.mjs";
 const dir = await mkdtemp(join(tmpdir(), "books-web-test-"));
 const env = {
   ...process.env,
@@ -73,6 +78,34 @@ try {
     "--key",
     "web-expense",
   ]);
+  run([
+    "company",
+    "add",
+    "--name",
+    "Maple Household",
+    "--company",
+    "maple",
+    "--currency",
+    "USD",
+    "--start",
+    "2026-01-01",
+  ]);
+  for (const a of householdAccounts)
+    run([
+      "--company",
+      "maple",
+      "account",
+      "add",
+      a.kind === "card" ? "credit-card" : "bank",
+      a.name,
+      "--code",
+      a.code,
+    ]);
+  const planFiles = {};
+  for (const [scenario, plan] of Object.entries(syntheticHousehold())) {
+    planFiles[scenario] = join(dir, `${scenario}.json`);
+    await writeFile(planFiles[scenario], JSON.stringify(plan), { mode: 0o600 });
+  }
   const probe = createServer();
   await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
   const port = probe.address().port;
@@ -88,7 +121,7 @@ try {
         {
           id: "web-test",
           token_sha256: createHash("sha256").update(token).digest("hex"),
-          companies: { "web-example": ["read"] },
+          companies: { "web-example": ["read"], maple: ["read"] },
         },
       ],
     }),
@@ -112,7 +145,11 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   assert.ok(ready, "isolated backend did not start");
-  web = createBooksWebServer({ upstream: `http://127.0.0.1:${port}`, token });
+  web = createBooksWebServer({
+    upstream: `http://127.0.0.1:${port}`,
+    token,
+    forecastPlans: { maple: planFiles },
+  });
   await new Promise((resolve) => web.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${web.address().port}/api`;
   const get = async (path) => {
@@ -121,7 +158,7 @@ try {
     return r.json();
   };
   const companies = await get("/books/companies");
-  assert.equal(companies[0].key, "web-example");
+  assert.deepEqual(companies.map((c) => c.key).sort(), ["maple", "web-example"]);
   const ledger = await get(
     "/books/companies/web-example/reports/general-ledger?from=2026-09-01&to=2026-09-13&include_zero=true",
   );
@@ -141,6 +178,87 @@ try {
     ).status,
     404,
   );
+  // Point-forward outlook from the real forecast engine through the web facade.
+  const dollars = (v) => (Number(v) / 100).toFixed(2);
+  const outlooks = {};
+  for (const scenario of ["baseline", "funded"]) {
+    const forecast = await get(
+      `/books/companies/maple/cash-forecast?scenario=${scenario}`,
+    );
+    const o = (outlooks[scenario] = summarizeOutlook(forecast));
+    assert.deepEqual(
+      o.months.map((m) => [
+        m.month,
+        m.complete,
+        dollars(m.income),
+        dollars(m.spending),
+        dollars(m.leftOver),
+      ]),
+      [
+        ["2026-09", false, "16800.00", "4974.36", "11825.64"],
+        ["2026-10", true, "16800.00", "15870.00", "930.00"],
+        ["2026-11", true, "16800.00", "16750.00", "50.00"],
+        ["2026-12", true, "16800.00", "15905.00", "895.00"],
+      ],
+    );
+    assert.equal(o.averageLeftOver, 62500n);
+    assert.equal(o.tightest.month, "2026-11");
+    // After reserves equals the month's change in non-reserve bank and card money.
+    const accounts = new Map(forecast.plan.accounts.map((a) => [a.code, a]));
+    const operating = (date) =>
+      forecast.days
+        .filter((d) => d.date === date)
+        .filter(
+          (d) =>
+            !(
+              accounts.get(d.account).kind === "bank" &&
+              accounts.get(d.account).reserved
+            ),
+        )
+        .reduce((total, d) => total + BigInt(d.closing), 0n);
+    const reserved = (date) =>
+      forecast.days
+        .filter((d) => d.date === date && accounts.get(d.account).reserved)
+        .reduce((total, d) => total + BigInt(d.closing), 0n);
+    for (const m of o.months) {
+      const before = new Date(m.from + "T00:00:00Z");
+      before.setUTCDate(before.getUTCDate() - 1);
+      const start = before.toISOString().slice(0, 10);
+      assert.equal(
+        operating(m.to) - operating(start),
+        m.afterReserves,
+        m.month,
+      );
+      assert.equal(reserved(m.to) - reserved(start), m.toReserves, m.month);
+    }
+  }
+  assert.equal(outlooks.baseline.reserveActivity, false);
+  assert.equal(outlooks.baseline.gaps.length, 4);
+  const funded = outlooks.funded;
+  assert.deepEqual(
+    funded.complete.map((m) => [
+      dollars(m.toReserves),
+      dollars(m.afterReserves),
+    ]),
+    [
+      ["1780.00", "-850.00"],
+      ["750.00", "-700.00"],
+      ["450.00", "445.00"],
+    ],
+  );
+  assert.equal(funded.averageAfterReserves, -36833n);
+  assert.deepEqual(
+    funded.gaps.map((g) => [
+      g.name,
+      g.firstDate,
+      g.lowestDate,
+      dollars(g.shortfall),
+      g.daysShort,
+    ]),
+    [["Kids Activities", "2026-12-14", "2026-12-14", "924.38", 17]],
+  );
+  const config = await get("/config");
+  assert.deepEqual(config.forecasts, { maple: ["baseline", "funded"] });
   run(["--company", "web-example", "doctor"]);
   run(["--company", "web-example", "audit", "verify"]);
   console.log(

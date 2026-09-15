@@ -39,7 +39,7 @@ These variables are read only by the Node server; never use `VITE_` variables
 for credentials. The browser receives neither the token nor upstream URLs.
 Remote API connections require HTTPS. The web server itself listens only on
 loopback, validates Host/Origin, uses a same-origin CSP, disables caching, and
-allows only entity listing and two read-only report routes. It is a single-operator client. For hosted use, set `BOOKS_WEB_ORIGIN` to the exact
+allows only entity listing, two read-only report routes and configured cash forecasts. It is a single-operator client. For hosted use, set `BOOKS_WEB_ORIGIN` to the exact
 HTTPS origin and `BOOKS_WEB_PROXY_TOKEN_FILE` to a private random token of at least
 32 characters. Hosted mode requires a connected API and rejects every request
 without the configured Host and proxy token. The trusted loopback reverse proxy
@@ -103,11 +103,12 @@ adapter. Do not point it at an untrusted service.
 
 ## Forecast and planning boundary
 
-The approved forecast and repair-choice states are implemented as interactive,
-clearly labeled demo experiences. Connected mode does not invent obligations,
-forecasts, classifications, completeness, or a saved-plan backend. Live cash
-planning requires those services before it can replace the unavailable state.
-The demo scenario figures are illustrative; they are not calculated advice.
+The demo's cash outlook and repair-choice states are interactive, clearly
+labeled illustrations; their figures are not calculated advice. Connected mode
+does not invent obligations, forecasts, classifications or completeness. Its
+Outlook shows only operator-supplied cash plans evaluated by Books (see
+[Daily cash projections](#daily-cash-projections)); there is no saved-plan
+backend and no way to change a plan from the interface.
 
 ## Components and maintenance
 
@@ -157,4 +158,17 @@ browser flows are checked in desktop and mobile Chromium profiles.
 
 ## Daily cash projections
 
-The connected overview supports daily per-bank-account forecasts and scenarios. Configure `BOOKS_FORECAST_PLANS_FILE` with company/scenario plan paths; see [cash projections](../docs/cash-projections.md). The server invokes the shared Books operation. Opening snapshots, dated events and assumptions remain explicit; no money is moved.
+Entities with a configured cash plan get **Outlook**: whether expected income
+covers planned spending by full month, reserve transfers, accounts that run
+short and daily per-account balances by scenario. Configure
+`BOOKS_FORECAST_PLANS_FILE` with company/scenario plan paths; see
+[cash projections](../docs/cash-projections.md) and the
+[Outlook design](../docs/design/forward-outlook/README.md). The server invokes the
+shared Books operation. Opening snapshots, dated events and assumptions remain
+explicit; no money is moved.
+
+To try it with invented data, run `npm run build` and then
+`npm run preview:forecast`. It builds Books into a new temporary home, creates
+a synthetic household and its baseline and funded plans, and serves the connected
+interface at `http://127.0.0.1:8790`. Stopping it removes the temporary directory.
+It requires the Go prerequisites and never reads an existing Books database.

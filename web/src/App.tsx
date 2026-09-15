@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Check,
   Building2,
+  CalendarRange,
   Clock3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CashForecast } from "@/components/cash-forecast";
+import { OutlookPage, OutlookSummary } from "@/components/outlook";
+import type { DayFilter } from "@/components/daily-balances";
 import { CashChart } from "@/components/cash-chart";
 import { Decision } from "@/components/decision";
 import {
@@ -53,22 +55,38 @@ import {
   type Snapshot,
 } from "@/lib/books";
 import { demoCompanies, demoSnapshot } from "@/lib/demo";
+import { useForecast } from "@/lib/use-forecast";
 
-type Page = "overview" | "ask" | "account";
+type Page = "overview" | "outlook" | "ask" | "account";
+type Config = {
+  demo: boolean;
+  agent: boolean;
+  forecasts?: Record<string, string[]>;
+};
+const pageNames = {
+  overview: "Overview",
+  outlook: "Outlook",
+  ask: "Ask Books",
+};
+const pageIcons = {
+  overview: Home,
+  outlook: CalendarRange,
+  ask: MessageCircle,
+};
 type Message = {
   role: "user" | "assistant";
   content: string;
   sources?: Answer["sources"];
 };
 function App() {
-  const [config, setConfig] = useState<{ demo: boolean; agent: boolean }>();
+  const [config, setConfig] = useState<Config>();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [company, setCompany] = useState<Company>();
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    request<{ demo: boolean; agent: boolean }>("/config", controller.signal)
+    request<Config>("/config", controller.signal)
       .then(async (cfg) => {
         const list = cfg.demo
           ? demoCompanies
@@ -153,7 +171,7 @@ function Workspace({
   company,
   selectCompany,
 }: {
-  config: { demo: boolean; agent: boolean };
+  config: Config;
   companies: Company[];
   company: Company;
   selectCompany: (c: Company) => void;
@@ -171,6 +189,15 @@ function Workspace({
   const [page, setPage] = useState<Page>("overview");
   const [accountID, setAccountID] = useState<string>();
   const [decision, setDecision] = useState(false);
+  const scenarios = config.demo ? [] : (config.forecasts?.[company.key] ?? []);
+  const [scenario, setScenario] = useState(scenarios[0] ?? "");
+  const forecast = useForecast(company.key, scenario);
+  const [outlookAccount, setOutlookAccount] = useState("");
+  const [dayFilter, setDayFilter] = useState<DayFilter>();
+  const [focusDaily, setFocusDaily] = useState(false);
+  const pages = (["overview", "outlook", "ask"] as const).filter(
+    (p) => p !== "outlook" || scenarios.length > 0,
+  );
   const [plan, setPlan] = useState(() => {
     try {
       const value = localStorage.getItem(`books.demo.plan.${company.key}`);
@@ -205,6 +232,7 @@ function Workspace({
       end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, page]);
   const account = snapshot?.accounts.find((a) => a.id === accountID);
+  const current = page === "account" ? "overview" : page;
   const business = company.key === "studio";
   const resetConversation = () => {
     askController.current?.abort();
@@ -225,6 +253,14 @@ function Workspace({
     if (id !== accountID) resetConversation();
     setAccountID(id);
     navigate("account");
+  };
+  const openOutlook = (accountCode?: string) => {
+    if (accountCode) {
+      setOutlookAccount(accountCode);
+      setDayFilter(undefined);
+      setFocusDaily(true);
+    }
+    navigate("outlook");
   };
   const openAsk = (question = "") => {
     setDraft(question);
@@ -352,22 +388,21 @@ function Workspace({
         </a>
         {entityMenu}
         <nav aria-label="Main navigation" className="mt-6 space-y-1">
-          {(["overview", "ask"] as const).map((p) => (
-            <Button
-              key={p}
-              variant="ghost"
-              className={`h-11 w-full justify-start gap-3 px-3 ${(page === "account" ? "overview" : page) === p ? "bg-zinc-200/60 font-medium" : "font-normal text-zinc-600"}`}
-              aria-current={
-                (page === "account" ? "overview" : page) === p
-                  ? "page"
-                  : undefined
-              }
-              onClick={() => navigate(p)}
-            >
-              {p === "overview" ? <Home /> : <MessageCircle />}
-              {p === "overview" ? "Overview" : "Ask Books"}
-            </Button>
-          ))}
+          {pages.map((p) => {
+            const Icon = pageIcons[p];
+            return (
+              <Button
+                key={p}
+                variant="ghost"
+                className={`h-11 w-full justify-start gap-3 px-3 ${current === p ? "bg-zinc-200/60 font-medium" : "font-normal text-zinc-600"}`}
+                aria-current={current === p ? "page" : undefined}
+                onClick={() => navigate(p)}
+              >
+                <Icon />
+                {pageNames[p]}
+              </Button>
+            );
+          })}
         </nav>
         <div className="mt-auto flex items-center gap-3 px-2 text-xs text-muted-foreground">
           <span className="grid size-8 place-items-center rounded-full bg-zinc-200 text-zinc-700">
@@ -406,22 +441,26 @@ function Workspace({
             />
             {config.demo
               ? "Demo · Synthetic data · Sep 13, 2026"
-              : "Posted accounting · Source coverage may be incomplete"}
+              : page === "outlook"
+                ? "Forecast · Estimates from a saved cash plan"
+                : "Posted accounting · Source coverage may be incomplete"}
           </div>
           <Button
             variant="ghost"
             size="icon"
             aria-label="Refresh view"
             onClick={() => {
+              if (page === "outlook") return forecast.retry();
               setError("");
               if (!config.demo) setSnapshot(undefined);
               setRevision((v) => v + 1);
+              if (scenario) forecast.retry();
             }}
           >
             <RefreshCw className="size-3.5" />
           </Button>
         </div>
-        {!config.demo && (
+        {!config.demo && page !== "outlook" && (
           <details className="mx-auto max-w-6xl px-5 pt-3 text-xs text-muted-foreground sm:px-10">
             <summary className="w-fit cursor-pointer py-2">
               Period: {dateLabel(range.from)} – {dateLabel(range.to)}
@@ -485,7 +524,19 @@ function Workspace({
           id="main"
           className="mx-auto max-w-6xl px-5 pb-28 pt-5 sm:px-10 md:pb-10 md:pt-10"
         >
-          {error ? (
+          {page === "outlook" && scenarios.length ? (
+            <OutlookPage
+              scenarios={scenarios}
+              onScenario={setScenario}
+              forecast={forecast}
+              account={outlookAccount}
+              onAccount={setOutlookAccount}
+              filter={dayFilter}
+              onFilter={setDayFilter}
+              focusDaily={focusDaily}
+              onFocused={() => setFocusDaily(false)}
+            />
+          ) : error ? (
             <div className="space-y-4 rounded-xl border bg-white p-8">
               <h1 className="text-xl font-semibold">This view couldn’t load</h1>
               <p role="alert">{error}</p>
@@ -514,9 +565,15 @@ function Workspace({
                     : "A clear view of what’s recorded in your books."}
                 </p>
               </div>
+              {scenarios.length > 0 && (
+                <OutlookSummary
+                  forecast={forecast}
+                  onOpen={() => openOutlook()}
+                />
+              )}
               <Card className="py-0 shadow-none">
                 <CardContent className="p-5 sm:p-7">
-                  <div className="flex justify-between gap-4">
+                  <div className="flex flex-wrap justify-between gap-4">
                     <div>
                       <h2 className="text-sm font-medium">
                         {config.demo ? "Cash outlook" : "Recorded cash"}
@@ -594,9 +651,6 @@ function Workspace({
                   ? "Posted performance"
                   : "¹ Income less expenses; excludes transfers and financing."}
               </p>
-              {!config.demo && (
-                <CashForecast key={company.key} company={company} />
-              )}
               <div className="mt-8 grid gap-8 lg:grid-cols-2">
                 <section>
                   <h2 className="section-title">Coming up</h2>
@@ -638,11 +692,23 @@ function Workspace({
                         </div>
                       ))}
                     </div>
+                  ) : scenarios.length ? (
+                    <div className="mt-4 rounded-lg border border-dashed p-5 text-sm leading-6 text-muted-foreground">
+                      Upcoming income, bills and transfers are in Outlook, by
+                      account and day.
+                      <Button
+                        variant="outline"
+                        className="mt-3 flex h-11 bg-white"
+                        onClick={() => openOutlook()}
+                      >
+                        Open outlook
+                        <ArrowRight />
+                      </Button>
+                    </div>
                   ) : (
                     <p className="mt-4 rounded-lg border border-dashed p-5 text-sm leading-6 text-muted-foreground">
-                      Upcoming payment dates are shown in the daily cash
-                      projection above. Recorded balances alone don’t establish
-                      bill coverage.
+                      No cash plan is connected for this entity. Recorded
+                      balances alone don’t establish bill coverage.
                     </p>
                   )}
                 </section>
@@ -737,6 +803,13 @@ function Workspace({
               snapshot={snapshot}
               onBack={() => navigate("overview")}
               onAsk={() => openAsk()}
+              onOutlook={
+                forecast.data?.plan.accounts.some(
+                  (a) => a.kind === "bank" && a.code === account.code,
+                )
+                  ? () => openOutlook(account.code)
+                  : undefined
+              }
             />
           ) : (
             <div className="mx-auto max-w-3xl">
@@ -903,25 +976,20 @@ function Workspace({
         aria-label="Mobile navigation"
         className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-white/95 px-8 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden"
       >
-        {(["overview", "ask"] as const).map((p) => (
-          <button
-            key={p}
-            onClick={() => navigate(p)}
-            aria-current={
-              (page === "account" ? "overview" : page) === p
-                ? "page"
-                : undefined
-            }
-            className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-1 text-[11px] ${(page === "account" ? "overview" : page) === p ? "font-semibold text-zinc-950" : "text-zinc-500"}`}
-          >
-            {p === "overview" ? (
-              <Home className="size-5" />
-            ) : (
-              <MessageCircle className="size-5" />
-            )}
-            {p === "overview" ? "Overview" : "Ask Books"}
-          </button>
-        ))}
+        {pages.map((p) => {
+          const Icon = pageIcons[p];
+          return (
+            <button
+              key={p}
+              onClick={() => navigate(p)}
+              aria-current={current === p ? "page" : undefined}
+              className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-1 text-[11px] ${current === p ? "font-semibold text-zinc-950" : "text-zinc-500"}`}
+            >
+              <Icon className="size-5" />
+              {pageNames[p]}
+            </button>
+          );
+        })}
       </nav>
       <Decision
         open={decision}
@@ -942,11 +1010,13 @@ function AccountView({
   snapshot,
   onBack,
   onAsk,
+  onOutlook,
 }: {
   account: Account;
   snapshot: Snapshot;
   onBack: () => void;
   onAsk: () => void;
+  onOutlook?: () => void;
 }) {
   const [search, setSearch] = useState("");
   const matches = account.movements
@@ -1062,8 +1132,20 @@ function AccountView({
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {snapshot.demo
                 ? "The household overview includes an illustrative cash projection. Account forecasts are not connected."
-                : "A forecast connection is needed to show upcoming changes. This account’s recorded balance is available in Activity."}
+                : onOutlook
+                  ? "This account is in the saved cash plan. Outlook shows its estimated end-of-day balances, floor and any shortfall."
+                  : "This account isn’t in a connected cash plan. Its recorded balance is available in Activity."}
             </p>
+            {onOutlook && (
+              <Button
+                variant="outline"
+                className="mt-4 h-11"
+                onClick={onOutlook}
+              >
+                View daily balances in Outlook
+                <ArrowRight />
+              </Button>
+            )}
           </div>
         </TabsContent>
       </Tabs>

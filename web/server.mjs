@@ -100,6 +100,15 @@ export function createBooksWebServer(config = {}) {
         return json(res, 200, {
           demo: !upstream,
           agent: Boolean(upstream && agentURL),
+          // Scenario names only; operator file paths never leave the server.
+          forecasts: upstream
+            ? Object.fromEntries(
+                Object.entries(forecastPlans).map(([company, plans]) => [
+                  company,
+                  Object.keys(plans),
+                ]),
+              )
+            : {},
         });
       const forecastMatch = url.pathname.match(
         /^\/api\/books\/companies\/([A-Za-z0-9_-]+)\/cash-forecast$/,

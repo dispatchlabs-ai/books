@@ -16,6 +16,7 @@ test("demo config does not fabricate connected data", async () =>
     assert.deepEqual(await (await fetch(url + "/api/config")).json(), {
       demo: true,
       agent: false,
+      forecasts: {},
     });
     assert.equal((await fetch(url + "/api/books/companies")).status, 503);
   }));
@@ -207,7 +208,7 @@ test("hosted mode requires authenticated proxy and exact HTTPS origin", async ()
         "X-Books-Proxy-Token": config.proxyToken,
         Origin: config.publicOrigin,
       }),
-      { status: 200, body: { demo: false, agent: false } },
+      { status: 200, body: { demo: false, agent: false, forecasts: {} } },
     );
   });
   assert.throws(() =>
@@ -247,6 +248,9 @@ test("forecast plan paths are operator-owned and backend enforces company access
         },
       },
       async (url) => {
+        const config = await (await fetch(url + "/api/config")).json();
+        assert.deepEqual(config.forecasts, { example: ["baseline"] });
+        assert.doesNotMatch(JSON.stringify(config), /plan\.json|books-web-forecast/);
         const response = await fetch(
           url + "/api/books/companies/example/cash-forecast",
         );

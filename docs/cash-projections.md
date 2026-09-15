@@ -81,13 +81,25 @@ Set `BOOKS_FORECAST_PLANS_FILE` on the web server to an operator-owned JSON file
 {"example":{"baseline":"/private/example-baseline.json","funded":"/private/example-funded.json"}}
 ```
 
-The selected company overview shows scenario/account selectors, a daily step
-chart, daily balance table, movement and transfer details, assumptions, funding
-gaps and actual-versus-expected differences. The web server reads only the
-configured file paths and invokes the authenticated company forecast API; it
-never exposes API credentials or accepts file paths from a browser. The UI does
-not edit plans or execute transfers. Updating a configured plan is reflected on
-reload. CLI/API/MCP can calculate any supplied scenario independently.
+Entities with configured plans get an **Outlook** page. It first answers whether
+expected income covers planned spending in each full calendar month, then shows
+how reserve transfers change what is left, which bank accounts fall below their
+floor, and the daily per-account balances with movements, evidence, assumptions
+and actual-versus-expected differences. The Overview links to it with a short
+summary that stays separate from posted accounting.
+
+In that summary, income is every inflow and spending is every outflow, including
+card purchases; card payments and other transfers are never spending. Reserve
+figures are the change in reserved bank accounts. Partial months are shown but
+excluded from averages. The [Outlook design](design/forward-outlook/README.md)
+defines each term; these are views of the same result, not a separate budget.
+
+`/api/config` lists each entity's scenario names so the interface knows where a
+plan exists. The web server reads only the configured file paths and invokes the
+authenticated company forecast API; it never exposes API credentials or file
+paths, and never accepts paths from a browser. The UI does not edit plans or
+execute transfers. Updating a configured plan is reflected on reload.
+CLI/API/MCP can calculate any supplied scenario independently.
 
 ## Interpretation
 

@@ -61,6 +61,9 @@ export function money(value: string | bigint, currency = "USD"): string {
       .find((p) => p.type === "currency")?.value ?? currency;
   return `${n < 0n ? "−" : ""}${symbol}${whole}${fraction}`;
 }
+export function signedMoney(value: bigint, currency = "USD"): string {
+  return (value > 0n ? "+" : "") + money(value, currency);
+}
 export function sum(values: string[]): string {
   return values.reduce((a, b) => a + BigInt(b), 0n).toString();
 }
@@ -69,6 +72,22 @@ export function dateLabel(date: string): string {
     month: "short",
     day: "numeric",
   });
+}
+export function dayLabel(date: string): string {
+  return new Date(date + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+// "Sep 15–30", "Oct 1–Dec 31", or with years when a range crosses one.
+export function rangeLabel(from: string, to: string): string {
+  if (from === to) return dateLabel(from);
+  if (from.slice(0, 4) !== to.slice(0, 4))
+    return `${dateLabel(from)}, ${from.slice(0, 4)}–${dateLabel(to)}, ${to.slice(0, 4)}`;
+  return from.slice(0, 7) === to.slice(0, 7)
+    ? `${dateLabel(from)}–${Number(to.slice(8))}`
+    : `${dateLabel(from)}–${dateLabel(to)}`;
 }
 export function today(): string {
   const d = new Date();

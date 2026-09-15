@@ -5,6 +5,10 @@ experiences and a contextual decision state, each designed for desktop and
 mobile using shadcn components. This is the current product direction for
 personal and business finances.
 
+[Outlook](forward-outlook/README.md) answers whether expected income covers
+planned spending from here forward, with reserves, account gaps and daily
+balances. Its semantics, component map and coverage record live there.
+
 The earlier atlas below is retained as an operation inventory, not the proposed
 navigation structure.
 
