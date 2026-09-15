@@ -23,7 +23,9 @@ func (s *Service) CashForecast(ctx context.Context, plan cashflow.Plan) (cashflo
 		found := false
 		for _, a := range accounts {
 			if a.Code == p.Code && a.PostingEnabled != nil && *a.PostingEnabled && (a.ActiveFrom == "" || a.ActiveFrom <= plan.AsOf) && (a.ActiveTo == "" || a.ActiveTo >= plan.Through) {
-				if (p.Kind == "bank" && a.Type == "ASSET" && a.Subtype == "BANK") || (p.Kind == "card" && a.Type == "LIABILITY" && a.Subtype == "CREDIT_CARD") {
+				// Older cash controls may have no subtype. The supplied plan must
+				// attest their cash identity; reject incompatible explicit subtypes.
+				if (p.Kind == "bank" && a.Type == "ASSET" && (a.Subtype == "BANK" || a.Subtype == "")) || (p.Kind == "card" && a.Type == "LIABILITY" && a.Subtype == "CREDIT_CARD") {
 					found = true
 				}
 			}

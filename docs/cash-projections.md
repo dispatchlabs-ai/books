@@ -26,7 +26,10 @@ selected company's currency scale. Card liability balances are negative.
 
 An account specifies its actual Books account `code`, display `name`, `kind`
 (`bank` or `card`), `opening`, nonnegative `floor`, `reserved` flag and `evidence`.
-Only active compatible company accounts are accepted. Opening balances are
+Only active compatible company accounts are accepted. A bank cash control may
+have the `BANK` subtype or an empty legacy subtype; the plan's evidence must
+establish that an untyped asset is bank cash. Other explicit asset subtypes are
+rejected. Opening balances are
 explicit evidence-backed **end-of-day snapshots on `as_of`**, not an assertion
 that the backend retrieved current bank balances. Include every owned bank
 account relevant to the scenario; leave excluded owners out. Keep reserved cash

@@ -22,7 +22,8 @@ func TestCashForecastAdapters(t *testing.T) {
 	t.Setenv("BOOKS_CONFIG", config)
 	t.Setenv("BOOKS_ACTOR", "cash-test")
 	t.Setenv("BOOKS_DB", "")
-	executeHumanJSON(t, "account", "add", "bank", "Checking")
+	executeHumanJSON(t, "account", "create", "--code", "1099", "--name", "Checking", "--type", "ASSET", "--books", "ACME")
+	executeHumanJSON(t, "account", "add", "asset", "Noncash asset")
 	app, e := application.Open(context.Background(), config, "acme", "cash-test", storesqlite.ReadOnly)
 	if e != nil {
 		t.Fatal(e)
@@ -36,6 +37,9 @@ func TestCashForecastAdapters(t *testing.T) {
 	for _, a := range ac {
 		if a.Name == "Checking" {
 			code = a.Code
+			if a.Subtype != "" {
+				t.Fatal("expected an untyped legacy cash control")
+			}
 		}
 	}
 	if code == "" {
@@ -78,6 +82,15 @@ func TestCashForecastAdapters(t *testing.T) {
 	}
 	if w = run("other", data); w.Code != 404 {
 		t.Fatal("company scope", w.Code)
+	}
+	for _, a := range ac {
+		if a.Name == "Noncash asset" {
+			p.Accounts[0].Code = a.Code
+			invalid, _ := json.Marshal(p)
+			if w = run("acme", invalid); w.Code == 200 {
+				t.Fatal("explicit noncash asset accepted as bank cash")
+			}
+		}
 	}
 	p.Accounts[0].Code = "not-this-book"
 	data, _ = json.Marshal(p)
