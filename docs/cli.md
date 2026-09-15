@@ -224,3 +224,7 @@ atomic mutations remain in `internal/ledger`. Direct CLI use needs no server.
 Relative dates, transaction ranges and plan-file paths are CLI conveniences.
 Local company registration, restore and filesystem import administration use
 shared services but are not exposed through company HTTP grants.
+
+## Cash projections
+
+`books --company example --json cash-forecast --input cash-plan.json` calculates daily account positions without posting. CSV output provides one row per account/day. See [cash projections](cash-projections.md) for the versioned plan and evidence contract.

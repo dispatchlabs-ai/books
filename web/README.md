@@ -154,3 +154,7 @@ When the backend currency registry changes, run `npm run currencies`; the test
 gate rejects stale generated metadata. Use `npm run notices` for dependency
 notice updates. Local development and build were tested on macOS and Linux;
 browser flows are checked in desktop and mobile Chromium profiles.
+
+## Daily cash projections
+
+The connected overview supports daily per-bank-account forecasts and scenarios. Configure `BOOKS_FORECAST_PLANS_FILE` with company/scenario plan paths; see [cash projections](../docs/cash-projections.md). The server invokes the shared Books operation. Opening snapshots, dated events and assumptions remain explicit; no money is moved.

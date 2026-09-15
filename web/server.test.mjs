@@ -217,3 +217,59 @@ test("hosted mode requires authenticated proxy and exact HTTPS origin", async ()
     createBooksWebServer({ ...config, upstream: undefined, token: undefined }),
   );
 });
+
+test("forecast plan paths are operator-owned and backend enforces company access", async () => {
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const directory = await mkdtemp(tmpdir() + "/books-web-forecast-");
+  try {
+    const file = directory + "/plan.json";
+    await writeFile(file, JSON.stringify({ version: "books.cash-plan/v1" }));
+    let called = 0;
+    await fixture(
+      {
+        upstream: "https://books.example",
+        token: "test-token",
+        forecastPlans: { example: { baseline: file } },
+        fetcher: async (url, init) => {
+          called++;
+          assert.equal(
+            url,
+            "https://books.example/v1/companies/example/operations/cash_forecast",
+          );
+          assert.equal(init.method, "POST");
+          assert.equal(JSON.parse(init.body).version, "books.cash-plan/v1");
+          return Response.json({
+            schema: "books.api/v1",
+            ok: true,
+            data: { digest: "synthetic" },
+          });
+        },
+      },
+      async (url) => {
+        const response = await fetch(
+          url + "/api/books/companies/example/cash-forecast",
+        );
+        assert.equal(response.status, 200);
+        assert.deepEqual((await response.json()).scenarios, ["baseline"]);
+        assert.equal(
+          (
+            await fetch(
+              url +
+                "/api/books/companies/example/cash-forecast?scenario=../../private",
+            )
+          ).status,
+          404,
+        );
+        assert.equal(
+          (await fetch(url + "/api/books/companies/foreign/cash-forecast"))
+            .status,
+          404,
+        );
+        assert.equal(called, 1);
+      },
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

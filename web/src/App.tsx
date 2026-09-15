@@ -36,6 +36,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CashForecast } from "@/components/cash-forecast";
 import { CashChart } from "@/components/cash-chart";
 import { Decision } from "@/components/decision";
 import {
@@ -593,7 +594,10 @@ function Workspace({
                   ? "Posted performance"
                   : "¹ Income less expenses; excludes transfers and financing."}
               </p>
-              <div className="grid gap-8 lg:grid-cols-2">
+              {!config.demo && (
+                <CashForecast key={company.key} company={company} />
+              )}
+              <div className="mt-8 grid gap-8 lg:grid-cols-2">
                 <section>
                   <h2 className="section-title">Coming up</h2>
                   {config.demo ? (
@@ -636,8 +640,9 @@ function Workspace({
                     </div>
                   ) : (
                     <p className="mt-4 rounded-lg border border-dashed p-5 text-sm leading-6 text-muted-foreground">
-                      Upcoming bills and forecasts aren’t connected yet.
-                      Recorded balances alone don’t establish bill coverage.
+                      Upcoming payment dates are shown in the daily cash
+                      projection above. Recorded balances alone don’t establish
+                      bill coverage.
                     </p>
                   )}
                 </section>

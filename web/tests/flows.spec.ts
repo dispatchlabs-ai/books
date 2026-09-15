@@ -158,3 +158,153 @@ test("connected history and conversations keep account scopes separate", async (
     { role: "user", content: "Question for savings" },
   ]);
 });
+
+test("daily per-bank forecast, movement evidence and scenario recovery", async ({
+  page,
+}, testInfo) => {
+  const company = {
+    key: "example",
+    name: "Example Household",
+    entity: "EXAMPLE",
+    book: "EXAMPLE",
+    currency: "USD",
+    basis: "ACCRUAL",
+  };
+  await page.route("**/api/config", (r) =>
+    r.fulfill({ json: { demo: false, agent: false } }),
+  );
+  await page.route("**/api/books/companies", (r) =>
+    r.fulfill({ json: [company] }),
+  );
+  await page.route("**/api/books/companies/example/reports/**", (r) =>
+    r.fulfill({
+      json: r.request().url().includes("general-ledger")
+        ? {
+            accounts: [
+              {
+                account: {
+                  id: "bank",
+                  code: "1000",
+                  name: "Checking",
+                  subtype: "BANK",
+                },
+                opening_balance: { consolidated_cents: "100000" },
+                closing_balance: { consolidated_cents: "100000" },
+                lines: [],
+              },
+            ],
+          }
+        : {
+            total_revenue: { consolidated_cents: "0" },
+            total_expenses: { consolidated_cents: "0" },
+            net_income: { consolidated_cents: "0" },
+          },
+    }),
+  );
+  const event = {
+    id: "rent",
+    date: "2026-09-02",
+    name: "Home rent",
+    account: "1000",
+    amount: "90000",
+    status: "confirmed",
+    evidence: "Synthetic lease",
+    category: "Housing",
+  };
+  const forecast = {
+    digest: "synthetic-digest",
+    scenarios: ["baseline", "funded"],
+    plan: {
+      name: "Synthetic",
+      as_of: "2026-09-01",
+      through: "2026-09-03",
+      currency: "USD",
+      accounts: [
+        {
+          code: "1000",
+          name: "Checking",
+          kind: "bank",
+          reserved: false,
+          opening: "100000",
+          floor: "20000",
+          evidence: "Synthetic bank snapshot",
+        },
+        {
+          code: "1001",
+          name: "Savings",
+          kind: "bank",
+          reserved: true,
+          opening: "50000",
+          floor: "0",
+          evidence: "Synthetic snapshot",
+        },
+      ],
+      assumptions: ["Synthetic daily example"],
+    },
+    days: [1, 2, 3].flatMap((n) => [
+      {
+        date: `2026-09-0${n}`,
+        account: "1000",
+        opening: n === 3 ? "10000" : "100000",
+        inflow: "0",
+        outflow: n === 2 ? "90000" : "0",
+        closing: n === 1 ? "100000" : "10000",
+        floor: "20000",
+        shortfall: n === 1 ? "0" : "10000",
+        movements:
+          n === 2 ? [{ event, delta: "-90000", balance: "10000" }] : [],
+      },
+      {
+        date: `2026-09-0${n}`,
+        account: "1001",
+        opening: "50000",
+        inflow: "0",
+        outflow: "0",
+        closing: "50000",
+        floor: "0",
+        shortfall: "0",
+        movements: [],
+      },
+    ]),
+    lows: [
+      {
+        account: "1000",
+        date: "2026-09-02",
+        balance: "10000",
+        shortfall: "10000",
+      },
+      { account: "1001", date: "2026-09-01", balance: "50000", shortfall: "0" },
+    ],
+    warnings: [],
+    variances: [],
+  };
+  await page.route("**/api/books/companies/example/cash-forecast?**", (r) =>
+    r.request().url().includes("scenario=funded")
+      ? r.fulfill({ status: 404, json: { error: "Scenario unavailable" } })
+      : r.fulfill({ json: forecast }),
+  );
+  await page.goto("/");
+  const view = page.getByRole("region", { name: "Daily cash projection" });
+  await expect(view).toBeVisible();
+  await view.getByRole("button", { name: "2026-09-02", exact: true }).click();
+  await view.getByText("Home rent ·").click();
+  await expect(view.getByText("Evidence: Synthetic lease")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("daily-cash.png"),
+    fullPage: true,
+  });
+  await page.getByLabel("Scenario", { exact: true }).selectOption("funded");
+  await expect(page.getByText("Scenario unavailable")).toBeVisible();
+  await page.getByLabel("Scenario", { exact: true }).selectOption("baseline");
+  await expect(view).toBeVisible();
+  await page.getByLabel("Bank account").selectOption("1001");
+  await expect(
+    view.getByText("No movements. Balance carries forward."),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});

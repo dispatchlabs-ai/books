@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
+	"github.com/dispatchlabs-ai/books/internal/cashflow"
 	"github.com/dispatchlabs-ai/books/internal/money"
 	"reflect"
 	"strconv"
@@ -46,6 +47,9 @@ func decodeValue(value any, typ reflect.Type) (any, error) {
 		typ = typ.Elem()
 	}
 	if typ == reflect.TypeFor[json.RawMessage]() {
+		return value, nil
+	}
+	if typ == reflect.TypeFor[cashflow.Amount]() {
 		return value, nil
 	}
 	if typ == reflect.TypeFor[money.Currency]() {

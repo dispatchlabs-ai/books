@@ -21,6 +21,7 @@ export function createBooksWebServer(config = {}) {
     agentToken,
     dist = resolve("dist"),
     fetcher = fetch,
+    forecastPlans = {},
   } = config;
   if (Boolean(upstream) !== Boolean(token))
     throw new Error("Set both BOOKS_API_URL and BOOKS_API_TOKEN_FILE.");
@@ -100,6 +101,49 @@ export function createBooksWebServer(config = {}) {
           demo: !upstream,
           agent: Boolean(upstream && agentURL),
         });
+      const forecastMatch = url.pathname.match(
+        /^\/api\/books\/companies\/([A-Za-z0-9_-]+)\/cash-forecast$/,
+      );
+      if (forecastMatch && req.method === "GET") {
+        const company = forecastMatch[1];
+        const scenario = url.searchParams.get("scenario") ?? "baseline";
+        const file = forecastPlans[company]?.[scenario];
+        if (!upstream || typeof file !== "string")
+          return json(res, 404, {
+            error: "No cash plan is configured for this entity and scenario.",
+          });
+        // Paths come only from operator configuration, never from the request.
+        const raw = await readFile(file, "utf8");
+        if (Buffer.byteLength(raw) > 2_000_000)
+          return json(res, 413, {
+            error: "Cash plan exceeds the input limit.",
+          });
+        const reply = await fetcher(
+          upstream.replace(/\/$/, "") +
+            "/v1/companies/" +
+            company +
+            "/operations/cash_forecast",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: raw,
+            redirect: "error",
+            signal: AbortSignal.timeout(15000),
+          },
+        );
+        const body = await reply.json();
+        if (!reply.ok || body.schema !== "books.api/v1" || body.ok !== true)
+          return json(res, reply.ok ? 502 : reply.status, {
+            error: "Cash plan could not be validated for this entity.",
+          });
+        return json(res, 200, {
+          ...body.data,
+          scenarios: Object.keys(forecastPlans[company]),
+        });
+      }
       const allowed =
         /^\/api\/books\/companies(?:\/[A-Za-z0-9_-]+\/reports\/(?:general-ledger|profit-loss))?$/.test(
           url.pathname,
@@ -252,6 +296,11 @@ if (
     token: await secret("BOOKS_API_TOKEN_FILE"),
     agentURL: process.env.BOOKS_AGENT_URL,
     agentToken: await secret("BOOKS_AGENT_TOKEN_FILE"),
+    forecastPlans: process.env.BOOKS_FORECAST_PLANS_FILE
+      ? JSON.parse(
+          await readFile(process.env.BOOKS_FORECAST_PLANS_FILE, "utf8"),
+        )
+      : {},
   });
   const port = Number(process.env.BOOKS_WEB_PORT ?? 8788);
   server.listen(port, "127.0.0.1", () =>

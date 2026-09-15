@@ -3,7 +3,7 @@
 Books can run as a headless backend for a web, Electron, or mobile client. The
 CLI remains available without a server. This is an experimental v1 integration
 surface, not a hosted multi-tenant service. See [the design](backend-design.md),
-[OpenAPI](schemas/books-api-v12.openapi.json), and the small
+[OpenAPI](schemas/books-api-v13.openapi.json), and the small
 [TypeScript transport example](examples/books-client.ts).
 
 The new OpenAPI artifact is an additive contract snapshot (1.11.0); routes and
@@ -367,7 +367,7 @@ QuickBooks inspect/plan/apply and precoverage lifecycle closure now accept [auth
 versions retain their existing authority. Registry routes are
 `POST /v1/admin/registry/operations/{operation_id}` for `company_add`,
 `company_default`, `company_list`, `config_get`, `config_path`, and `config_set`.
-Their request schemas are in [OpenAPI 1.11.0](schemas/books-api-v12.openapi.json).
+Their request schemas are in [OpenAPI 1.11.0](schemas/books-api-v13.openapi.json).
 Registry paths are operator configuration, never request arguments.
 
 A v4 principal may opt into `companies: {"*": ["read", "import", "post", "manage"]}`

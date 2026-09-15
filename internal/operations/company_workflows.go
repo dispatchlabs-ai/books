@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/dispatchlabs-ai/books/internal/apperr"
 	"github.com/dispatchlabs-ai/books/internal/application"
+	"github.com/dispatchlabs-ai/books/internal/cashflow"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/report"
 	"strings"
@@ -66,6 +67,9 @@ type ReverseRequest struct {
 
 func CompanyOperations() []CompanyOperation {
 	return append([]CompanyOperation{
+		companyOp("cash_forecast", "read", "read", func(c context.Context, s *application.Service, a Access, r cashflow.Plan) (cashflow.Result, error) {
+			return s.CashForecast(c, r)
+		}),
 		companyOp("account_list", "read", "read", func(c context.Context, s *application.Service, a Access, r EmptyRequest) ([]ledger.Account, error) {
 			return s.Accounts(c)
 		}),

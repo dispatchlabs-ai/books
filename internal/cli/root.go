@@ -114,7 +114,7 @@ func newRootCommand() (*cobra.Command, *options) {
 	root.PersistentFlags().StringVar(&opts.actor, "actor", opts.actor, "audit actor (or BOOKS_ACTOR)")
 	root.PersistentFlags().BoolVar(&opts.dryRun, "dry-run", false, "validate and preview without committing where supported")
 	root.PersistentFlags().BoolVar(&opts.noInput, "no-input", true, "never read interactive input (always true; retained for explicit automation contracts)")
-	root.AddCommand(newMCPCommand(),
+	root.AddCommand(newMCPCommand(), newCashForecastCommand(opts),
 		newInitCommand(opts),
 		newBankImportCommand(opts),
 		newServeCommand(opts),

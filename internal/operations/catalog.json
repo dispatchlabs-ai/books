@@ -2026,5 +2026,21 @@
       "books_company_year_close_plan"
     ],
     "gap": ""
+  },
+  {
+    "id": "cash_forecast",
+    "cli": [
+      "cash-forecast"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/cash_forecast"
+      }
+    ],
+    "mcp": [
+      "books_company_cash_forecast"
+    ],
+    "gap": ""
   }
 ]

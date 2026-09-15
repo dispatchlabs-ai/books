@@ -89,12 +89,11 @@ migration. See [statement formats and limits](docs/statement-formats.md) and
 [currency rules](docs/currencies.md).
 
 Books includes an experimental [shadcn web interface](web/README.md) for
-overview, account activity and an optional AI adapter. Its synthetic demo also
-shows proposed cash planning. Books does not include a model, automatic bank feeds,
+overview, account activity and an optional AI adapter. Its connected view supports [daily cash projections](docs/cash-projections.md)
+from explicit evidence-backed scenario files. Books does not include a model, automatic bank feeds,
 invoicing or A/R and A/P workflows, bill pay, payroll processing, inventory, or
 tax filing. Multiple currencies within an entity, currency translation, and
-partial ownership are unsupported. Cash planning and offline synchronization
-remain future work.
+partial ownership are unsupported. Automatic plan discovery and offline synchronization remain future work.
 
 Books does not encrypt its local databases, attachments, plans, or backups.
 Protect these files and keep independent backups. Your agent's model provider
