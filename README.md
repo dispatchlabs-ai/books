@@ -90,7 +90,7 @@ migration. See [statement formats and limits](docs/statement-formats.md) and
 
 Books includes an experimental [shadcn web interface](web/README.md) for
 overview, account activity and an optional AI adapter. Its connected view supports [daily cash projections](docs/cash-projections.md)
-from explicit evidence-backed scenario files. Books does not include a model, automatic bank feeds,
+from explicit evidence-backed scenario files. Its [monthly budgets](docs/budgets.md) compare the previous two complete months of posted spending with editable account-bucket targets and explicit purchase attribution. Books does not include a model, automatic bank feeds,
 invoicing or A/R and A/P workflows, bill pay, payroll processing, inventory, or
 tax filing. Multiple currencies within an entity, currency translation, and
 partial ownership are unsupported. Automatic plan discovery and offline synchronization remain future work.

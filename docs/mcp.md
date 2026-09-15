@@ -142,3 +142,8 @@ fails after a successful mutation, the complete result stays inline with
 `delivery_warning`. Inspect that result; do not repeat the mutation because of a
 delivery warning. Neither threshold permits dropping validation, truncating rows,
 or treating an artifact reference as proof that accounting is complete.
+
+Monthly spending targets and bucket assignments use `books_company_budget_get`
+and `books_company_budget_save`. Saving requires the separate company `budget`
+grant, alongside `read`; `post` and `manage` do not imply it. See
+[spending budgets](budgets.md) for attribution and sidecar backup requirements.

@@ -7,6 +7,7 @@ import (
 	"github.com/dispatchlabs-ai/books/internal/cashflow"
 	"github.com/dispatchlabs-ai/books/internal/ledger"
 	"github.com/dispatchlabs-ai/books/internal/report"
+	"slices"
 	"strings"
 )
 
@@ -67,6 +68,15 @@ type ReverseRequest struct {
 
 func CompanyOperations() []CompanyOperation {
 	return append([]CompanyOperation{
+		companyOp("budget_get", "read", "read", func(c context.Context, s *application.Service, a Access, r application.BudgetRequest) (application.BudgetResult, error) {
+			out, err := s.Budget(c, r)
+			out.CanEdit = a.local || slices.Contains(a.grants, "budget")
+			return out, err
+		}),
+		companyOp("budget_save", "budget", "write", func(c context.Context, s *application.Service, a Access, r application.BudgetSaveRequest) (application.BudgetResult, error) {
+			return s.SaveBudget(c, r)
+		}),
+
 		companyOp("cash_forecast", "read", "read", func(c context.Context, s *application.Service, a Access, r cashflow.Plan) (cashflow.Result, error) {
 			return s.CashForecast(c, r)
 		}),

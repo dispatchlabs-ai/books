@@ -39,6 +39,8 @@ func toolDescription(d operations.Descriptor) string {
 // Explicit intent text is shared only where the operation means the same thing
 // across scopes. Catalog coverage tests require additions to be documented here.
 var operationDescriptions = map[string]string{
+	"budget_get":                                        "Read monthly bucket targets and the previous two complete months of posted expense attribution, including unassigned spending. Does not certify source completeness.",
+	"budget_save":                                       "Save company-scoped monthly targets and category or purchase assignments with an expected revision. Requires budget permission; never posts journals or rewrites dated cash forecasts.",
 	"cash_forecast":                                     "Calculate daily cash projections from an explicit scenario and ledger observations; returns estimates, coverage and funding gaps without posting journals.",
 	"account_list":                                      "List chart-of-accounts codes, types and settings to select accounts for entries; statement_account_list instead lists bank-source controls.",
 	"account_add":                                       "Add a chart account to a registered company using an explicit code and active_from date; returns the account or dry-run result.",

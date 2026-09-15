@@ -2042,5 +2042,37 @@
       "books_company_cash_forecast"
     ],
     "gap": ""
+  },
+  {
+    "id": "budget_get",
+    "cli": [
+      "budget show"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/budget_get"
+      }
+    ],
+    "mcp": [
+      "books_company_budget_get"
+    ],
+    "gap": ""
+  },
+  {
+    "id": "budget_save",
+    "cli": [
+      "budget save"
+    ],
+    "http": [
+      {
+        "method": "POST",
+        "path": "/v1/companies/{company}/operations/budget_save"
+      }
+    ],
+    "mcp": [
+      "books_company_budget_save"
+    ],
+    "gap": ""
   }
 ]

@@ -250,7 +250,10 @@ test("forecast plan paths are operator-owned and backend enforces company access
       async (url) => {
         const config = await (await fetch(url + "/api/config")).json();
         assert.deepEqual(config.forecasts, { example: ["baseline"] });
-        assert.doesNotMatch(JSON.stringify(config), /plan\.json|books-web-forecast/);
+        assert.doesNotMatch(
+          JSON.stringify(config),
+          /plan\.json|books-web-forecast/,
+        );
         const response = await fetch(
           url + "/api/books/companies/example/cash-forecast",
         );
@@ -276,4 +279,74 @@ test("forecast plan paths are operator-owned and backend enforces company access
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+test("budget routes forward only scoped planning operations and preserve conflicts", async () => {
+  const calls = [];
+  await fixture(
+    {
+      upstream: "https://books.example",
+      token: "private-budget-token",
+      fetcher: async (url, init) => {
+        calls.push({ url, init });
+        return Response.json(
+          {
+            schema: "books.api/v1",
+            ok: !url.endsWith("budget_save"),
+            data: { rows: [] },
+          },
+          { status: url.endsWith("budget_save") ? 409 : 200 },
+        );
+      },
+    },
+    async (url) => {
+      const path = url + "/api/books/companies/example/budget";
+      const read = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ as_of: "2026-09-15" }),
+      });
+      assert.equal(read.status, 200);
+      assert.equal(
+        calls[0].url,
+        "https://books.example/v1/companies/example/operations/budget_get",
+      );
+      assert.equal(
+        calls[0].init.headers.Authorization,
+        "Bearer private-budget-token",
+      );
+      const save = await fetch(path + "/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          as_of: "2026-09-15",
+          plan: { revision: "stale" },
+        }),
+      });
+      assert.equal(save.status, 409);
+      assert.match((await save.json()).error, /changed in another session/);
+      assert.equal(
+        (
+          await fetch(path + "/save", {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: "{}",
+          })
+        ).status,
+        415,
+      );
+      assert.equal(
+        (
+          await fetch(path + "/save", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Origin: "https://foreign.example",
+            },
+            body: "{}",
+          })
+        ).status,
+        403,
+      );
+    },
+  );
 });

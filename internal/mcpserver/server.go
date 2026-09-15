@@ -86,7 +86,7 @@ func (p Policy) Validate() error {
 		}
 		seen := map[string]bool{}
 		for _, grant := range grants {
-			if seen[grant] || (grant != "read" && grant != "post" && grant != "import" && grant != "manage") {
+			if seen[grant] || (grant != "read" && grant != "post" && grant != "import" && grant != "manage" && grant != "budget") {
 				return bad()
 			}
 			seen[grant] = true

@@ -1,3 +1,5 @@
+import { useBudget } from "@/lib/budget";
+import { BudgetEditor } from "@/components/budgets";
 import { useState, useId } from "react";
 import { AlertCircle, CheckCircle2, CircleHelp } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,12 +66,14 @@ function Sparkline({ points }: { points: { date: string; value: bigint }[] }) {
   );
 }
 export function Cash({
+  company,
   forecast,
   snapshot,
   onAccount,
   ledgerError,
   retryLedger,
 }: {
+  company: string;
   ledgerError: string;
   retryLedger: () => void;
   forecast: ForecastState;
@@ -78,6 +82,7 @@ export function Cash({
 }) {
   const [horizon, setHorizon] = useState<Horizon>("month");
   const now = today();
+  const budgets = useBudget(company, snapshot?.fetchedAt);
   const data = forecast.data;
   const result = data ? cashWindow(data, horizon, now) : undefined;
   const banks = snapshot?.accounts.filter((a) => a.kind === "BANK") ?? [];
@@ -100,6 +105,58 @@ export function Cash({
               </TabsTrigger>
             ))}
           </TabsList>
+        </div>
+        <div className="my-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+          {budgets.data ? (
+            <>
+              <span className="text-muted-foreground">
+                Monthly averages:{" "}
+                {budgets.data.months
+                  .map((m) =>
+                    new Date(m + "-15T12:00:00").toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    }),
+                  )
+                  .join(" – ")}{" "}
+                · Posted spending
+                {budgets.data.unassigned.count > 0
+                  ? ` · ${money(budgets.data.unassigned.average, snapshot?.company.currency ?? "USD")} / month unassigned`
+                  : ""}
+              </span>
+              {budgets.data.can_edit ? (
+                <BudgetEditor
+                  data={budgets.data}
+                  currency={
+                    snapshot?.company.currency ?? data?.plan.currency ?? "USD"
+                  }
+                  banks={
+                    data?.plan.accounts
+                      .filter((a) => a.kind === "bank")
+                      .map((a) => ({ code: a.code, name: a.name })) ?? banks
+                  }
+                  save={budgets.save}
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Read-only budgets
+                </span>
+              )}
+            </>
+          ) : budgets.error ? (
+            <span role="alert">
+              Budgets unavailable.{" "}
+              <Button variant="link" onClick={budgets.retry}>
+                Retry budgets
+              </Button>
+            </span>
+          ) : (
+            <span role="status">
+              {company
+                ? "Loading budgets…"
+                : "Connect a ledger to manage budgets"}
+            </span>
+          )}
         </div>
         {horizons.map((h) => (
           <TabsContent key={h} value={h}>
@@ -131,9 +188,11 @@ export function Cash({
             )}
             {data && result ? (
               <>
-                <div className="hidden grid-cols-[minmax(0,2fr)_1fr_1.2fr_1fr] gap-5 px-4 pb-3 text-xs text-muted-foreground lg:grid">
+                <div className="hidden grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1.1fr_1fr] gap-5 px-4 pb-3 text-xs text-muted-foreground lg:grid">
                   <span>Bank account</span>
                   <span>Cash now</span>
+                  <span>2-month avg / mo</span>
+                  <span>Budget / mo</span>
                   <span>First below zero</span>
                   <span className="text-right">Lowest balance</span>
                 </div>
@@ -157,7 +216,7 @@ export function Cash({
                       <button
                         key={row.account.code}
                         onClick={() => onAccount(row.account.code)}
-                        className={`grid w-full grid-cols-2 items-start gap-4 rounded-lg border p-4 text-left transition hover:bg-zinc-50 lg:grid-cols-[minmax(0,2fr)_1fr_1.2fr_1fr] lg:gap-5 ${negative ? "border-red-200 bg-red-50/40" : ""}`}
+                        className={`grid w-full grid-cols-2 items-start gap-4 rounded-lg border p-4 text-left transition hover:bg-zinc-50 lg:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1.1fr_1fr] lg:gap-5 ${negative ? "border-red-200 bg-red-50/40" : ""}`}
                       >
                         <div className="col-span-2 flex min-w-0 gap-3 lg:col-span-1">
                           <Icon className={`mt-0.5 size-5 shrink-0 ${tone}`} />
@@ -180,6 +239,40 @@ export function Cash({
                             {ledger
                               ? money(ledger.balance, data.plan.currency)
                               : "Unavailable"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
+                            2-month avg / mo
+                          </span>
+                          <span className="amount font-medium">
+                            {budgets.data?.rows.find(
+                              (b) => b.account === row.account.code,
+                            )
+                              ? money(
+                                  budgets.data.rows.find(
+                                    (b) => b.account === row.account.code,
+                                  )!.average,
+                                  data.plan.currency,
+                                )
+                              : "Not assigned"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
+                            Budget / mo
+                          </span>
+                          <span className="amount font-medium">
+                            {budgets.data?.rows.find(
+                              (b) => b.account === row.account.code,
+                            )?.monthly != null
+                              ? money(
+                                  budgets.data.rows.find(
+                                    (b) => b.account === row.account.code,
+                                  )!.monthly!,
+                                  data.plan.currency,
+                                )
+                              : "Not set"}
                           </span>
                         </div>
                         <div className={`text-sm ${tone}`}>
@@ -231,6 +324,27 @@ export function Cash({
                       <span className="text-sm text-muted-foreground">
                         Not included in forecast
                       </span>
+                      <span className="text-sm">
+                        2-month avg / mo:{" "}
+                        {budgets.data?.rows.find((b) => b.account === a.code)
+                          ? money(
+                              budgets.data.rows.find(
+                                (b) => b.account === a.code,
+                              )!.average,
+                              data.plan.currency,
+                            )
+                          : "Not assigned"}{" "}
+                        · Budget / mo:{" "}
+                        {budgets.data?.rows.find((b) => b.account === a.code)
+                          ?.monthly != null
+                          ? money(
+                              budgets.data.rows.find(
+                                (b) => b.account === a.code,
+                              )!.monthly!,
+                              data.plan.currency,
+                            )
+                          : "Not set"}
+                      </span>
                     </button>
                   ))}
                 <p className="mt-5 text-xs leading-5 text-muted-foreground">
@@ -258,11 +372,32 @@ export function Cash({
                     <button
                       key={a.id}
                       onClick={() => onAccount(a.code)}
-                      className="mb-2 flex w-full justify-between gap-4 rounded-lg border p-4 text-left"
+                      className="mb-2 flex w-full flex-wrap justify-between gap-4 rounded-lg border p-4 text-left"
                     >
                       <span>{a.name}</span>
                       <span className="amount">
                         {money(a.balance, snapshot!.company.currency)}
+                      </span>
+                      <span className="text-sm">
+                        2-month avg / mo:{" "}
+                        {budgets.data?.rows.find((b) => b.account === a.code)
+                          ? money(
+                              budgets.data.rows.find(
+                                (b) => b.account === a.code,
+                              )!.average,
+                              snapshot!.company.currency,
+                            )
+                          : "Not assigned"}{" "}
+                        · Budget / mo:{" "}
+                        {budgets.data?.rows.find((b) => b.account === a.code)
+                          ?.monthly != null
+                          ? money(
+                              budgets.data.rows.find(
+                                (b) => b.account === a.code,
+                              )!.monthly!,
+                              snapshot!.company.currency,
+                            )
+                          : "Not set"}
                       </span>
                     </button>
                   ))}

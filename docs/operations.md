@@ -255,3 +255,11 @@ identities converge on their existing records; the posting phase is atomic.
 An `ACCOUNT_DEFAULTS_PARTIAL` error means the account exists but its requested
 registry default could not be saved. Set the default for the reported code;
 do not create a second account.
+
+
+## Budget planning recovery
+
+Monthly budget targets and purchase assignments are stored separately in
+`<database-path>.budgets/`. Native SQLite backups do not include that directory.
+Back it up and restore it alongside the ledger to preserve planning revisions.
+See [budget storage and recovery](budgets.md#storage-and-recovery).

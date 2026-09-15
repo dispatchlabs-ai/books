@@ -74,6 +74,7 @@ Server configuration `books.server/v2` supports these company grants:
 | `read` | Queries, reports, and reconciliation/close plan generation |
 | `import` | Statement upload, preview, and source-only import apply |
 | `post` | Routine posting, journal status/correction/reversal, reconciliation apply; posting imported journals also requires `import` |
+| `budget` | Save monthly spending targets and budget-bucket assignments; no ledger writes |
 | `manage` | Chart accounts, defaults, fiscal periods, reopen and period-close apply |
 
 Every grant set includes `read`. Applying a year-end close or changing a closing

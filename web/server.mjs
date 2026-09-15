@@ -131,6 +131,53 @@ export function createBooksWebServer(config = {}) {
               )
             : {},
         });
+      const budgetMatch = url.pathname.match(
+        /^\/api\/books\/companies\/([A-Za-z0-9_-]+)\/budget(\/save)?$/,
+      );
+      if (budgetMatch && req.method === "POST") {
+        if (!upstream)
+          return json(res, 503, { error: "Books API is not connected." });
+        if (!req.headers["content-type"]?.startsWith("application/json"))
+          return json(res, 415, { error: "JSON required." });
+        let raw = "";
+        for await (const chunk of req) {
+          raw += chunk;
+          if (Buffer.byteLength(raw) > 2_000_000)
+            return json(res, 413, { error: "Budget is too large." });
+        }
+        let input;
+        try {
+          input = JSON.parse(raw);
+        } catch {
+          return json(res, 400, { error: "Invalid budget request." });
+        }
+        const reply = await fetcher(
+          upstream.replace(/\/$/, "") +
+            "/v1/companies/" +
+            budgetMatch[1] +
+            "/operations/" +
+            (budgetMatch[2] ? "budget_save" : "budget_get"),
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(input),
+            redirect: "error",
+            signal: AbortSignal.timeout(30000),
+          },
+        );
+        const body = await reply.json();
+        if (!reply.ok || body.ok !== true || body.schema !== "books.api/v1")
+          return json(res, reply.ok ? 502 : reply.status, {
+            error:
+              reply.status === 409
+                ? "Budget changed in another session. Close and refresh before saving."
+                : "Could not load or save budgets. Check inputs and budget permissions.",
+          });
+        return json(res, 200, body.data);
+      }
       const forecastMatch = url.pathname.match(
         /^\/api\/books\/companies\/([A-Za-z0-9_-]+)\/cash-forecast$/,
       );

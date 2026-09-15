@@ -31863,6 +31863,726 @@
         },
         "summary": "Health"
       }
+    },
+    "/v1/companies/{company}/operations/budget_get": {
+      "post": {
+        "description": "Requires scope read and read grants. Effect: read. Inputs use exact int64 minor-unit strings; domain decimal amount fields remain strings.",
+        "operationId": "company_budget_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "as_of": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "input_artifact": {
+                        "description": "Completed JSON artifact owned by this actor and selected company/database.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "input_artifact"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accounts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "subtype": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "can_edit": {
+                          "type": "boolean"
+                        },
+                        "expenses": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                "pattern": "^(0|-?[1-9][0-9]*)$",
+                                "type": "string"
+                              },
+                              "basis": {
+                                "type": "string"
+                              },
+                              "bucket": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "expense_account": {
+                                "type": "string"
+                              },
+                              "journal": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "integer"
+                              },
+                              "reversal_of": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "months": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "plan": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "assignments": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "journal": {
+                                    "type": "string"
+                                  },
+                                  "line": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            },
+                            "buckets": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "expense_accounts": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": [
+                                      "array",
+                                      "null"
+                                    ]
+                                  },
+                                  "monthly": {
+                                    "anyOf": [
+                                      {
+                                        "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                        "pattern": "^(0|-?[1-9][0-9]*)$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            },
+                            "revision": {
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "rows": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "account": {
+                                "type": "string"
+                              },
+                              "average": {
+                                "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                "pattern": "^(0|-?[1-9][0-9]*)$",
+                                "type": "string"
+                              },
+                              "count": {
+                                "type": "integer"
+                              },
+                              "monthly": {
+                                "anyOf": [
+                                  {
+                                    "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                    "pattern": "^(0|-?[1-9][0-9]*)$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "months": {
+                                "items": {
+                                  "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "unassigned": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "account": {
+                              "type": "string"
+                            },
+                            "average": {
+                              "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                              "pattern": "^(0|-?[1-9][0-9]*)$",
+                              "type": "string"
+                            },
+                            "count": {
+                              "type": "integer"
+                            },
+                            "monthly": {
+                              "anyOf": [
+                                {
+                                  "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "months": {
+                              "items": {
+                                "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                "pattern": "^(0|-?[1-9][0-9]*)$",
+                                "type": "string"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": "object"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "schema": {
+                      "const": "books.api/v1"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Operation result"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Stable Books error"
+          }
+        },
+        "summary": "budget_get"
+      }
+    },
+    "/v1/companies/{company}/operations/budget_save": {
+      "post": {
+        "description": "Requires scope read and budget grants. Effect: write. Inputs use exact int64 minor-unit strings; domain decimal amount fields remain strings.",
+        "operationId": "company_budget_save",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "as_of": {
+                        "type": "string"
+                      },
+                      "plan": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "assignments": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "account": {
+                                  "type": "string"
+                                },
+                                "journal": {
+                                  "type": "string"
+                                },
+                                "line": {
+                                  "type": "integer"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          },
+                          "buckets": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "account": {
+                                  "type": "string"
+                                },
+                                "expense_accounts": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": [
+                                    "array",
+                                    "null"
+                                  ]
+                                },
+                                "monthly": {
+                                  "anyOf": [
+                                    {
+                                      "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                      "pattern": "^(0|-?[1-9][0-9]*)$",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          },
+                          "revision": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "input_artifact": {
+                        "description": "Completed JSON artifact owned by this actor and selected company/database.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "input_artifact"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accounts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "subtype": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "can_edit": {
+                          "type": "boolean"
+                        },
+                        "expenses": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                "pattern": "^(0|-?[1-9][0-9]*)$",
+                                "type": "string"
+                              },
+                              "basis": {
+                                "type": "string"
+                              },
+                              "bucket": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "expense_account": {
+                                "type": "string"
+                              },
+                              "journal": {
+                                "type": "string"
+                              },
+                              "line": {
+                                "type": "integer"
+                              },
+                              "reversal_of": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "months": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "plan": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "assignments": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "journal": {
+                                    "type": "string"
+                                  },
+                                  "line": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            },
+                            "buckets": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "account": {
+                                    "type": "string"
+                                  },
+                                  "expense_accounts": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": [
+                                      "array",
+                                      "null"
+                                    ]
+                                  },
+                                  "monthly": {
+                                    "anyOf": [
+                                      {
+                                        "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                        "pattern": "^(0|-?[1-9][0-9]*)$",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            },
+                            "revision": {
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "rows": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "account": {
+                                "type": "string"
+                              },
+                              "average": {
+                                "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                "pattern": "^(0|-?[1-9][0-9]*)$",
+                                "type": "string"
+                              },
+                              "count": {
+                                "type": "integer"
+                              },
+                              "monthly": {
+                                "anyOf": [
+                                  {
+                                    "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                    "pattern": "^(0|-?[1-9][0-9]*)$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "months": {
+                                "items": {
+                                  "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "unassigned": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "account": {
+                              "type": "string"
+                            },
+                            "average": {
+                              "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                              "pattern": "^(0|-?[1-9][0-9]*)$",
+                              "type": "string"
+                            },
+                            "count": {
+                              "type": "integer"
+                            },
+                            "monthly": {
+                              "anyOf": [
+                                {
+                                  "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "months": {
+                              "items": {
+                                "description": "Exact signed int64; monetary amounts use owning currency minor units.",
+                                "pattern": "^(0|-?[1-9][0-9]*)$",
+                                "type": "string"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": "object"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "ok": {
+                      "const": true
+                    },
+                    "schema": {
+                      "const": "books.api/v1"
+                    }
+                  },
+                  "required": [
+                    "schema",
+                    "ok",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Operation result"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Stable Books error"
+          }
+        },
+        "summary": "budget_save"
+      }
     }
   },
   "security": [

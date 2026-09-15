@@ -794,9 +794,82 @@ test("Cash shows a failed ledger load and can retry", async ({ page }) => {
     r.fulfill({ status: 503, json: { error: "Ledger offline" } }),
   );
   await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText("Ledger offline");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Bank balances unavailable" }),
+  ).toContainText("Ledger offline");
   await expect(
     page.getByRole("button", { name: "Retry balances" }),
   ).toBeVisible();
   await expect(page.getByText("Loading bank accounts…")).toHaveCount(0);
+});
+
+test("Cash compares two-month spending and saves explicit monthly budgets", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  let revision = "one",
+    monthly: string | null = "20000";
+  const budgetData = () => ({
+    can_edit: true,
+    from: "2026-07-01",
+    to: "2026-08-31",
+    months: ["2026-07", "2026-08"],
+    rows: [
+      {
+        account: "1000",
+        months: ["12000", "18000"],
+        average: "15000",
+        monthly,
+        count: 2,
+      },
+    ],
+    unassigned: {
+      account: "",
+      months: ["0", "5000"],
+      average: "2500",
+      monthly: null,
+      count: 1,
+    },
+    expenses: [],
+    plan: {
+      revision,
+      buckets: [{ account: "1000", monthly, expense_accounts: ["5000"] }],
+      assignments: [],
+    },
+    accounts: [
+      { code: "1000", name: "Checking", type: "ASSET", subtype: "BANK" },
+      { code: "5000", name: "Groceries", type: "EXPENSE", subtype: "" },
+    ],
+  });
+  await page.route("**/api/books/companies/example/budget", (r) =>
+    r.fulfill({ json: budgetData() }),
+  );
+  await page.route("**/api/books/companies/example/budget/save", (r) => {
+    const input = r.request().postDataJSON();
+    expect(input.plan.revision).toBe(revision);
+    monthly = input.plan.buckets.find(
+      (b: { account: string }) => b.account === "1000",
+    ).monthly;
+    revision = "two";
+    return r.fulfill({ json: budgetData() });
+  });
+  await page.goto("/");
+  const row = page.getByRole("button", { name: /Checking 1000/ });
+  await expect(row).toContainText("$150.00");
+  await expect(row).toContainText("$200.00");
+  await expect(page.getByText(/\$25.00 \/ month unassigned/)).toBeVisible();
+  await page.getByRole("button", { name: "Edit budgets" }).click();
+  await page
+    .getByRole("textbox", { name: "Monthly budget for Checking", exact: true })
+    .fill("175.50");
+  await page.getByRole("button", { name: "Save budgets" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(row).toContainText("$175.50");
+  await page.getByRole("tab", { name: "Week", exact: true }).click();
+  await expect(row).toContainText("$150.00");
+  expect(await noPageScroll(page)).toBe(true);
+  await page.screenshot({
+    path: "/tmp/books-budgets-" + page.viewportSize()!.width + ".png",
+    fullPage: true,
+  });
 });

@@ -160,8 +160,8 @@ func (c Config) Validate() error {
 			}
 			found := map[string]bool{}
 			for _, grant := range grants {
-				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && ((c.Schema != "books.server/v2" && c.Schema != "books.server/v3" && c.Schema != "books.server/v4") || grant != "manage")) {
-					return bad("grants must be unique read, import, post, or (v2 only) manage values")
+				if found[grant] || (grant != "read" && grant != "import" && grant != "post" && grant != "budget" && ((c.Schema != "books.server/v2" && c.Schema != "books.server/v3" && c.Schema != "books.server/v4") || grant != "manage")) {
+					return bad("grants must be unique read, import, post, budget, or (v2+) manage values")
 				}
 				found[grant] = true
 			}

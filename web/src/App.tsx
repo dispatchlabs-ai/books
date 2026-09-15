@@ -460,9 +460,11 @@ function Workspace({
             />
             {config.demo
               ? "Demo · Synthetic data · Sep 13, 2026"
-              : page === "outlook" || page === "cash"
-                ? "Forecast · Estimates from a saved cash plan"
-                : "Posted accounting · Source coverage may be incomplete"}
+              : page === "cash"
+                ? "Cash · Balances, spending and budgets"
+                : page === "outlook"
+                  ? "Forecast · Estimates from a saved cash plan"
+                  : "Posted accounting · Source coverage may be incomplete"}
           </div>
           {config.session && (
             <form action="/logout" method="post">
@@ -552,6 +554,8 @@ function Workspace({
         >
           {page === "cash" ? (
             <Cash
+              key={company.key}
+              company={config.demo ? "" : company.key}
               ledgerError={error}
               retryLedger={() => {
                 setError("");
