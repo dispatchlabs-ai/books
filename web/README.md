@@ -43,10 +43,11 @@ allows only entity listing, two read-only report routes and configured cash fore
 HTTPS origin and `BOOKS_WEB_PROXY_TOKEN_FILE` to a private random token of at least
 32 characters. Hosted mode requires a connected API and rejects every request
 without the configured Host and proxy token. The trusted loopback reverse proxy
-must authenticate users before forwarding any path, replace `X-Books-Proxy-Token`
+must replace `X-Books-Proxy-Token`
 with that secret, preserve Host, and strip browser Authorization. It must serve
 HTTPS with a valid certificate and enforce the intended network boundary. Never
-publish the Node listener directly. This does not implement multi-user accounting
+publish the Node listener directly. If no application login is configured, the proxy
+must authenticate every path before forwarding. This does not implement multi-user accounting
 permissions: every authorized website user sees the web principal's entities.
 
 Connected views read the general ledger and profit/loss API, defaulting to the
@@ -172,3 +173,33 @@ To try it with invented data, run `npm run build` and then
 a synthetic household and its baseline and funded plans, and serves the connected
 interface at `http://127.0.0.1:8790`. Stopping it removes the temporary directory.
 It requires the Go prerequisites and never reads an existing Books database.
+
+## Browser sign-in and feedback
+
+Hosted deployments can set `BOOKS_WEB_LOGIN_FILE` to a private JSON file with
+`username`, `salt` (64 lowercase hex characters), and `hash` (128 lowercase hex
+characters). Generate it with the exported async `passwordRecord(username,
+password)` helper in `session-auth.mjs`, passing credentials through a private
+process environment or secret store. It uses Node scrypt with a random salt;
+never put passwords in command arguments or repository files.
+
+With this file configured, Books serves `/login` as HTML and authenticates every
+other route before reading data. The proxy still enforces HTTPS, Host and its
+private token, but does not need HTTP Basic authentication. Cookies are random,
+Secure, HttpOnly, SameSite=Strict, host-only and expire after twelve hours.
+Sessions are held in memory: restarting the service or changing the login file
+and restarting revokes them. `POST /logout` revokes the current session. Login
+attempts are limited to six per minute globally for this single-operator app;
+POST requests require the exact Origin. This is not multi-user authorization.
+
+Optional `BOOKS_WEB_FEEDBACK_FILE` is a private JSON configuration containing
+absolute `sources`, `snapshot`, and `answers` paths. Sources contain
+`records[].source`; the snapshot contains `transactions[].source_uid` including
+resolved records. Existing answers are retained and saved atomically; notes do
+not post ledger entries. Session login is mandatory for feedback. Its `/feedback/`
+page and JSON routes run inside the same supervised server. An optional `page`
+path serves a trusted operator-owned HTML template, preserving prior annotations;
+only the exact inline scripts in that file receive CSP hashes. Keep this file
+operator-controlled, never supplied by an HTTP request. The bundled page is a
+minimal USD/minor-unit review interface; use an appropriate operator template
+for other transaction display conventions.

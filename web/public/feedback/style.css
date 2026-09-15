@@ -1,0 +1,79 @@
+body {
+  margin: 0;
+  background: #f7f8fa;
+  color: #182432;
+  font: 16px system-ui;
+}
+header,
+main {
+  max-width: 760px;
+  margin: auto;
+  padding: 24px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+a {
+  color: #284568;
+}
+h1 {
+  font-size: 30px;
+}
+p {
+  color: #5b6675;
+  line-height: 1.5;
+}
+.card {
+  background: white;
+  border: 1px solid #dce2e9;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+h2 {
+  font-size: 18px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.meta {
+  font-size: 14px;
+  color: #687487;
+  margin-top: 6px;
+}
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100px;
+  margin-top: 20px;
+  padding: 12px;
+  font: inherit;
+  border: 1px solid #bcc5d0;
+  border-radius: 8px;
+}
+button {
+  padding: 9px 14px;
+  font: inherit;
+  background: white;
+  border: 1px solid #bdc7d3;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.amount {
+  white-space: nowrap;
+}
+.done {
+  border-color: #7da48e;
+}

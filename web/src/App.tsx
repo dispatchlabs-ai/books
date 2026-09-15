@@ -59,6 +59,7 @@ import { useForecast } from "@/lib/use-forecast";
 
 type Page = "overview" | "outlook" | "ask" | "account";
 type Config = {
+  session?: boolean;
   demo: boolean;
   agent: boolean;
   forecasts?: Record<string, string[]>;
@@ -445,6 +446,13 @@ function Workspace({
                 ? "Forecast · Estimates from a saved cash plan"
                 : "Posted accounting · Source coverage may be incomplete"}
           </div>
+          {config.session && (
+            <form action="/logout" method="post">
+              <Button variant="ghost" size="sm" type="submit">
+                Sign out
+              </Button>
+            </form>
+          )}
           <Button
             variant="ghost"
             size="icon"

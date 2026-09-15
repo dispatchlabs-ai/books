@@ -1,3 +1,5 @@
+import { createSessionAuth } from "./session-auth.mjs";
+import { createFeedback } from "./feedback.mjs";
 import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -22,6 +24,8 @@ export function createBooksWebServer(config = {}) {
     dist = resolve("dist"),
     fetcher = fetch,
     forecastPlans = {},
+    sessionAuth,
+    feedback,
   } = config;
   if (Boolean(upstream) !== Boolean(token))
     throw new Error("Set both BOOKS_API_URL and BOOKS_API_TOKEN_FILE.");
@@ -58,6 +62,12 @@ export function createBooksWebServer(config = {}) {
         "Upstreams require HTTPS or loopback HTTP, without URL credentials or query parameters.",
       );
   }
+  if (sessionAuth && !publicOrigin)
+    throw new Error("Session login requires hosted HTTPS mode.");
+  if (feedback && !sessionAuth)
+    throw new Error("Feedback requires session login.");
+  const authenticate = sessionAuth ? createSessionAuth(sessionAuth) : null;
+  const feedbackHandler = feedback ? createFeedback(feedback) : null;
   return createServer(async (req, res) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
@@ -96,8 +106,19 @@ export function createBooksWebServer(config = {}) {
           return json(res, 403, { error: "Origin not allowed." });
       }
       const url = new URL(req.url, "http://localhost");
+      if (authenticate && (await authenticate(req, res, url, publicOrigin)))
+        return;
+      if (feedbackHandler && (await feedbackHandler(req, res, url))) return;
+      if (url.pathname === "/feedback") {
+        res.writeHead(303, { Location: "/feedback/" });
+        res.end();
+        return;
+      }
+      if (url.pathname.startsWith("/feedback/") && !feedback)
+        return json(res, 404, { error: "Feedback is not configured." });
       if (url.pathname === "/api/config" && req.method === "GET")
         return json(res, 200, {
+          ...(sessionAuth ? { session: true } : {}),
           demo: !upstream,
           agent: Boolean(upstream && agentURL),
           // Scenario names only; operator file paths never leave the server.
@@ -261,7 +282,15 @@ export function createBooksWebServer(config = {}) {
         return json(res, 404, { error: "Route not found." });
       if (req.method !== "GET" && req.method !== "HEAD")
         return json(res, 405, { error: "Method not allowed." });
-      const requested = resolve(dist, "." + decodeURIComponent(url.pathname));
+      const requested = resolve(
+        dist,
+        "." +
+          decodeURIComponent(
+            url.pathname === "/feedback/"
+              ? "/feedback/index.html"
+              : url.pathname,
+          ),
+      );
       if (requested !== dist && !requested.startsWith(dist + "/"))
         return json(res, 404, { error: "Not found." });
       let data,
@@ -299,6 +328,12 @@ if (
       ? (await readFile(process.env[name], "utf8")).trim()
       : undefined;
   const server = createBooksWebServer({
+    sessionAuth: process.env.BOOKS_WEB_LOGIN_FILE
+      ? JSON.parse(await readFile(process.env.BOOKS_WEB_LOGIN_FILE, "utf8"))
+      : undefined,
+    feedback: process.env.BOOKS_WEB_FEEDBACK_FILE
+      ? JSON.parse(await readFile(process.env.BOOKS_WEB_FEEDBACK_FILE, "utf8"))
+      : undefined,
     publicOrigin: process.env.BOOKS_WEB_ORIGIN,
     proxyToken: await secret("BOOKS_WEB_PROXY_TOKEN_FILE"),
     upstream: process.env.BOOKS_API_URL,

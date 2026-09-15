@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "start": "node server.mjs",
-    "test": "node scripts/currencies.mjs --check && vitest run && node --test server.test.mjs",
+    "test": "node scripts/currencies.mjs --check && vitest run && node --test server.test.mjs auth.test.mjs",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm test && npm run build && npm run test:e2e",
     "currencies": "node scripts/currencies.mjs",

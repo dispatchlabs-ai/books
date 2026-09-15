@@ -8,6 +8,9 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Added optional hosted HTML sign-in with expiring, revocable sessions and
+  protected feedback notes with stale-save rejection.
+
 - Added operation-specific MCP descriptions and initialization workflow guidance
   for company/database scope, continuous bookkeeping, planning and retry recovery.
   Large reads prefer complete scoped artifacts above 32 KiB; artifact chunks and
