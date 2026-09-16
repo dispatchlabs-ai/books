@@ -108,7 +108,7 @@ await writeFile(
       {
         id: "preview",
         token_sha256: createHash("sha256").update(token).digest("hex"),
-        companies: { maple: ["read"] },
+        companies: { maple: ["read", "budget"] },
       },
     ],
   }),

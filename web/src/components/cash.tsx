@@ -1,6 +1,12 @@
-import { useState, useId, type ReactNode } from "react";
-import { useBudget } from "@/lib/budget";
-import { BudgetEditor } from "@/components/budgets";
+import { useState, useId, useRef, useEffect, type ReactNode } from "react";
+import {
+  useBudget,
+  decimalMinor,
+  decimalValue,
+  type BudgetPlan,
+} from "@/lib/budget";
+import { BudgetAssignments } from "@/components/budgets";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -17,6 +23,7 @@ import {
   money,
   rangeLabel,
   today,
+  scale,
   type Snapshot,
 } from "@/lib/books";
 import type { ForecastState } from "@/lib/use-forecast";
@@ -96,6 +103,7 @@ export function Cash({
   snapshot,
   ledgerError,
   retryLedger,
+  onBudgetEditingChange,
 }: {
   company: string;
   currency: string;
@@ -103,8 +111,28 @@ export function Cash({
   snapshot?: Snapshot;
   ledgerError: string;
   retryLedger: () => void;
+  onBudgetEditingChange: (editing: boolean) => void;
 }) {
   const [horizon, setHorizon] = useState<Horizon>("month");
+  const [draft, setDraft] = useState<BudgetPlan>();
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [saveError, setSaveError] = useState("");
+  const [invalidAccount, setInvalidAccount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputRefs = useRef(new Map<string, HTMLInputElement>());
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
+  const editing = !!draft;
+  const saveErrorRef = useRef<HTMLParagraphElement>(null);
+  const errorId = useId();
+  useEffect(() => {
+    if (editing) inputRefs.current.values().next().value?.focus();
+    else if (wasEditing.current) editButtonRef.current?.focus();
+    wasEditing.current = editing;
+  }, [editing]);
+  useEffect(() => {
+    if (saveError && !invalidAccount) saveErrorRef.current?.focus();
+  }, [saveError, invalidAccount]);
   const now = today();
   const budgets = useBudget(company, snapshot?.fetchedAt);
   const data = forecast.data;
@@ -129,6 +157,21 @@ export function Cash({
       [...rows, ...banks].map((b) => [b.code, { code: b.code, name: b.name }]),
     ).values(),
   ];
+  // Bank rows can arrive after the budget response or after editing begins.
+  // Every displayed input must belong to the draft that will be saved.
+  const currentDraft = draft && {
+    ...draft,
+    buckets: [
+      ...draft.buckets,
+      ...bankOptions
+        .filter((bank) => !draft.buckets.some((b) => b.account === bank.code))
+        .map((bank) => ({
+          account: bank.code,
+          monthly: null,
+          expense_accounts: [],
+        })),
+    ],
+  };
   const incomplete = result?.rows.some((r) => !r.complete);
   const period = result ? rangeLabel(now, result.through) : "";
   const averagePeriod = budgets.data?.months
@@ -139,8 +182,67 @@ export function Cash({
       }),
     )
     .join(" – ");
+  const beginEditing = () => {
+    if (!budgets.data?.can_edit) return;
+    const plan = structuredClone(budgets.data.plan);
+    for (const bank of bankOptions) {
+      if (!plan.buckets.some((b) => b.account === bank.code))
+        plan.buckets.push({
+          account: bank.code,
+          monthly: null,
+          expense_accounts: [],
+        });
+    }
+    setAmounts(
+      Object.fromEntries(
+        plan.buckets.map((b) => [
+          b.account,
+          decimalValue(b.monthly, scale(currency)),
+        ]),
+      ),
+    );
+    setDraft(plan);
+    setSaveError("");
+    setInvalidAccount("");
+    onBudgetEditingChange(true);
+  };
+  const stopEditing = () => {
+    setDraft(undefined);
+    setSaveError("");
+    setInvalidAccount("");
+    onBudgetEditingChange(false);
+  };
+  const saveBudgets = async () => {
+    if (!currentDraft || saving) return;
+    setSaveError("");
+    setInvalidAccount("");
+    try {
+      const plan = {
+        ...currentDraft,
+        buckets: currentDraft.buckets.map((b) => {
+          try {
+            return {
+              ...b,
+              monthly: decimalMinor(amounts[b.account] ?? "", scale(currency)),
+            };
+          } catch (e) {
+            setInvalidAccount(b.account);
+            inputRefs.current.get(b.account)?.focus();
+            throw e;
+          }
+        }),
+      };
+      setSaving(true);
+      await budgets.save(plan);
+      stopEditing();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Could not save budgets.");
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <section aria-label="Cash">
+    <section aria-label="Cash" data-editing={!!draft}>
       <Tabs
         value={horizon}
         onValueChange={(v) => setHorizon(v as Horizon)}
@@ -162,16 +264,51 @@ export function Cash({
                 </TabsTrigger>
               ))}
             </TabsList>
-            {budgets.data?.can_edit && (
-              <BudgetEditor
-                data={budgets.data}
-                currency={currency}
-                banks={bankOptions}
-                save={budgets.save}
-              />
-            )}
+            {draft ? (
+              <div
+                className="flex items-center gap-2"
+                aria-label="Budget actions"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={saving}
+                  onClick={stopEditing}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" disabled={saving} onClick={saveBudgets}>
+                  {saving ? "Saving…" : "Save budgets"}
+                </Button>
+              </div>
+            ) : budgets.data?.can_edit ? (
+              <Button
+                ref={editButtonRef}
+                variant="outline"
+                size="sm"
+                onClick={beginEditing}
+              >
+                Edit budgets
+              </Button>
+            ) : null}
           </div>
         </div>
+        {saveError && (
+          <p
+            ref={saveErrorRef}
+            tabIndex={-1}
+            role="alert"
+            id={errorId}
+            className="cash-notice cash-negative"
+          >
+            {saveError}
+          </p>
+        )}
+        {draft && (
+          <p className="budget-edit-note">
+            Edit monthly targets below. Leave blank for no target.
+          </p>
+        )}
         {horizons.map((h) => (
           <TabsContent key={h} value={h}>
             {ledgerError && (
@@ -267,7 +404,32 @@ export function Cash({
                         )}
                       </TableCell>
                       <TableCell data-label="Budget / mo" className="amount">
-                        {b?.monthly != null ? (
+                        {draft ? (
+                          <Input
+                            ref={(node) => {
+                              if (node) inputRefs.current.set(row.code, node);
+                              else inputRefs.current.delete(row.code);
+                            }}
+                            aria-label={`Monthly budget for ${row.name}`}
+                            aria-invalid={
+                              invalidAccount === row.code || undefined
+                            }
+                            aria-describedby={
+                              invalidAccount === row.code ? errorId : undefined
+                            }
+                            className="budget-amount-input"
+                            inputMode="decimal"
+                            placeholder="Not set"
+                            value={amounts[row.code] ?? ""}
+                            disabled={saving}
+                            onChange={(e) =>
+                              setAmounts((current) => ({
+                                ...current,
+                                [row.code]: e.target.value,
+                              }))
+                            }
+                          />
+                        ) : b?.monthly != null ? (
                           money(b.monthly, currency)
                         ) : (
                           <Missing>
@@ -368,6 +530,17 @@ export function Cash({
           </TabsContent>
         ))}
       </Tabs>
+      {currentDraft && budgets.data && (
+        <div className="budget-assignments">
+          <BudgetAssignments
+            data={budgets.data}
+            currency={currency}
+            draft={currentDraft}
+            onChange={setDraft}
+            saving={saving}
+          />
+        </div>
+      )}
     </section>
   );
 }

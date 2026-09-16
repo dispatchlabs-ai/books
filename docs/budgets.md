@@ -21,8 +21,11 @@ is complete. Unassigned spending is shown separately and can change the bucket
 averages when classified. Category edits also affect the displayed historical
 comparison; they do not alter immutable ledger entries.
 
-In **Edit budgets**, set monthly targets, assign expense categories, and review
-purchase exceptions. An empty target means Not set; zero is a deliberate target.
+In **Edit budgets**, change monthly targets directly in the Cash table and use
+**Save budgets** or **Cancel** above it. Open **Spending assignments** below the
+table to assign expense categories and review purchase exceptions. An empty
+target means Not set; zero is a deliberate target. Period changes keep the draft;
+entity switching and view refresh become available again after saving or cancelling.
 Each save requires the revision read by the editor. A concurrent change is rejected
 so the operator can reload instead of overwriting another edit.
 

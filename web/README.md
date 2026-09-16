@@ -83,6 +83,9 @@ posted expenses by budget bucket. It stays monthly across forecast horizons.
 Unset targets, missing data, unassigned spending, errors and retry controls
 remain distinct. Editing budgets uses the existing revisioned, separately
 permissioned budget operation. It never rewrites dated forecasts.
+Targets are edited in the Cash table with Save and Cancel controls; spending
+assignments expand below it. The last accessible entity is remembered across
+reloads when browser storage is available, separately for demo and connected use.
 
 ## Components and maintenance
 
@@ -95,7 +98,7 @@ App-specific composition lives outside that directory. See the
 historical, not approval of additional screens.
 
 React/TypeScript supplies the interactive view; Vite and Tailwind compile static
-assets; Radix provides accessible tabs, menus, selects and the budget Sheet;
+assets; Radix provides accessible tabs, menus, selects and disclosures;
 Geist and Lucide keep typography and icons consistent. Cash trends use
 exact-integer inputs scaled into SVG coordinates. Vitest, Node tests, and
 Playwright validate money, isolation, transport, and user flows. These

@@ -8,6 +8,10 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Remember the selected accessible browser entity across reloads and edit monthly
+  targets directly in the Cash table, preserving drafts on period changes and
+  failed saves.
+
 - Simplified the browser to Cash: a compact responsive account table, shared
   shadcn controls and monthly budget editing. Removed the experimental Accounts,
   Outlook, Ask Books and decision screens; backend operations are unchanged.

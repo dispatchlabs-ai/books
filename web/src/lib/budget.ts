@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { request, today } from "./books";
 export type Bucket = {
   account: string;
@@ -42,7 +42,9 @@ export function useBudget(company: string, revision?: string) {
   const [data, setData] = useState<Budget>();
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const readGeneration = useRef(0);
   useEffect(() => {
+    const generation = ++readGeneration.current;
     if (!company) {
       setData(undefined);
       setError("");
@@ -56,9 +58,13 @@ export function useBudget(company: string, revision?: string) {
       controller.signal,
       { as_of: today() },
     )
-      .then(setData)
+      .then((result) => {
+        if (!controller.signal.aborted && generation === readGeneration.current)
+          setData(result);
+      })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
+        if (!controller.signal.aborted && generation === readGeneration.current)
+          setError(e.message);
       });
     return () => controller.abort();
   }, [company, revision, refresh]);
@@ -72,7 +78,10 @@ export function useBudget(company: string, revision?: string) {
         undefined,
         { as_of: today(), plan },
       );
+      // A read started before this save must not replace the saved revision.
+      readGeneration.current++;
       setData(result);
+      setError("");
       return result;
     },
   };

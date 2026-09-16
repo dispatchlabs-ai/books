@@ -371,6 +371,7 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
   await connectedHousehold(page);
   let revision = "one",
     monthly: string | null = "20000";
+  let saves = 0;
   const budgetData = () => ({
     can_edit: true,
     from: "2026-07-01",
@@ -407,6 +408,7 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
     r.fulfill({ json: budgetData() }),
   );
   await page.route("**/api/books/companies/example/budget/save", (r) => {
+    saves++;
     const input = r.request().postDataJSON();
     expect(input.plan.revision).toBe(revision);
     monthly = input.plan.buckets.find(
@@ -421,14 +423,62 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
   await expect(row).toContainText("$200.00");
   await expect(page.getByText(/\$25.00 \/ month unassigned/)).toBeVisible();
   await page.getByRole("button", { name: "Edit budgets" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /^Select entity/ }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Refresh view" }),
+  ).toBeDisabled();
+  for (const width of [320, 390, 760, 761, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => noPageScroll(page)).toBe(true);
+  }
+  const amount = row.getByRole("textbox", {
+    name: "Monthly budget for Checking",
+    exact: true,
+  });
+  await amount.fill("-1");
+  await page.getByRole("button", { name: "Save budgets" }).click();
+  await expect(amount).toHaveAttribute("aria-invalid", "true");
+  await expect(amount).toBeFocused();
+  expect(saves).toBe(0);
   await page
     .getByRole("textbox", { name: "Monthly budget for Checking", exact: true })
     .fill("175.50");
   await page.getByRole("button", { name: "Save budgets" }).click();
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(amount).toHaveCount(0);
   await expect(row).toContainText("$175.50");
   await page.getByRole("tab", { name: "Week", exact: true }).click();
   await expect(row).toContainText("$150.00");
+  await page.getByRole("button", { name: "Edit budgets" }).click();
+  await amount.fill("999");
+  await page.getByRole("tab", { name: "Month", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    page.getByRole("tab", { name: "Year", exact: true }),
+  ).toBeFocused();
+  await expect(amount).toHaveValue("999");
+  await page.keyboard.press("ArrowLeft");
+  await expect(
+    page.getByRole("tab", { name: "Month", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit budgets" }),
+  ).toBeFocused();
+  await expect(row).toContainText("$175.50");
+  expect(saves).toBe(1);
+  for (const [value, expected] of [
+    ["0", "$0.00"],
+    ["", "Not set"],
+  ]) {
+    await page.getByRole("button", { name: "Edit budgets" }).click();
+    await amount.fill(value);
+    await page.getByRole("button", { name: "Save budgets" }).click();
+    await expect(row).toContainText(expected);
+    await expect(amount).toHaveCount(0);
+  }
   expect(await noPageScroll(page)).toBe(true);
   await page.screenshot({
     path: "/tmp/books-budgets-" + page.viewportSize()!.width + ".png",
@@ -445,7 +495,9 @@ test("entity selection stays scoped and narrow layouts fit", async ({
   );
   for (const width of [320, 390, 760, 761, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await expect.poll(() => noPageScroll(page), { message: `Layout at ${width}px` }).toBe(true);
+    await expect
+      .poll(() => noPageScroll(page), { message: `Layout at ${width}px` })
+      .toBe(true);
   }
   await page
     .getByRole("button", { name: "Select entity, current: Maple Household" })
@@ -472,6 +524,15 @@ test("entity selection stays scoped and narrow layouts fit", async ({
   await expect(
     page.getByRole("tab", { name: "Year", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
+  await page.reload();
+  await expect(
+    page.getByRole("button", {
+      name: "Select entity, current: Example Studio",
+    }),
+  ).toBeVisible();
+  await expect(page.getByTestId("cash-row-1000")).toContainText(
+    "Operating account",
+  );
 });
 
 test("failed forecasts keep posted banks visible and recover", async ({
@@ -564,12 +625,9 @@ test("budget editor fits 320px and preserves conflicts, categories and purchase 
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Edit budgets" }).click();
-  const dialog = page.getByRole("dialog");
-  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
-    true,
-  );
+  expect(await noPageScroll(page)).toBe(true);
   await page
-    .getByRole("textbox", { name: "Monthly budget for Emergency Savings" })
+    .getByRole("textbox", { name: "Monthly budget for Checking" })
     .fill("0");
   await page
     .getByRole("button", { name: "Spending assignments", exact: true })
@@ -589,11 +647,11 @@ test("budget editor fits 320px and preserves conflicts, categories and purchase 
   await page
     .getByRole("option", { name: "Emergency Savings", exact: true })
     .click();
-  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
-    true,
-  );
+  expect(await noPageScroll(page)).toBe(true);
   await page.getByRole("button", { name: "Save budgets", exact: true }).click();
-  await expect(dialog.getByRole("alert")).toContainText("Budget changed");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Budget changed" }),
+  ).toBeVisible();
   expect(saved?.plan.revision).toBe("one");
   expect(saved?.plan.buckets.find((b) => b.account === "1000")).toMatchObject({
     monthly: "0",
@@ -603,9 +661,216 @@ test("budget editor fits 320px and preserves conflicts, categories and purchase 
     { journal: "purchase-1", line: 1, account: "1000" },
   ]);
   await expect(
-    page.getByRole("textbox", { name: "Monthly budget for Emergency Savings" }),
+    page.getByRole("textbox", { name: "Monthly budget for Checking" }),
   ).toHaveValue("0");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Monthly budget for Checking" }),
+  ).toHaveCount(0);
   await expect(page.getByTestId("cash-row-1000")).toContainText("Not set");
+});
+
+test("connected entity survives reload and falls back when access is removed", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  const other = {
+    key: "other",
+    name: "Other Entity",
+    currency: "USD",
+    basis: "ACCRUAL",
+  };
+  const selected = {
+    key: "example",
+    name: "Example Household",
+    currency: "USD",
+    basis: "ACCRUAL",
+  };
+  let allowed = [other, selected];
+  const requests: string[] = [];
+  await page.route("**/api/books/companies", (r) => {
+    if (allowed.length === 1) requests.length = 0;
+    return r.fulfill({ json: allowed });
+  });
+  await page.route("**/api/books/companies/other/**", (r) =>
+    r.request().url().includes("/budget")
+      ? r.fulfill({ status: 403, json: { error: "Budgets unavailable" } })
+      : r.fulfill({ json: { accounts: [] } }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Select entity, current: Other Entity" })
+    .click();
+  await page.getByRole("menuitem", { name: "Example Household" }).click();
+  await expect(page.getByTestId("cash-row-1000")).toContainText("Checking");
+  await page.reload();
+  await expect(
+    page.getByRole("button", {
+      name: "Select entity, current: Example Household",
+    }),
+  ).toBeVisible();
+  await expect(page.getByTestId("cash-row-1000")).toContainText("Checking");
+  allowed = [other];
+  page.on("request", (r) => requests.push(r.url()));
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Select entity, current: Other Entity" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("cash-row-1000")).toHaveCount(0);
+  expect(requests.some((url) => url.includes("/companies/example/"))).toBe(
+    false,
+  );
+});
+
+test("entity switching still works when browser storage is blocked", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      get() {
+        throw new DOMException("Storage blocked", "SecurityError");
+      },
+    });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Select entity, current: Maple Household" })
+    .click();
+  await page.getByRole("menuitem", { name: "Example Studio" }).click();
+  await expect(page.getByTestId("cash-row-1000")).toContainText(
+    "Operating account",
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("button", {
+      name: "Select entity, current: Maple Household",
+    }),
+  ).toBeVisible();
+});
+
+test("budget edits include bank rows that load after editing begins", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.route("**/api/config", (r) =>
+    r.fulfill({ json: { demo: false } }),
+  );
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/books/companies/example/reports/**", async (r) => {
+    await ready;
+    await r.fallback();
+  });
+  const budget = {
+    can_edit: true,
+    months: ["2026-07", "2026-08"],
+    rows: [],
+    unassigned: { average: "0", count: 0 },
+    expenses: [],
+    accounts: [
+      { code: "1000", name: "Checking", type: "ASSET", subtype: "BANK" },
+    ],
+    plan: { revision: "one", buckets: [], assignments: [] },
+  };
+  await page.route("**/api/books/companies/example/budget", (r) =>
+    r.fulfill({ json: budget }),
+  );
+  let saved:
+    | { plan: { buckets: { account: string; monthly: string | null }[] } }
+    | undefined;
+  await page.route("**/api/books/companies/example/budget/save", (r) => {
+    saved = r.request().postDataJSON();
+    return r.fulfill({ json: budget });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+  release();
+  const input = page.getByRole("textbox", {
+    name: "Monthly budget for Extra bank",
+    exact: true,
+  });
+  await input.fill("123.45");
+  await page.getByRole("button", { name: "Save budgets", exact: true }).click();
+  await expect(input).toHaveCount(0);
+  expect(saved?.plan.buckets.find((b) => b.account === "1099")?.monthly).toBe(
+    "12345",
+  );
+});
+
+test("a late budget read cannot replace a successful save", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.route("**/api/config", (r) =>
+    r.fulfill({ json: { demo: false } }),
+  );
+  let releaseLedger!: () => void;
+  const ledgerReady = new Promise<void>((resolve) => {
+    releaseLedger = resolve;
+  });
+  await page.route("**/api/books/companies/example/reports/**", async (r) => {
+    await ledgerReady;
+    await r.fallback();
+  });
+  const budget = (monthly: string, revision: string) => ({
+    can_edit: true,
+    months: ["2026-07", "2026-08"],
+    rows: [{ account: "1099", monthly, average: "10000", count: 1 }],
+    unassigned: { average: "0", count: 0 },
+    expenses: [],
+    accounts: [
+      { code: "1099", name: "Extra bank", type: "ASSET", subtype: "BANK" },
+    ],
+    plan: {
+      revision,
+      buckets: [{ account: "1099", monthly, expense_accounts: [] }],
+      assignments: [],
+    },
+  });
+  let releaseRead!: () => void, readStarted!: () => void;
+  const readReady = new Promise<void>((resolve) => {
+    releaseRead = resolve;
+  });
+  const reading = new Promise<void>((resolve) => {
+    readStarted = resolve;
+  });
+  let reads = 0;
+  await page.route("**/api/books/companies/example/budget", async (r) => {
+    if (++reads > 1) {
+      readStarted();
+      await readReady;
+    }
+    await r.fulfill({ json: budget("20000", "one") });
+  });
+  await page.route("**/api/books/companies/example/budget/save", (r) =>
+    r.fulfill({ json: budget("17550", "two") }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  releaseLedger();
+  await reading;
+  await page
+    .getByRole("textbox", {
+      name: "Monthly budget for Extra bank",
+      exact: true,
+    })
+    .fill("175.50");
+  await page.getByRole("button", { name: "Save budgets", exact: true }).click();
+  const row = page.getByTestId("cash-row-1099");
+  await expect(row).toContainText("$175.50");
+  const response = page.waitForResponse((r) => r.url().endsWith("/budget"));
+  releaseRead();
+  await (await response).finished();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(row).toContainText("$175.50");
+  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await expect(row.getByRole("textbox")).toHaveValue("175.50");
 });

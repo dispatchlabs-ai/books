@@ -25,6 +25,10 @@ type Config = {
   forecasts?: Record<string, string[]>;
 };
 
+function selectedCompanyKey(demo: boolean) {
+  return `books.selected-company.${demo ? "demo" : "connected"}`;
+}
+
 function App() {
   const [config, setConfig] = useState<Config>();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -41,7 +45,13 @@ function App() {
         if (controller.signal.aborted) return;
         setConfig(cfg);
         setCompanies(list);
-        setCompany(list[0]);
+        let selected: string | null = null;
+        try {
+          selected = localStorage.getItem(selectedCompanyKey(cfg.demo));
+        } catch {
+          // Storage can be unavailable; entity selection must still work.
+        }
+        setCompany(list.find((c) => c.key === selected) ?? list[0]);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -85,7 +95,14 @@ function App() {
       config={config}
       companies={companies}
       company={company}
-      selectCompany={setCompany}
+      selectCompany={(next) => {
+        setCompany(next);
+        try {
+          localStorage.setItem(selectedCompanyKey(config.demo), next.key);
+        } catch {
+          // A browser storage restriction should not prevent switching.
+        }
+      }}
     />
   );
 }
@@ -106,6 +123,7 @@ function Workspace({
   );
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [budgetEditing, setBudgetEditing] = useState(false);
   const scenario = config.demo
     ? ""
     : (config.forecasts?.[company.key]?.[0] ?? "");
@@ -161,6 +179,7 @@ function Workspace({
                 variant="ghost"
                 className="entity-switcher"
                 aria-label={`Select entity, current: ${company.name}`}
+                disabled={budgetEditing}
               >
                 <span className="truncate">{company.name}</span>
                 <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -194,6 +213,7 @@ function Workspace({
               aria-label="Refresh view"
               title="Refresh view"
               onClick={refresh}
+              disabled={budgetEditing}
             >
               <RefreshCw className="size-4" />
             </Button>
@@ -203,6 +223,7 @@ function Workspace({
                   variant="ghost"
                   size="sm"
                   type="submit"
+                  disabled={budgetEditing}
                   className="text-muted-foreground"
                 >
                   Sign out
@@ -220,6 +241,7 @@ function Workspace({
           snapshot={snapshot}
           ledgerError={error}
           retryLedger={refresh}
+          onBudgetEditingChange={setBudgetEditing}
         />
       </main>
     </div>

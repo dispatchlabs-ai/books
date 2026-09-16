@@ -25,3 +25,26 @@ entity isolation. Backend operations and authentication are unchanged.
 
 All development and test records were synthetic. No existing financial database
 was accessed during development.
+
+## Review follow-up: inline budgets and remembered entity
+
+The maintainer accepted the Cash layout and requested a replacement for the
+budget Sheet plus a fix for entity selection resetting on browser reload.
+Targets now edit in the table with Save/Cancel and a collapsed assignment
+section. Accessible entity selection persists separately for demo and connected use.
+
+- The full `./scripts/check` passed on both macOS and Linux, including the real
+  CLI/API integration with disposable synthetic data.
+- All 24 desktop/mobile browser tests passed. Regression coverage includes
+  connected entity reloads and removed access, blocked storage, inline save and
+  cancellation, zero versus unset, invalid amounts, conflicts, assignment
+  preservation, keyboard period changes and widths from 320 to 1440 pixels.
+- Independent review reproduced and confirmed repairs for late bank rows being
+  omitted from saves, period changes taking focus from tabs, and an older budget
+  read replacing a newer save. All three targeted reproductions passed after
+  repair, with no remaining actionable findings.
+- The connected synthetic preview now permits budget edits in its disposable
+  company. The inline inputs were visually inspected in the existing table.
+
+The replacement editor awaits maintainer visual review. Existing accounting,
+forecast arithmetic and real budget records were not changed by development.

@@ -256,8 +256,37 @@
 }
 .cash-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
+}
+.budget-amount-input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding-inline: 8px;
+  text-align: right;
+  font-size: inherit;
+  font-variant-numeric: tabular-nums;
+  background: white;
+}
+.budget-edit-note {
+  margin: -12px 0 18px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.budget-assignments {
+  margin-top: 24px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  max-width: 720px;
+}
+[data-editing="true"] .cash-heading {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-block: 16px;
+  background: #fafbf8;
 }
 .cash-tabs {
   height: 34px !important;
