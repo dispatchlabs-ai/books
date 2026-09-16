@@ -92,3 +92,33 @@ field or message.
   visible. Desktop and 320-pixel screenshots were visually checked.
 
 All test records were synthetic; no production target was changed.
+
+## Review follow-up: account order and hiding
+
+The maintainer requested drag ordering and optional hidden accounts, with the
+arrangement shared across devices. Cash now composes dnd-kit sorting with the
+existing shadcn rows and menus. Server storage is display-only and per entity;
+local/demo previews retain isolated browser storage.
+
+- Full `./scripts/check` passed on macOS and Linux, including disposable CLI/API
+  integration, dependency audit (zero reported vulnerabilities), and server
+  tests for persisted views, entity isolation, stale revisions, payload limits,
+  corruption and access denial. The final focus repair received repeated Linux
+  web lint/unit/server/build/integration checks against the final source.
+- All 34 desktop/mobile Chromium tests passed. New coverage includes pointer and
+  touch drag, keyboard reorder and cancellation, reload persistence, hide and
+  restore (including all-hidden recovery), independent-device conflicts, and
+  retention of hidden budgets and assignments. Existing no-jump checks pass.
+- Independent review caught an overly restrictive account-code grammar and
+  offscreen focus after restoring a distant row. Both were repaired and
+  re-reviewed. The reviewer also verified delayed preference reads and pending
+  restore saves cannot remove a focused budget editor, and that hiding returns
+  focus to an adjacent row. No actionable findings remain.
+- Desktop and phone views were visually checked. The dnd-kit addition increases
+  the main bundle by approximately 38 KB gzip; the build reports its 500 KB
+  uncompressed chunk-size advisory. The full build and checks pass.
+
+macOS checks used the installed Command Line Tools through `DEVELOPER_DIR` after
+an unrelated Xcode selection required its license setup. No global toolchain
+configuration was changed. Development used synthetic data only. Visual product
+acceptance remains the maintainer's review, separate from these checks.

@@ -935,17 +935,19 @@ test("budget editing preserves the viewport and row positions", async ({
     type: "ASSET",
     subtype: "BANK",
   }));
-  await page.route("**/api/books/companies/example/reports/general-ledger?**", (r) =>
-    r.fulfill({
-      json: {
-        accounts: accounts.map((account) => ({
-          account,
-          opening_balance: { consolidated_cents: "0" },
-          closing_balance: { consolidated_cents: "0" },
-          lines: [],
-        })),
-      },
-    }),
+  await page.route(
+    "**/api/books/companies/example/reports/general-ledger?**",
+    (r) =>
+      r.fulfill({
+        json: {
+          accounts: accounts.map((account) => ({
+            account,
+            opening_balance: { consolidated_cents: "0" },
+            closing_balance: { consolidated_cents: "0" },
+            lines: [],
+          })),
+        },
+      }),
   );
   await page.route("**/api/books/companies/example/budget", (r) =>
     r.fulfill({
@@ -990,7 +992,10 @@ test("budget editing preserves the viewport and row positions", async ({
   const initial = await positions();
   await first.click();
   await expect(
-    page.getByRole("textbox", { name: "Monthly budget for Bank 1", exact: true }),
+    page.getByRole("textbox", {
+      name: "Monthly budget for Bank 1",
+      exact: true,
+    }),
   ).toBeFocused();
   expect(await positions()).toEqual(initial);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -1003,7 +1008,9 @@ test("budget editing preserves the viewport and row positions", async ({
     const heading = document.querySelector(".cash-heading")!;
     window.scrollBy(
       0,
-      el.getBoundingClientRect().top - heading.getBoundingClientRect().bottom - 20,
+      el.getBoundingClientRect().top -
+        heading.getBoundingClientRect().bottom -
+        20,
     );
   });
   const scrolled = await positions();
@@ -1029,4 +1036,259 @@ test("budget editing preserves the viewport and row positions", async ({
   await expect(input).toHaveAttribute("aria-invalid", "true");
   await expect(input).toBeFocused();
   await expect.poll(unobscured).toBe(true);
+});
+
+const cashCodes = (page: import("@playwright/test").Page) =>
+  page
+    .locator(".cash-table tbody tr")
+    .evaluateAll((rows) =>
+      rows.map((r) => r.getAttribute("data-testid")!.replace("cash-row-", "")),
+    );
+async function rowMenu(
+  page: import("@playwright/test").Page,
+  name: string,
+  action: string,
+) {
+  await page
+    .getByRole("button", { name: `Account options for ${name}`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
+test("Cash drag order, keyboard moves, cancel and reload preserve row order", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.goto("/");
+  const handle = page.getByRole("button", {
+    name: "Reorder Checking",
+    exact: true,
+  });
+  await expect(handle).toBeEnabled();
+  await expect(page.getByTestId("cash-row-1099")).toBeVisible();
+  const initial = await cashCodes(page);
+  const source = await handle.boundingBox();
+  const target = await page
+    .getByRole("button", { name: "Reorder Home Reserve", exact: true })
+    .boundingBox();
+  const from = {
+    x: source!.x + source!.width / 2,
+    y: source!.y + source!.height / 2,
+  };
+  const to = {
+    x: target!.x + target!.width / 2,
+    y: target!.y + target!.height / 2,
+  };
+  if (page.viewportSize()!.width < 600) {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [from],
+    });
+    // Touch uses the library's 250ms hold threshold before movement.
+    await expect(
+      page.locator('[data-testid="cash-row-1000"][data-dnd-dragging="true"]'),
+    ).toBeVisible();
+    for (let i = 1; i <= 15; i++)
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [
+          {
+            x: from.x + ((to.x - from.x) * i) / 15,
+            y: from.y + ((to.y - from.y) * i) / 15,
+          },
+        ],
+      });
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    await session.detach();
+  } else {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 15 });
+    await page.mouse.up();
+  }
+  await expect
+    .poll(() => cashCodes(page))
+    .toEqual(["1050", "1000", "1030", "1099"]);
+  await page.reload();
+  await expect
+    .poll(() => cashCodes(page))
+    .toEqual(["1050", "1000", "1030", "1099"]);
+  await handle.focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(() => cashCodes(page))
+    .toEqual(["1050", "1000", "1030", "1099"]);
+  await handle.focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Space");
+  await expect.poll(() => cashCodes(page)).toEqual(initial);
+});
+
+test("hide, restore and all-hidden recovery preserve ordering without changing financial rows", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.goto("/");
+  await expect(page.getByTestId("cash-row-1099")).toBeVisible();
+  await rowMenu(page, "Kids Activities", "Hide account");
+  await expect(page.getByTestId("cash-row-1030")).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Hidden accounts (1)" }),
+  ).toBeEnabled();
+  await expect(page.getByTestId("cash-row-1030")).toHaveCount(0);
+  await rowMenu(page, "Home Reserve", "Move up");
+  await page.getByRole("button", { name: "Hidden accounts (1)" }).click();
+  await page.getByRole("menuitem", { name: "Show Kids Activities" }).click();
+  await expect
+    .poll(() => cashCodes(page))
+    .toEqual(["1050", "1000", "1030", "1099"]);
+  await expect(page.getByTestId("cash-row-1030")).toContainText("$300.00");
+  for (const name of [
+    "Home Reserve",
+    "Kids Activities",
+    "Checking",
+    "Extra bank",
+  ])
+    await rowMenu(page, name, "Hide account");
+  await expect(page.getByText("All accounts are hidden.")).toBeVisible();
+  await page.getByRole("button", { name: "Hidden accounts (4)" }).click();
+  await page
+    .getByRole("menuitem", { name: "Show Checking", exact: true })
+    .click();
+  await expect(page.getByTestId("cash-row-1000")).toBeVisible();
+  expect(await noPageScroll(page)).toBe(true);
+});
+
+test("server arrangement is shared by independent devices, with conflict rollback and reload", async ({
+  page,
+  browser,
+}) => {
+  let view = { order: [] as string[], hidden: [] as string[], revision: "0" };
+  const connect = async (p: import("@playwright/test").Page) => {
+    await connectedHousehold(p);
+    await p.route("**/api/config", (r) =>
+      r.fulfill({
+        json: {
+          demo: false,
+          cashViews: true,
+          forecasts: { example: ["baseline"] },
+        },
+      }),
+    );
+    await p.route("**/api/books/companies/example/cash-view", (r) => {
+      if (r.request().method() === "POST") {
+        const input = r.request().postDataJSON();
+        if (input.revision !== view.revision)
+          return r.fulfill({
+            status: 409,
+            json: {
+              error:
+                "Account arrangement changed elsewhere. Reload to try again.",
+            },
+          });
+        view = { ...input, revision: String(Number(view.revision) + 1) };
+      }
+      return r.fulfill({ json: view });
+    });
+    await p.goto("/");
+    await expect(
+      p.getByRole("button", { name: "Reorder Checking", exact: true }),
+    ).toBeEnabled();
+    await expect(p.getByTestId("cash-row-1099")).toBeVisible();
+  };
+  const context = await browser.newContext();
+  const other = await context.newPage();
+  try {
+    await connect(page);
+    await connect(other);
+    await rowMenu(page, "Checking", "Hide account");
+    await rowMenu(other, "Home Reserve", "Move up");
+    await expect(
+      other.getByRole("alert").filter({ hasText: "changed elsewhere" }),
+    ).toBeVisible();
+    await expect
+      .poll(() => cashCodes(other))
+      .toEqual(["1000", "1050", "1030", "1099"]);
+    await other.getByRole("button", { name: "Reload arrangement" }).click();
+    await expect(other.getByTestId("cash-row-1000")).toHaveCount(0);
+    await rowMenu(other, "Kids Activities", "Move up");
+    await page.reload();
+    await expect.poll(() => cashCodes(page)).toEqual(["1030", "1050", "1099"]);
+    await expect(page.getByTestId("cash-row-1000")).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("hidden accounts retain budgets and assignments when visible budgets change", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  const budget = {
+    can_edit: true,
+    months: ["2026-07", "2026-08"],
+    from: "2026-07-01",
+    to: "2026-08-31",
+    rows: [
+      {
+        account: "1000",
+        average: "15000",
+        monthly: "20000",
+        count: 1,
+        months: ["15000", "15000"],
+      },
+    ],
+    unassigned: { average: "0", count: 0 },
+    expenses: [],
+    plan: {
+      revision: "one",
+      buckets: [
+        { account: "1000", monthly: "20000", expense_accounts: ["5000"] },
+      ],
+      assignments: [{ journal: "purchase", line: 1, bucket: "1000" }],
+    },
+    accounts: [
+      { code: "1000", name: "Checking", type: "ASSET", subtype: "BANK" },
+      { code: "5000", name: "Groceries", type: "EXPENSE", subtype: "" },
+    ],
+  };
+  await page.route("**/api/books/companies/example/budget", (r) =>
+    r.fulfill({ json: budget }),
+  );
+  let saved: typeof budget.plan | undefined;
+  await page.route("**/api/books/companies/example/budget/save", (r) => {
+    saved = r.request().postDataJSON().plan;
+    return r.fulfill({ json: { ...budget, plan: saved } });
+  });
+  await page.goto("/");
+  await rowMenu(page, "Checking", "Hide account");
+  await page
+    .getByRole("button", { name: /^Edit monthly budget for Kids Activities,/ })
+    .click();
+  await page
+    .getByRole("textbox", {
+      name: "Monthly budget for Kids Activities",
+      exact: true,
+    })
+    .fill("35");
+  await expect(
+    page.getByRole("button", { name: "Hidden accounts (1)" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Save budgets", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Save budgets", exact: true }),
+  ).toHaveCount(0);
+  expect(saved!.buckets.find((b) => b.account === "1000")).toEqual(
+    budget.plan.buckets[0],
+  );
+  expect(saved!.assignments).toEqual(budget.plan.assignments);
+  await expect(page.getByTestId("cash-row-1000")).toHaveCount(0);
 });

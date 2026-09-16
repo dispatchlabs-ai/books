@@ -23,6 +23,7 @@ type Config = {
   session?: boolean;
   demo: boolean;
   forecasts?: Record<string, string[]>;
+  cashViews?: boolean;
 };
 
 function selectedCompanyKey(demo: boolean) {
@@ -236,6 +237,8 @@ function Workspace({
       <main id="main" className="cash-workspace">
         <Cash
           company={config.demo ? "" : company.key}
+          viewScope={`${config.demo ? "demo" : "connected"}:${company.key}`}
+          sharedView={!!config.cashViews}
           currency={company.currency}
           forecast={forecast}
           snapshot={snapshot}

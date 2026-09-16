@@ -1,5 +1,6 @@
 import { createSessionAuth } from "./session-auth.mjs";
 import { createFeedback } from "./feedback.mjs";
+import { createCashViews } from "./cash-views.mjs";
 import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -26,6 +27,7 @@ export function createBooksWebServer(config = {}) {
     forecastPlans = {},
     sessionAuth,
     feedback,
+    cashViewsFile,
   } = config;
   if (Boolean(upstream) !== Boolean(token))
     throw new Error("Set both BOOKS_API_URL and BOOKS_API_TOKEN_FILE.");
@@ -68,6 +70,31 @@ export function createBooksWebServer(config = {}) {
     throw new Error("Feedback requires session login.");
   const authenticate = sessionAuth ? createSessionAuth(sessionAuth) : null;
   const feedbackHandler = feedback ? createFeedback(feedback) : null;
+  const cashViewsHandler =
+    cashViewsFile && upstream
+      ? createCashViews({
+          file: cashViewsFile,
+          authorize: async (company) => {
+            const response = await fetcher(
+              upstream.replace(/\/$/, "") + "/v1/companies",
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                redirect: "error",
+                signal: AbortSignal.timeout(30000),
+              },
+            );
+            const body = await response.json();
+            if (
+              !response.ok ||
+              body.schema !== "books.api/v1" ||
+              body.ok !== true ||
+              !Array.isArray(body.data)
+            )
+              throw new Error("Could not verify entity access.");
+            return body.data.some((entry) => entry.key === company);
+          },
+        })
+      : null;
   return createServer(async (req, res) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "same-origin");
@@ -109,6 +136,7 @@ export function createBooksWebServer(config = {}) {
       if (authenticate && (await authenticate(req, res, url, publicOrigin)))
         return;
       if (feedbackHandler && (await feedbackHandler(req, res, url))) return;
+      if (cashViewsHandler && (await cashViewsHandler(req, res, url))) return;
       if (url.pathname === "/feedback") {
         res.writeHead(303, { Location: "/feedback/" });
         res.end();
@@ -120,6 +148,7 @@ export function createBooksWebServer(config = {}) {
         return json(res, 200, {
           ...(sessionAuth ? { session: true } : {}),
           demo: !upstream,
+          ...(cashViewsHandler ? { cashViews: true } : {}),
           agent: Boolean(upstream && agentURL),
           // Scenario names only; operator file paths never leave the server.
           forecasts: upstream
@@ -381,6 +410,7 @@ if (
     feedback: process.env.BOOKS_WEB_FEEDBACK_FILE
       ? JSON.parse(await readFile(process.env.BOOKS_WEB_FEEDBACK_FILE, "utf8"))
       : undefined,
+    cashViewsFile: process.env.BOOKS_WEB_CASH_VIEWS_FILE,
     publicOrigin: process.env.BOOKS_WEB_ORIGIN,
     proxyToken: await secret("BOOKS_WEB_PROXY_TOKEN_FILE"),
     upstream: process.env.BOOKS_API_URL,

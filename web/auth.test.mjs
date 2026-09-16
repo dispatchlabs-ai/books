@@ -84,6 +84,7 @@ test("session boundary, feedback persistence, rejection paths and logout", async
     assert.match(await page.text(), /Sign in to Books/);
     for (const path of [
       "/api/config",
+      "/api/books/companies/example/cash-view",
       "/api/books/companies",
       "/feedback/api/items",
     ])

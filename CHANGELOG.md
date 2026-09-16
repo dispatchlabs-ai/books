@@ -8,6 +8,10 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Arrange Cash accounts by dragging rows, hide accounts and restore them from the
+  same table. Optional server storage shares arrangements per entity across
+  devices, with stale-save protection and no changes to financial records.
+
 - Keep the Cash viewport and account rows in place when entering or cancelling
   budget editing.
 

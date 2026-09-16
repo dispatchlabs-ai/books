@@ -18,8 +18,9 @@ quarter selector, or always-open detail panel.
 - Rolling horizons contain today and the next 6, 29, or 364 calendar days.
 - Negative means end-of-day cash below zero, independently of reserve floors.
   Card liabilities are excluded. Intraday overdrafts are not assessed.
-- Sort known shortfalls by first date, then by account name. Reserved bank
-  accounts stay visible. Rows are informational and do not navigate to
+- Default to known shortfalls by first date, then by account name. A saved
+  manual order takes precedence across horizons. Reserved banks follow the same
+  optional hide/restore controls as other bank accounts. Rows are informational and do not navigate to
   unapproved detail screens.
 - Cash now comes from the posted ledger through today, not a live bank balance.
   The balance request always ends at today.
@@ -66,3 +67,17 @@ is introduced. The September 15 concept and initial September 16 Sheet remain
 historical evidence. The maintainer accepted the Cash layout and requested this
 replacement for the budget editor, then requested direct activation from the
 budget amount instead of a separate Edit budgets button.
+
+## Account arrangement refinement
+
+The maintainer requested a manual account order to reflect money arriving and
+being distributed, plus the ability to hide accounts. Drag handles and shadcn
+row menus provide these actions in Cash; the Hidden accounts menu restores rows.
+No separate management screen is introduced. New banks append after saved ones,
+and hidden banks keep their saved slots. The configured web facade stores one
+revisioned arrangement per entity, shared across devices as requested. Local
+previews and demo mode use separate browser preferences.
+
+This supersedes automatic shortfall ordering only after a manual order is saved.
+It is presentation, not a funding dependency graph or transfer instruction.
+Hiding a row preserves its balances, forecast data, budget and assignments.

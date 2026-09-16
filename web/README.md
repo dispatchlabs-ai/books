@@ -40,7 +40,7 @@ for credentials. The browser receives neither the token nor upstream URLs.
 Remote API connections require HTTPS. The web server itself listens only on
 loopback, validates Host/Origin, uses a same-origin CSP, disables caching, and
 allows only entity listing, two read-only report routes and configured cash
-forecasts. It is a single-operator client. For hosted use, set
+forecasts, monthly budget operations, and optional display preferences. It is a single-operator client. For hosted use, set
 `BOOKS_WEB_ORIGIN` to the exact HTTPS origin and `BOOKS_WEB_PROXY_TOKEN_FILE` to
 a private random token of at least 32 characters. Hosted mode requires a
 connected API and rejects every request without the configured Host and proxy
@@ -87,6 +87,37 @@ Click a target amount or **Not set** to edit in the Cash table with Save and Can
 controls; spending assignments expand below it. The last accessible entity is remembered across
 reloads when browser storage is available, separately for demo and connected use.
 
+## Account order and visibility
+
+Drag an account's handle to set its place in Cash. Its row menu also offers
+Move up, Move down and Hide account. **Hidden accounts** restores individual
+rows, including when all accounts are hidden. Keyboard users can use the menu,
+or focus a handle, press Space, move with arrow keys and press Space to drop
+(Escape cancels). Arrangement changes save immediately. While budgets are being
+edited, arrangement controls are disabled so the editor stays in place.
+
+For persistence across devices, set the web server's
+`BOOKS_WEB_CASH_VIEWS_FILE` to an absolute private JSON path outside the checkout.
+The parent directory must be writable by the web process. The facade creates
+this mode-0600 file on the first save; preserve it during upgrades and include
+it in private backups. One process owns this store. Demo and local setups
+without this option remember arrangements only in browser storage, separately
+for each entity and connection mode.
+
+The facade exposes GET and POST `/api/books/companies/{key}/cash-view` only when
+configured with a connected API and this file. GET returns `order`, `hidden`
+(account-code arrays) and `revision`. POST requires the current revision and
+returns the saved view; a stale save returns 409. Arrays accept at most 10,000
+unique opaque account-code strings of 1–128 characters. The JSON body is limited to 256,000 bytes. Both methods require
+access to the entity through the web principal and the existing site session
+when configured. All authorized visitors share the single operator's view.
+An unreadable/corrupt store fails visibly; no automatic reset discards it.
+
+The saved order applies to every horizon. New accounts appear at the end;
+hidden and temporarily absent accounts retain their places. Hiding affects
+only this table: balances, forecasts, budget targets and spending assignments
+are preserved. It neither archives an account nor changes funding calculations.
+
 ## Components and maintenance
 
 Components in `src/components/ui` were installed through shadcn CLI 4.21.0,
@@ -100,7 +131,12 @@ historical, not approval of additional screens.
 React/TypeScript supplies the interactive view; Vite and Tailwind compile static
 assets; Radix provides accessible tabs, menus, selects and disclosures;
 Geist and Lucide keep typography and icons consistent. Cash trends use
-exact-integer inputs scaled into SVG coordinates. Vitest, Node tests, and
+exact-integer inputs scaled into SVG coordinates. The MIT-licensed
+`@dnd-kit/react` and `@dnd-kit/helpers` 0.5.0 supply pointer/touch/keyboard sorting
+and accessible drag announcements, composed with shadcn controls. This avoids
+maintaining a custom drag sensor and adds roughly 38 KB gzip to the main bundle.
+They run in the browser without network access; review their pre-1.0 API and
+rerun pointer, keyboard, cancellation and narrow-layout checks on upgrades. Vitest, Node tests, and
 Playwright validate money, isolation, transport, and user flows. These
 dependencies are actively published packages from the npm registry; the lockfile
 pins the resolved versions. The Node facade uses built-in HTTP/fetch APIs and

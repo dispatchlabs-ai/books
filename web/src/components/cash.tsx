@@ -34,6 +34,17 @@ import {
   type Snapshot,
 } from "@/lib/books";
 import type { ForecastState } from "@/lib/use-forecast";
+import { DragDropProvider } from "@dnd-kit/react";
+import { move } from "@dnd-kit/helpers";
+import { Eye } from "lucide-react";
+import { CashAccountRow } from "@/components/cash-account-row";
+import { orderedAccounts, reorderedView, useCashView } from "@/lib/cash-view";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 function Sparkline({ points }: { points: { date: string; value: bigint }[] }) {
   const id = useId();
@@ -105,6 +116,8 @@ const Missing = ({ children = "—" }: { children?: ReactNode }) => (
 
 export function Cash({
   company,
+  viewScope,
+  sharedView,
   currency,
   forecast,
   snapshot,
@@ -113,6 +126,8 @@ export function Cash({
   onBudgetEditingChange,
 }: {
   company: string;
+  viewScope: string;
+  sharedView: boolean;
   currency: string;
   forecast: ForecastState;
   snapshot?: Snapshot;
@@ -130,6 +145,8 @@ export function Cash({
   const budgetButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const editOrigin = useRef("");
   const headingRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const hiddenTriggerRef = useRef<HTMLButtonElement>(null);
   const wasEditing = useRef(false);
   const editing = !!draft;
   const saveErrorRef = useRef<HTMLParagraphElement>(null);
@@ -161,6 +178,7 @@ export function Cash({
   }, [saveError, invalidAccount, focusEditorElement]);
   const now = today();
   const budgets = useBudget(company, snapshot?.fetchedAt);
+  const accountView = useCashView(company, sharedView, viewScope);
   const data = forecast.data;
   const result = data ? cashWindow(data, horizon, now) : undefined;
   const banks = snapshot?.accounts.filter((a) => a.kind === "BANK") ?? [];
@@ -178,6 +196,33 @@ export function Cash({
       .map((b) => ({ code: b.code, name: b.name, balance: b.balance })),
   ];
   const budgetRows = new Map(budgets.data?.rows.map((r) => [r.account, r]));
+  const orderedRows = orderedAccounts(rows, accountView.view.order);
+  const hiddenRows = orderedRows.filter((r) =>
+    accountView.view.hidden.includes(r.code),
+  );
+  const [dragRows, setDragRows] = useState<CashRow[]>();
+  const visibleRows =
+    dragRows ??
+    orderedRows.filter((r) => !accountView.view.hidden.includes(r.code));
+  const layoutDisabled = editing || accountView.saving || !accountView.ready;
+  const reorderRows = (codes: string[]) =>
+    accountView.update(
+      reorderedView(
+        accountView.view,
+        orderedRows.map((r) => r.code),
+        codes,
+      ),
+    );
+  const focusRow = (code?: string, reveal = false) => {
+    const row = Array.from(
+      tableRef.current?.querySelectorAll("tbody tr") ?? [],
+    ).find((el) => el.getAttribute("data-testid") === `cash-row-${code}`);
+    const target =
+      row?.querySelector<HTMLButtonElement>("button") ??
+      hiddenTriggerRef.current;
+    if (reveal) focusEditorElement(target);
+    else target?.focus({ preventScroll: true });
+  };
   const bankOptions = [
     ...new Map(
       [...rows, ...banks].map((b) => [b.code, { code: b.code, name: b.name }]),
@@ -292,10 +337,7 @@ export function Cash({
               ))}
             </TabsList>
             {draft && (
-              <div
-                className="budget-actions"
-                aria-label="Budget actions"
-              >
+              <div className="budget-actions" aria-label="Budget actions">
                 <Button
                   variant="outline"
                   size="sm"
@@ -321,6 +363,58 @@ export function Cash({
           >
             {saveError}
           </p>
+        )}
+        {accountView.error && (
+          <p role="alert" className="cash-notice">
+            {accountView.error}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={editing || accountView.saving}
+              onClick={accountView.reload}
+            >
+              Reload arrangement
+            </Button>
+          </p>
+        )}
+        {hiddenRows.length > 0 && (
+          <div className="cash-hidden-accounts">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  ref={hiddenTriggerRef}
+                  variant="ghost"
+                  size="sm"
+                  disabled={layoutDisabled}
+                >
+                  <Eye />
+                  Hidden accounts ({hiddenRows.length})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="w-72 max-w-[calc(100vw-40px)]"
+              >
+                {hiddenRows.map((row) => (
+                  <DropdownMenuItem
+                    key={row.code}
+                    onSelect={async () => {
+                      const saved = await accountView.update({
+                        ...accountView.view,
+                        hidden: accountView.view.hidden.filter(
+                          (code) => code !== row.code,
+                        ),
+                      });
+                      if (saved)
+                        requestAnimationFrame(() => focusRow(row.code, true));
+                    }}
+                  >
+                    <span className="whitespace-normal">Show {row.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
         {horizons.map((h) => (
           <TabsContent key={h} value={h}>
@@ -358,168 +452,218 @@ export function Cash({
                 No forecast for this entity. Future shortfalls are unknown.
               </p>
             )}
-            <Table className="cash-table" aria-label="Bank accounts">
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Account</TableHead>
-                  <TableHead scope="col">Cash now</TableHead>
-                  <TableHead scope="col">
-                    2-month avg<span>/ month</span>
-                  </TableHead>
-                  <TableHead scope="col">
-                    Budget<span>/ month</span>
-                  </TableHead>
-                  <TableHead scope="col">Trend</TableHead>
-                  <TableHead scope="col">First below zero</TableHead>
-                  <TableHead scope="col">Lowest balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const p = row.projection,
-                    b = budgetRows.get(row.code);
-                  return (
-                    <TableRow
-                      key={row.code}
-                      data-shortfall={!!p?.first}
-                      data-testid={`cash-row-${row.code}`}
-                    >
-                      <TableCell className="cash-account" data-label="Account">
-                        <span className="account-name">{row.name}</span>
-                        {row.reserved && (
-                          <span className="account-meta">Reserve</span>
-                        )}
-                      </TableCell>
-                      <TableCell
-                        data-label="Cash now"
-                        className={`cash-current amount ${row.balance !== undefined && BigInt(row.balance) < 0n ? "cash-negative" : ""}`}
+            <DragDropProvider
+              onDragStart={() => setDragRows(visibleRows)}
+              onDragEnd={(event) => {
+                setDragRows(undefined);
+                if (event.canceled || layoutDisabled) return;
+                const codes = visibleRows.map((row) => row.code);
+                const next = move(codes, event);
+                if (next.some((code, i) => code !== codes[i]))
+                  void reorderRows(next);
+              }}
+            >
+              <Table
+                ref={tableRef}
+                className="cash-table"
+                aria-label="Bank accounts"
+              >
+                <TableHeader>
+                  <TableRow>
+                    <TableHead scope="col">Account</TableHead>
+                    <TableHead scope="col">Cash now</TableHead>
+                    <TableHead scope="col">
+                      2-month avg<span>/ month</span>
+                    </TableHead>
+                    <TableHead scope="col">
+                      Budget<span>/ month</span>
+                    </TableHead>
+                    <TableHead scope="col">Trend</TableHead>
+                    <TableHead scope="col">First below zero</TableHead>
+                    <TableHead scope="col">Lowest balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleRows.map((row, index) => {
+                    const p = row.projection,
+                      b = budgetRows.get(row.code);
+                    return (
+                      <CashAccountRow
+                        key={row.code}
+                        code={row.code}
+                        name={row.name}
+                        reserved={row.reserved}
+                        index={index}
+                        count={visibleRows.length}
+                        disabled={layoutDisabled}
+                        shortfall={!!p?.first}
+                        onHide={async () => {
+                          const saved = await accountView.update({
+                            ...accountView.view,
+                            hidden: [...accountView.view.hidden, row.code],
+                          });
+                          if (saved)
+                            requestAnimationFrame(() =>
+                              focusRow(
+                                visibleRows[index + 1]?.code ??
+                                  visibleRows[index - 1]?.code,
+                              ),
+                            );
+                        }}
+                        onMove={(delta) => {
+                          const codes = visibleRows.map((r) => r.code);
+                          const target = index + delta;
+                          if (target < 0 || target >= codes.length) return;
+                          [codes[index], codes[target]] = [
+                            codes[target],
+                            codes[index],
+                          ];
+                          void reorderRows(codes);
+                        }}
                       >
-                        {ledgerError || row.balance === undefined ? (
-                          <Missing>Unavailable</Missing>
-                        ) : (
-                          money(row.balance, currency)
-                        )}
-                      </TableCell>
-                      <TableCell
-                        data-label="2-month avg / mo"
-                        className="amount"
-                      >
-                        {b ? (
-                          money(b.average, currency)
-                        ) : (
-                          <Missing>
-                            {budgets.error
-                              ? "Unavailable"
-                              : budgets.data
-                                ? "Not assigned"
-                                : "—"}
-                          </Missing>
-                        )}
-                      </TableCell>
-                      <TableCell data-label="Budget / mo" className="amount">
-                        {draft ? (
-                          <Input
-                            ref={(node) => {
-                              if (node) inputRefs.current.set(row.code, node);
-                              else inputRefs.current.delete(row.code);
-                            }}
-                            aria-label={`Monthly budget for ${row.name}`}
-                            aria-invalid={
-                              invalidAccount === row.code || undefined
-                            }
-                            aria-describedby={
-                              invalidAccount === row.code ? errorId : undefined
-                            }
-                            className="budget-amount-input"
-                            inputMode="decimal"
-                            placeholder="Not set"
-                            value={amounts[row.code] ?? ""}
-                            disabled={saving}
-                            onChange={(e) =>
-                              setAmounts((current) => ({
-                                ...current,
-                                [row.code]: e.target.value,
-                              }))
-                            }
-                          />
-                        ) : budgets.data?.can_edit ? (
-                          <Button
-                            ref={(node) => {
-                              if (node)
-                                budgetButtonRefs.current.set(row.code, node);
-                              else budgetButtonRefs.current.delete(row.code);
-                            }}
-                            variant="ghost"
-                            className="budget-amount-trigger"
-                            aria-label={`Edit monthly budget for ${row.name}, ${b?.monthly != null ? money(b.monthly, currency) : "not set"}`}
-                            onClick={() => beginEditing(row.code)}
-                          >
-                            {b?.monthly != null ? (
-                              money(b.monthly, currency)
-                            ) : (
-                              <Missing>Not set</Missing>
-                            )}
-                          </Button>
-                        ) : b?.monthly != null ? (
-                          money(b.monthly, currency)
-                        ) : (
-                          <Missing>
-                            {budgets.error
-                              ? "Unavailable"
-                              : budgets.data
-                                ? "Not set"
-                                : "—"}
-                          </Missing>
-                        )}
-                      </TableCell>
-                      <TableCell className="cash-trend">
-                        {p ? <Sparkline points={p.points} /> : <Missing />}
-                      </TableCell>
-                      <TableCell
-                        data-label="First below zero"
-                        className={p?.first ? "cash-negative" : "cash-status"}
-                      >
-                        {p?.first ? (
-                          <span className="shortfall-date">
-                            <span aria-hidden="true" />
-                            {dateLabel(p.first)}
-                          </span>
-                        ) : p?.complete ? (
-                          <>
-                            <span aria-hidden="true">—</span>
-                            <span className="sr-only">
-                              No shortfall in this period
+                        <TableCell
+                          data-label="Cash now"
+                          className={`cash-current amount ${row.balance !== undefined && BigInt(row.balance) < 0n ? "cash-negative" : ""}`}
+                        >
+                          {ledgerError || row.balance === undefined ? (
+                            <Missing>Unavailable</Missing>
+                          ) : (
+                            money(row.balance, currency)
+                          )}
+                        </TableCell>
+                        <TableCell
+                          data-label="2-month avg / mo"
+                          className="amount"
+                        >
+                          {b ? (
+                            money(b.average, currency)
+                          ) : (
+                            <Missing>
+                              {budgets.error
+                                ? "Unavailable"
+                                : budgets.data
+                                  ? "Not assigned"
+                                  : "—"}
+                            </Missing>
+                          )}
+                        </TableCell>
+                        <TableCell data-label="Budget / mo" className="amount">
+                          {draft ? (
+                            <Input
+                              ref={(node) => {
+                                if (node) inputRefs.current.set(row.code, node);
+                                else inputRefs.current.delete(row.code);
+                              }}
+                              aria-label={`Monthly budget for ${row.name}`}
+                              aria-invalid={
+                                invalidAccount === row.code || undefined
+                              }
+                              aria-describedby={
+                                invalidAccount === row.code
+                                  ? errorId
+                                  : undefined
+                              }
+                              className="budget-amount-input"
+                              inputMode="decimal"
+                              placeholder="Not set"
+                              value={amounts[row.code] ?? ""}
+                              disabled={saving}
+                              onChange={(e) =>
+                                setAmounts((current) => ({
+                                  ...current,
+                                  [row.code]: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : budgets.data?.can_edit ? (
+                            <Button
+                              ref={(node) => {
+                                if (node)
+                                  budgetButtonRefs.current.set(row.code, node);
+                                else budgetButtonRefs.current.delete(row.code);
+                              }}
+                              variant="ghost"
+                              className="budget-amount-trigger"
+                              aria-label={`Edit monthly budget for ${row.name}, ${b?.monthly != null ? money(b.monthly, currency) : "not set"}`}
+                              disabled={
+                                accountView.saving ||
+                                (!accountView.ready && !accountView.error) ||
+                                !!dragRows
+                              }
+                              onClick={() => beginEditing(row.code)}
+                            >
+                              {b?.monthly != null ? (
+                                money(b.monthly, currency)
+                              ) : (
+                                <Missing>Not set</Missing>
+                              )}
+                            </Button>
+                          ) : b?.monthly != null ? (
+                            money(b.monthly, currency)
+                          ) : (
+                            <Missing>
+                              {budgets.error
+                                ? "Unavailable"
+                                : budgets.data
+                                  ? "Not set"
+                                  : "—"}
+                            </Missing>
+                          )}
+                        </TableCell>
+                        <TableCell className="cash-trend">
+                          {p ? <Sparkline points={p.points} /> : <Missing />}
+                        </TableCell>
+                        <TableCell
+                          data-label="First below zero"
+                          className={p?.first ? "cash-negative" : "cash-status"}
+                        >
+                          {p?.first ? (
+                            <span className="shortfall-date">
+                              <span aria-hidden="true" />
+                              {dateLabel(p.first)}
                             </span>
-                          </>
-                        ) : (
-                          <Missing>{p ? "Incomplete" : "No forecast"}</Missing>
-                        )}
-                      </TableCell>
-                      <TableCell
-                        data-label="Lowest balance"
-                        className={`amount ${p?.low !== undefined && p.low < 0n ? "cash-negative" : ""}`}
-                      >
-                        {p?.low === undefined ? (
-                          <Missing />
-                        ) : (
-                          <>
-                            {money(p.low, currency)}
-                            {!p.complete && (
-                              <span
-                                className="partial-marker"
-                                aria-label="Available dates only"
-                              >
-                                *
+                          ) : p?.complete ? (
+                            <>
+                              <span aria-hidden="true">—</span>
+                              <span className="sr-only">
+                                No shortfall in this period
                               </span>
-                            )}
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                            </>
+                          ) : (
+                            <Missing>
+                              {p ? "Incomplete" : "No forecast"}
+                            </Missing>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          data-label="Lowest balance"
+                          className={`amount ${p?.low !== undefined && p.low < 0n ? "cash-negative" : ""}`}
+                        >
+                          {p?.low === undefined ? (
+                            <Missing />
+                          ) : (
+                            <>
+                              {money(p.low, currency)}
+                              {!p.complete && (
+                                <span
+                                  className="partial-marker"
+                                  aria-label="Available dates only"
+                                >
+                                  *
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </TableCell>
+                      </CashAccountRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </DragDropProvider>
+            {rows.length > 0 && visibleRows.length === 0 && (
+              <p className="cash-notice">All accounts are hidden.</p>
+            )}
             {!rows.length && (
               <p role="status" className="py-12 text-sm text-muted-foreground">
                 {!snapshot && !ledgerError

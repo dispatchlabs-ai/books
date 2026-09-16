@@ -371,6 +371,40 @@
   text-align: left;
   white-space: normal;
 }
+.cash-account-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cash-account-label {
+  flex: 1;
+  min-width: 0;
+}
+.cash-drag-handle,
+.cash-row-menu {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.cash-drag-handle {
+  cursor: grab !important;
+  touch-action: none;
+}
+.cash-drag-handle:active {
+  cursor: grabbing !important;
+}
+.cash-drag-handle:disabled {
+  cursor: default !important;
+}
+.cash-table tr[data-dragging="true"] {
+  background: var(--background);
+  box-shadow: 0 3px 14px #00000018;
+}
+.cash-hidden-accounts {
+  margin-bottom: 12px;
+}
+.cash-hidden-accounts > button {
+  color: var(--muted-foreground);
+}
 .account-name {
   font-weight: 480;
   line-height: 1.45;
