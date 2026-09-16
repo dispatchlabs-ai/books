@@ -86,28 +86,17 @@ Set `BOOKS_FORECAST_PLANS_FILE` on the web server to an operator-owned JSON file
 {"example":{"baseline":"/private/example-baseline.json","funded":"/private/example-funded.json"}}
 ```
 
-Entities with configured plans get an **Outlook** page. It first answers whether
-expected income covers planned spending in each full calendar month, then shows
-how reserve balance changes and transfer timing affect other balances, which
-bank accounts fall below their floor, and the daily per-account balances with movements, evidence, assumptions
-and actual-versus-expected differences. The Overview links to it with a short
-summary that stays separate from posted accounting.
-
-In that summary, income is every bank inflow. Spending is every outflow,
-including card purchases, less card refunds/credits; card payments and other
-transfers within the plan are never spending. Money leaving for an account
-outside the plan is an outflow and counts as spending. Reserve figures are net
-balance changes, including reserve-paid expenses, not contribution totals.
-Transfers use departure for the source and arrival for the destination; the
-change in transit reconciles monthly surplus to reserve and other balances.
-Partial, ended and unplanned months are visible but excluded from the answer
-and averages. The [Outlook design](design/forward-outlook/README.md) defines each
-term; these are views of the same result, not a separate budget.
+Cash uses the first scenario configured for the selected entity. It does not
+provide scenario switching, a separate Outlook page, or account-detail screens.
+Those experimental browser views were removed in the September 16
+simplification; the earlier [Outlook design](design/forward-outlook/README.md)
+remains a historical record of that interpretation. The calculation operations
+are unchanged.
 
 Full reserve-goal affordability is not established by proposed funding. The v1
-plan has no structured reserve targets, contribution schedules or cap rules;
-Outlook prominently states this limitation in every scenario. Personal targets
-must not be hardcoded into the generic interface.
+plan has no structured reserve targets, contribution schedules or cap rules.
+Cash shows only known end-of-day shortfalls and projected lows; it does not
+claim to assess reserve-goal affordability.
 
 `/api/config` lists each entity's scenario names so the interface knows where a
 plan exists. The web server reads only the configured file paths and invokes the

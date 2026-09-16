@@ -1,8 +1,15 @@
+import { useState, useId, type ReactNode } from "react";
 import { useBudget } from "@/lib/budget";
 import { BudgetEditor } from "@/components/budgets";
-import { useState, useId } from "react";
-import { AlertCircle, CheckCircle2, CircleHelp } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { cashWindow, horizons, type Horizon } from "@/lib/cash";
 import {
@@ -16,7 +23,7 @@ import type { ForecastState } from "@/lib/use-forecast";
 
 function Sparkline({ points }: { points: { date: string; value: bigint }[] }) {
   const id = useId();
-  if (!points.length) return <div className="h-10" />;
+  if (!points.length) return <span className="text-muted-foreground">—</span>;
   const values = points.map((p) => p.value);
   const min = values.reduce((a, b) => (a < b ? a : b), 0n),
     max = values.reduce((a, b) => (a > b ? a : b), 0n);
@@ -30,11 +37,7 @@ function Sparkline({ points }: { points: { date: string; value: bigint }[] }) {
     )
     .join(" ");
   return (
-    <svg
-      viewBox="0 0 320 40"
-      className="mt-2 h-10 w-full max-w-80"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 320 40" className="cash-sparkline" aria-hidden="true">
       <defs>
         <clipPath id={id}>
           <rect x="0" y={zero} width="301" height={40 - zero} />
@@ -43,14 +46,23 @@ function Sparkline({ points }: { points: { date: string; value: bigint }[] }) {
       <path
         d={`M0,${zero} H301`}
         stroke="#a1a1aa"
-        strokeDasharray="3 3"
+        strokeDasharray="2 3"
+        strokeWidth="0.5"
+        vectorEffect="non-scaling-stroke"
         fill="none"
       />
-      <path d={path} stroke="#334155" strokeWidth="1.5" fill="none" />
+      <path
+        d={path}
+        stroke="#334155"
+        strokeWidth="1.2"
+        vectorEffect="non-scaling-stroke"
+        fill="none"
+      />
       <path
         d={path}
         stroke="#dc2626"
-        strokeWidth="1.5"
+        strokeWidth="1.2"
+        vectorEffect="non-scaling-stroke"
         fill="none"
         clipPath={`url(#${id})`}
       />
@@ -65,20 +77,32 @@ function Sparkline({ points }: { points: { date: string; value: bigint }[] }) {
     </svg>
   );
 }
+
+type CashRow = {
+  code: string;
+  name: string;
+  balance?: string;
+  reserved?: boolean;
+  projection?: ReturnType<typeof cashWindow>["rows"][number];
+};
+const Missing = ({ children = "—" }: { children?: ReactNode }) => (
+  <span className="text-muted-foreground font-normal">{children}</span>
+);
+
 export function Cash({
   company,
+  currency,
   forecast,
   snapshot,
-  onAccount,
   ledgerError,
   retryLedger,
 }: {
   company: string;
-  ledgerError: string;
-  retryLedger: () => void;
+  currency: string;
   forecast: ForecastState;
   snapshot?: Snapshot;
-  onAccount: (code: string) => void;
+  ledgerError: string;
+  retryLedger: () => void;
 }) {
   const [horizon, setHorizon] = useState<Horizon>("month");
   const now = today();
@@ -86,327 +110,261 @@ export function Cash({
   const data = forecast.data;
   const result = data ? cashWindow(data, horizon, now) : undefined;
   const banks = snapshot?.accounts.filter((a) => a.kind === "BANK") ?? [];
+  const planned = new Set(result?.rows.map((r) => r.account.code));
+  const rows: CashRow[] = [
+    ...(result?.rows.map((r) => ({
+      code: r.account.code,
+      name: r.account.name,
+      reserved: r.account.reserved,
+      balance: banks.find((b) => b.code === r.account.code)?.balance,
+      projection: r,
+    })) ?? []),
+    ...banks
+      .filter((b) => !planned.has(b.code))
+      .map((b) => ({ code: b.code, name: b.name, balance: b.balance })),
+  ];
+  const budgetRows = new Map(budgets.data?.rows.map((r) => [r.account, r]));
+  const bankOptions = [
+    ...new Map(
+      [...rows, ...banks].map((b) => [b.code, { code: b.code, name: b.name }]),
+    ).values(),
+  ];
+  const incomplete = result?.rows.some((r) => !r.complete);
+  const period = result ? rangeLabel(now, result.through) : "";
+  const averagePeriod = budgets.data?.months
+    .map((m) =>
+      new Date(m + "-15T12:00:00").toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      }),
+    )
+    .join(" – ");
   return (
-    <section
-      className="rounded-xl border bg-white p-4 sm:p-7"
-      aria-label="Cash"
-    >
-      <Tabs value={horizon} onValueChange={(v) => setHorizon(v as Horizon)}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight">Cash</h1>
-          <TabsList aria-label="Cash period" className="h-10!">
-            {horizons.map((h) => (
-              <TabsTrigger
-                key={h}
-                value={h}
-                className="transition-none min-w-16 px-4 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                {h[0].toUpperCase() + h.slice(1)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-        <div className="my-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-          {budgets.data ? (
-            <>
-              <span className="text-muted-foreground">
-                Monthly averages:{" "}
-                {budgets.data.months
-                  .map((m) =>
-                    new Date(m + "-15T12:00:00").toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    }),
-                  )
-                  .join(" – ")}{" "}
-                · Posted spending
-                {budgets.data.unassigned.count > 0
-                  ? ` · ${money(budgets.data.unassigned.average, snapshot?.company.currency ?? "USD")} / month unassigned`
-                  : ""}
-              </span>
-              {budgets.data.can_edit ? (
-                <BudgetEditor
-                  data={budgets.data}
-                  currency={
-                    snapshot?.company.currency ?? data?.plan.currency ?? "USD"
-                  }
-                  banks={
-                    data?.plan.accounts
-                      .filter((a) => a.kind === "bank")
-                      .map((a) => ({ code: a.code, name: a.name })) ?? banks
-                  }
-                  save={budgets.save}
-                />
-              ) : (
-                <span className="text-xs text-muted-foreground">
-                  Read-only budgets
-                </span>
-              )}
-            </>
-          ) : budgets.error ? (
-            <span role="alert">
-              Budgets unavailable.{" "}
-              <Button variant="link" onClick={budgets.retry}>
-                Retry budgets
-              </Button>
-            </span>
-          ) : (
-            <span role="status">
-              {company
-                ? "Loading budgets…"
-                : "Connect a ledger to manage budgets"}
-            </span>
-          )}
+    <section aria-label="Cash">
+      <Tabs
+        value={horizon}
+        onValueChange={(v) => setHorizon(v as Horizon)}
+        className="gap-0"
+      >
+        <div className="cash-heading">
+          <div>
+            <h1>Cash</h1>
+            <p className="cash-period">
+              {period || "Bank accounts"}
+              <span>{currency}</span>
+            </p>
+          </div>
+          <div className="cash-controls">
+            <TabsList aria-label="Cash period" className="cash-tabs">
+              {horizons.map((h) => (
+                <TabsTrigger key={h} value={h}>
+                  {h[0].toUpperCase() + h.slice(1)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {budgets.data?.can_edit && (
+              <BudgetEditor
+                data={budgets.data}
+                currency={currency}
+                banks={bankOptions}
+                save={budgets.save}
+              />
+            )}
+          </div>
         </div>
         {horizons.map((h) => (
           <TabsContent key={h} value={h}>
-            <p className="mb-6 mt-2 text-sm text-muted-foreground">
-              {result
-                ? `${rangeLabel(now, result.through)} · Sorted by first shortfall`
-                : "Bank accounts"}
-            </p>
             {ledgerError && (
-              <div role="alert" className="mb-4 rounded-lg border p-4">
-                Bank balances unavailable: {ledgerError}{" "}
-                <Button variant="outline" onClick={retryLedger}>
+              <div role="alert" className="cash-notice">
+                Bank balances unavailable: {ledgerError}
+                <Button variant="outline" size="sm" onClick={retryLedger}>
                   Retry balances
                 </Button>
               </div>
             )}
-            {forecast.scenario && forecast.loading && (
-              <p role="status" className="py-8">
-                Loading cash forecast…
-              </p>
-            )}
             {forecast.error && (
-              <div role="alert" className="mb-4 rounded-lg border p-4">
-                Forecast unavailable: {forecast.error}{" "}
-                <Button variant="outline" onClick={forecast.retry}>
+              <div role="alert" className="cash-notice">
+                Forecast unavailable: {forecast.error}
+                <Button variant="outline" size="sm" onClick={forecast.retry}>
                   Try again
                 </Button>
               </div>
             )}
-            {data && result ? (
-              <>
-                <div className="hidden grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1.1fr_1fr] gap-5 px-4 pb-3 text-xs text-muted-foreground lg:grid">
-                  <span>Bank account</span>
-                  <span>Cash now</span>
-                  <span>2-month avg / mo</span>
-                  <span>Budget / mo</span>
-                  <span>First below zero</span>
-                  <span className="text-right">Lowest balance</span>
-                </div>
-                <div className="space-y-2">
-                  {result.rows.map((row) => {
-                    const ledger = snapshot?.accounts.find(
-                      (a) => a.code === row.account.code,
-                    );
-                    const negative = !!row.first;
-                    const Icon = negative
-                      ? AlertCircle
-                      : row.complete
-                        ? CheckCircle2
-                        : CircleHelp;
-                    const tone = negative
-                      ? "text-red-700"
-                      : row.complete
-                        ? "text-teal-700"
-                        : "text-muted-foreground";
-                    return (
-                      <button
-                        key={row.account.code}
-                        onClick={() => onAccount(row.account.code)}
-                        className={`grid w-full grid-cols-2 items-start gap-4 rounded-lg border p-4 text-left transition hover:bg-zinc-50 lg:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1.1fr_1fr] lg:gap-5 ${negative ? "border-red-200 bg-red-50/40" : ""}`}
-                      >
-                        <div className="col-span-2 flex min-w-0 gap-3 lg:col-span-1">
-                          <Icon className={`mt-0.5 size-5 shrink-0 ${tone}`} />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium break-words">
-                              {row.account.name}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {row.account.code}
-                              {row.account.reserved ? " · Reserve" : ""}
-                            </p>
-                            <Sparkline points={row.points} />
-                          </div>
-                        </div>
-                        <div>
-                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
-                            Cash now
-                          </span>
-                          <span className="amount font-medium">
-                            {ledger
-                              ? money(ledger.balance, data.plan.currency)
-                              : "Unavailable"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
-                            2-month avg / mo
-                          </span>
-                          <span className="amount font-medium">
-                            {budgets.data?.rows.find(
-                              (b) => b.account === row.account.code,
-                            )
-                              ? money(
-                                  budgets.data.rows.find(
-                                    (b) => b.account === row.account.code,
-                                  )!.average,
-                                  data.plan.currency,
-                                )
-                              : "Not assigned"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
-                            Budget / mo
-                          </span>
-                          <span className="amount font-medium">
-                            {budgets.data?.rows.find(
-                              (b) => b.account === row.account.code,
-                            )?.monthly != null
-                              ? money(
-                                  budgets.data.rows.find(
-                                    (b) => b.account === row.account.code,
-                                  )!.monthly!,
-                                  data.plan.currency,
-                                )
-                              : "Not set"}
-                          </span>
-                        </div>
-                        <div className={`text-sm ${tone}`}>
-                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
-                            First below zero
-                          </span>
-                          {row.first
-                            ? dateLabel(row.first)
-                            : row.complete
-                              ? "Stays at or above zero"
-                              : "Forecast incomplete"}
-                        </div>
-                        <div
-                          className={`col-span-2 text-sm lg:col-span-1 lg:text-right ${tone}`}
-                        >
-                          <span className="mb-1 block text-xs text-muted-foreground lg:hidden">
-                            Lowest balance
-                          </span>
-                          <span className="amount font-medium">
-                            {row.low === undefined
-                              ? "Unavailable"
-                              : money(row.low, data.plan.currency)}
-                          </span>
-                          {!row.complete && row.low !== undefined && (
-                            <span className="mt-1 block text-xs text-muted-foreground">
-                              Available dates only
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {!result.rows.length && <p>No bank accounts in this plan.</p>}
-                {banks
-                  .filter(
-                    (a) => !data.plan.accounts.some((p) => p.code === a.code),
-                  )
-                  .map((a) => (
-                    <button
-                      key={a.code}
-                      onClick={() => onAccount(a.code)}
-                      className="mt-2 flex w-full flex-wrap justify-between gap-4 rounded-lg border p-4 text-left"
-                    >
-                      <span>{a.name}</span>
-                      <span className="amount">
-                        {money(a.balance, data.plan.currency)}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        Not included in forecast
-                      </span>
-                      <span className="text-sm">
-                        2-month avg / mo:{" "}
-                        {budgets.data?.rows.find((b) => b.account === a.code)
-                          ? money(
-                              budgets.data.rows.find(
-                                (b) => b.account === a.code,
-                              )!.average,
-                              data.plan.currency,
-                            )
-                          : "Not assigned"}{" "}
-                        · Budget / mo:{" "}
-                        {budgets.data?.rows.find((b) => b.account === a.code)
-                          ?.monthly != null
-                          ? money(
-                              budgets.data.rows.find(
-                                (b) => b.account === a.code,
-                              )!.monthly!,
-                              data.plan.currency,
-                            )
-                          : "Not set"}
-                      </span>
-                    </button>
-                  ))}
-                <p className="mt-5 text-xs leading-5 text-muted-foreground">
-                  Projected end-of-day balances · {forecast.shown} plan ·
-                  Opening snapshot {dateLabel(data.plan.as_of)}. Cash now is the
-                  posted ledger balance
-                  {snapshot ? ` as of ${dateLabel(snapshot.to)}` : ""}.
-                </p>
-                {result.rows.some((r) => !r.complete) && (
-                  <p role="status" className="mt-2 text-sm text-amber-800">
-                    The forecast does not cover this entire period. Plan ends{" "}
-                    {dateLabel(data.plan.through)},{" "}
-                    {data.plan.through.slice(0, 4)}.
-                  </p>
-                )}
-              </>
-            ) : (
-              !forecast.scenario && (
-                <>
-                  <p className="mb-5 text-sm text-muted-foreground">
-                    No cash forecast is configured for this entity. Future
-                    shortfalls are unknown.
-                  </p>
-                  {banks.map((a) => (
-                    <button
-                      key={a.id}
-                      onClick={() => onAccount(a.code)}
-                      className="mb-2 flex w-full flex-wrap justify-between gap-4 rounded-lg border p-4 text-left"
-                    >
-                      <span>{a.name}</span>
-                      <span className="amount">
-                        {money(a.balance, snapshot!.company.currency)}
-                      </span>
-                      <span className="text-sm">
-                        2-month avg / mo:{" "}
-                        {budgets.data?.rows.find((b) => b.account === a.code)
-                          ? money(
-                              budgets.data.rows.find(
-                                (b) => b.account === a.code,
-                              )!.average,
-                              snapshot!.company.currency,
-                            )
-                          : "Not assigned"}{" "}
-                        · Budget / mo:{" "}
-                        {budgets.data?.rows.find((b) => b.account === a.code)
-                          ?.monthly != null
-                          ? money(
-                              budgets.data.rows.find(
-                                (b) => b.account === a.code,
-                              )!.monthly!,
-                              snapshot!.company.currency,
-                            )
-                          : "Not set"}
-                      </span>
-                    </button>
-                  ))}
-                  {!snapshot && !ledgerError && (
-                    <p role="status">Loading bank accounts…</p>
-                  )}
-                </>
-              )
+            {forecast.scenario && forecast.loading && (
+              <p role="status" className="cash-notice">
+                Loading cash forecast…
+              </p>
             )}
+            {incomplete && (
+              <p role="status" className="cash-notice">
+                Forecast incomplete for this period. Plan ends{" "}
+                {dateLabel(data!.plan.through)},{" "}
+                {data!.plan.through.slice(0, 4)}. Lowest balances use available
+                dates only.
+              </p>
+            )}
+            {!forecast.scenario && (
+              <p className="cash-notice">
+                No forecast for this entity. Future shortfalls are unknown.
+              </p>
+            )}
+            <Table className="cash-table" aria-label="Bank accounts">
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">Account</TableHead>
+                  <TableHead scope="col">Cash now</TableHead>
+                  <TableHead scope="col">
+                    2-month avg<span>/ month</span>
+                  </TableHead>
+                  <TableHead scope="col">
+                    Budget<span>/ month</span>
+                  </TableHead>
+                  <TableHead scope="col">Trend</TableHead>
+                  <TableHead scope="col">First below zero</TableHead>
+                  <TableHead scope="col">Lowest balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => {
+                  const p = row.projection,
+                    b = budgetRows.get(row.code);
+                  return (
+                    <TableRow
+                      key={row.code}
+                      data-shortfall={!!p?.first}
+                      data-testid={`cash-row-${row.code}`}
+                    >
+                      <TableCell className="cash-account" data-label="Account">
+                        <span className="account-name">{row.name}</span>
+                        {row.reserved && (
+                          <span className="account-meta">Reserve</span>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        data-label="Cash now"
+                        className={`cash-current amount ${row.balance !== undefined && BigInt(row.balance) < 0n ? "cash-negative" : ""}`}
+                      >
+                        {ledgerError || row.balance === undefined ? (
+                          <Missing>Unavailable</Missing>
+                        ) : (
+                          money(row.balance, currency)
+                        )}
+                      </TableCell>
+                      <TableCell
+                        data-label="2-month avg / mo"
+                        className="amount"
+                      >
+                        {b ? (
+                          money(b.average, currency)
+                        ) : (
+                          <Missing>
+                            {budgets.error
+                              ? "Unavailable"
+                              : budgets.data
+                                ? "Not assigned"
+                                : "—"}
+                          </Missing>
+                        )}
+                      </TableCell>
+                      <TableCell data-label="Budget / mo" className="amount">
+                        {b?.monthly != null ? (
+                          money(b.monthly, currency)
+                        ) : (
+                          <Missing>
+                            {budgets.error
+                              ? "Unavailable"
+                              : budgets.data
+                                ? "Not set"
+                                : "—"}
+                          </Missing>
+                        )}
+                      </TableCell>
+                      <TableCell className="cash-trend">
+                        {p ? <Sparkline points={p.points} /> : <Missing />}
+                      </TableCell>
+                      <TableCell
+                        data-label="First below zero"
+                        className={p?.first ? "cash-negative" : "cash-status"}
+                      >
+                        {p?.first ? (
+                          <span className="shortfall-date">
+                            <span aria-hidden="true" />
+                            {dateLabel(p.first)}
+                          </span>
+                        ) : p?.complete ? (
+                          <>
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">
+                              No shortfall in this period
+                            </span>
+                          </>
+                        ) : (
+                          <Missing>{p ? "Incomplete" : "No forecast"}</Missing>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        data-label="Lowest balance"
+                        className={`amount ${p?.low !== undefined && p.low < 0n ? "cash-negative" : ""}`}
+                      >
+                        {p?.low === undefined ? (
+                          <Missing />
+                        ) : (
+                          <>
+                            {money(p.low, currency)}
+                            {!p.complete && (
+                              <span
+                                className="partial-marker"
+                                aria-label="Available dates only"
+                              >
+                                *
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            {!rows.length && (
+              <p role="status" className="py-12 text-sm text-muted-foreground">
+                {!snapshot && !ledgerError
+                  ? "Loading bank accounts…"
+                  : "No bank accounts available."}
+              </p>
+            )}
+            <div className="cash-footnotes">
+              <p>
+                Cash now: posted balance
+                {snapshot ? ` as of ${dateLabel(snapshot.to)}` : ""}.
+                {data &&
+                  ` Forecast: ${forecast.shown} · ${dateLabel(data.plan.as_of)} opening snapshot · End-of-day balances.`}
+              </p>
+              {budgets.data ? (
+                <p>
+                  Average monthly spending: {averagePeriod}.
+                  {budgets.data.unassigned.count > 0 && (
+                    <>
+                      {" "}
+                      <span className="unassigned">
+                        {money(budgets.data.unassigned.average, currency)} /
+                        month unassigned.
+                      </span>
+                    </>
+                  )}
+                </p>
+              ) : budgets.error ? (
+                <p role="alert">
+                  Budgets unavailable.{" "}
+                  <Button variant="link" onClick={budgets.retry}>
+                    Retry budgets
+                  </Button>
+                </p>
+              ) : company ? (
+                <p role="status">Loading budgets…</p>
+              ) : null}
+            </div>
           </TabsContent>
         ))}
       </Tabs>

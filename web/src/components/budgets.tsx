@@ -1,3 +1,16 @@
+import { ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -84,34 +97,31 @@ export function BudgetEditor({
           if (!saving) setOpen(v);
         }}
       >
-        <SheetContent className="overflow-y-auto sm:max-w-2xl w-full">
+        <SheetContent className="overflow-y-auto sm:max-w-2xl w-full!">
           <SheetHeader>
             <SheetTitle>Monthly budgets</SheetTitle>
             <SheetDescription>
-              Compare monthly spending targets with posted expenses from{" "}
-              {data.months.join(" and ")}. Targets are saved in Books. Dated
-              cash forecasts are updated separately.
+              Monthly spending targets. These do not change dated cash
+              forecasts.
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-6 p-5">
-            <p className="text-sm text-muted-foreground">
-              Choose which bucket owns each spending category. A purchase
-              assignment can override its category. Card payments and funding
-              transfers do not add spending.
-            </p>
             {draft.buckets.map((b) => (
-              <div key={b.account} className="border-b pb-4">
+              <div
+                key={b.account}
+                className="flex items-center justify-between gap-4 border-b pb-4"
+              >
                 <label
-                  className="block text-sm font-medium"
+                  className="min-w-0 text-sm font-medium wrap-anywhere"
                   htmlFor={`budget-${b.account}`}
                 >
                   {names.get(b.account) ?? b.account}
                 </label>
-                <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="flex shrink-0 items-center gap-2">
                   <Input
                     id={`budget-${b.account}`}
                     aria-label={`Monthly budget for ${names.get(b.account) ?? b.account}`}
-                    className="max-w-44"
+                    className="w-28 text-right tabular-nums"
                     inputMode="decimal"
                     placeholder="Not set"
                     value={amounts[b.account] ?? ""}
@@ -126,106 +136,140 @@ export function BudgetEditor({
                 </div>
               </div>
             ))}
-            <h3 className="font-semibold">Spending categories</h3>
-            {data.accounts
-              .filter((a) => a.type === "EXPENSE")
-              .map((a) => (
-                <label
-                  key={a.code}
-                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-0">
+                  Spending assignments
+                  <ChevronDown className="size-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-5 pt-4">
+                <p className="text-xs text-muted-foreground">
+                  Assign categories to a budget bucket. Purchase assignments
+                  override categories; transfers and card payments are excluded.
+                </p>
+                <h3 className="text-sm font-medium">Categories</h3>
+                {data.accounts
+                  .filter((a) => a.type === "EXPENSE")
+                  .map((a) => (
+                    <label
+                      key={a.code}
+                      className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                    >
+                      <span>{a.name}</span>
+                      <Select
+                        disabled={saving}
+                        value={
+                          draft.buckets.find((b) =>
+                            b.expense_accounts.includes(a.code),
+                          )?.account || "unassigned"
+                        }
+                        onValueChange={(value) =>
+                          setDraft({
+                            ...draft,
+                            buckets: draft.buckets.map((b) => ({
+                              ...b,
+                              expense_accounts: [
+                                ...b.expense_accounts.filter(
+                                  (c) => c !== a.code,
+                                ),
+                                ...(b.account === value ? [a.code] : []),
+                              ],
+                            })),
+                          })
+                        }
+                      >
+                        <SelectTrigger
+                          aria-label={`Bucket for ${a.name}`}
+                          className="max-w-full sm:max-w-72"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">
+                            Direct bank / unassigned
+                          </SelectItem>
+                          {draft.buckets.map((b) => (
+                            <SelectItem key={b.account} value={b.account}>
+                              {names.get(b.account) ?? b.account}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  ))}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExpenses((v) => !v)}
                 >
-                  <span>{a.name}</span>
-                  <select
-                    aria-label={`Bucket for ${a.name}`}
-                    disabled={saving}
-                    className="rounded border bg-white p-2 max-w-full"
-                    value={
-                      draft.buckets.find((b) =>
-                        b.expense_accounts.includes(a.code),
-                      )?.account ?? ""
-                    }
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        buckets: draft.buckets.map((b) => ({
-                          ...b,
-                          expense_accounts: [
-                            ...b.expense_accounts.filter((c) => c !== a.code),
-                            ...(b.account === e.target.value ? [a.code] : []),
-                          ],
-                        })),
-                      })
-                    }
-                  >
-                    <option value="">Direct bank / unassigned</option>
-                    {draft.buckets.map((b) => (
-                      <option key={b.account} value={b.account}>
-                        {names.get(b.account) ?? b.account}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            <Button
-              variant="outline"
-              onClick={() => setShowExpenses((v) => !v)}
-            >
-              {showExpenses ? "Hide" : "Review"} purchase assignments (
-              {data.expenses.length})
-            </Button>
-            {showExpenses &&
-              data.expenses.map((x) => (
-                <div
-                  key={`${x.journal}:${x.line}`}
-                  className="rounded border p-3 text-sm"
-                >
-                  <p>
-                    {x.date} · {x.description}
-                  </p>
-                  <p className="my-1 font-medium">
-                    {money(x.amount, currency)}
-                  </p>
-                  <select
-                    aria-label={`Bucket for ${x.description} ${x.date} line ${x.line}`}
-                    disabled={saving}
-                    className="w-full rounded border bg-white p-2"
-                    value={
-                      draft.assignments.find(
-                        (a) => a.journal === x.journal && a.line === x.line,
-                      )?.account ?? ""
-                    }
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        assignments: [
-                          ...draft.assignments.filter(
-                            (a) => a.journal !== x.journal || a.line !== x.line,
-                          ),
-                          ...(e.target.value
-                            ? [
-                                {
-                                  journal: x.journal,
-                                  line: x.line,
-                                  account: e.target.value,
-                                },
-                              ]
-                            : []),
-                        ],
-                      })
-                    }
-                  >
-                    <option value="">Use category / direct bank</option>
-                    {draft.buckets.map((b) => (
-                      <option key={b.account} value={b.account}>
-                        {names.get(b.account) ?? b.account}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Current: {names.get(x.bucket) ?? "Unassigned"} · {x.basis}
-                  </p>
-                </div>
-              ))}
+                  {showExpenses ? "Hide" : "Review"} purchase assignments (
+                  {data.expenses.length})
+                </Button>
+                {showExpenses &&
+                  data.expenses.map((x) => (
+                    <div
+                      key={`${x.journal}:${x.line}`}
+                      className="rounded border p-3 text-sm"
+                    >
+                      <p>
+                        {x.date} · {x.description}
+                      </p>
+                      <p className="my-1 font-medium">
+                        {money(x.amount, currency)}
+                      </p>
+                      <Select
+                        disabled={saving}
+                        value={
+                          draft.assignments.find(
+                            (a) => a.journal === x.journal && a.line === x.line,
+                          )?.account || "unassigned"
+                        }
+                        onValueChange={(value) =>
+                          setDraft({
+                            ...draft,
+                            assignments: [
+                              ...draft.assignments.filter(
+                                (a) =>
+                                  a.journal !== x.journal || a.line !== x.line,
+                              ),
+                              ...(value !== "unassigned"
+                                ? [
+                                    {
+                                      journal: x.journal,
+                                      line: x.line,
+                                      account: value,
+                                    },
+                                  ]
+                                : []),
+                            ],
+                          })
+                        }
+                      >
+                        <SelectTrigger
+                          aria-label={`Bucket for ${x.description} ${x.date} line ${x.line}`}
+                          className="w-full"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">
+                            Use category / direct bank
+                          </SelectItem>
+                          {draft.buckets.map((b) => (
+                            <SelectItem key={b.account} value={b.account}>
+                              {names.get(b.account) ?? b.account}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Current: {names.get(x.bucket) ?? "Unassigned"} ·{" "}
+                        {x.basis}
+                      </p>
+                    </div>
+                  ))}
+              </CollapsibleContent>
+            </Collapsible>
             {error && (
               <p role="alert" className="text-red-700">
                 {error}

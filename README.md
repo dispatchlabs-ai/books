@@ -88,8 +88,8 @@ reports, period and year close, consolidation, and optional initial QuickBooks
 migration. See [statement formats and limits](docs/statement-formats.md) and
 [currency rules](docs/currencies.md).
 
-Books includes an experimental [shadcn web interface](web/README.md) for
-overview, account activity and an optional AI adapter. Its connected view supports [daily cash projections](docs/cash-projections.md)
+Books includes an experimental [shadcn web interface](web/README.md) with
+a Cash screen for bank balances, shortfalls, spending and budgets. Its connected view supports [daily cash projections](docs/cash-projections.md)
 from explicit evidence-backed scenario files. Its [monthly budgets](docs/budgets.md) compare the previous two complete months of posted spending with editable account-bucket targets and explicit purchase attribution. Books does not include a model, automatic bank feeds,
 invoicing or A/R and A/P workflows, bill pay, payroll processing, inventory, or
 tax filing. Multiple currencies within an entity, currency translation, and

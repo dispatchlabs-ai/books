@@ -8,6 +8,10 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Simplified the browser to Cash: a compact responsive account table, shared
+  shadcn controls and monthly budget editing. Removed the experimental Accounts,
+  Outlook, Ask Books and decision screens; backend operations are unchanged.
+
 - Added a Cash home screen with week, month, and year bank-account forecasts,
   first negative dates, exact projected lows, and explicit incomplete coverage.
 

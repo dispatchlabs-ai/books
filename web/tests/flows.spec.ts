@@ -1,83 +1,4 @@
 import { test, expect } from "@playwright/test";
-test("overview, account search, scoped conversation, entity reset and planning", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Your money, in view" }),
-  ).toBeVisible();
-  await expect(page.getByText("Demo · Synthetic data")).toBeVisible();
-  // Demo mode has no cash plan, so there is no Outlook destination.
-  await expect(
-    page.getByRole("button", { name: "Outlook", exact: true }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: /Everyday checking Cash account/ })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Everyday checking" }),
-  ).toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Search transactions" })
-    .fill("coffee");
-  await expect(page.getByText("Coffee House", { exact: true })).toBeVisible();
-  await expect(page.getByText("Paycheck", { exact: true })).not.toBeVisible();
-  await page.getByRole("button", { name: "Ask about this account" }).click();
-  await page
-    .getByRole("textbox", { name: "Ask Books a question" })
-    .fill("How much cash do we have?");
-  await page.getByRole("button", { name: "Send question" }).click();
-  await expect(page.getByText(/This demo has \$8,420.00/)).toBeVisible();
-  await page
-    .getByRole("button", { name: "Select entity" })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("menuitem", { name: "Example Studio" }).click();
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect(
-    page.getByText("Business overview", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText(/This demo has/)).not.toBeVisible();
-  await page
-    .getByRole("button", { name: "Select entity" })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("menuitem", { name: "Maple Household" }).click();
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("button", { name: /Planning the home repair/ }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("radio", { name: /This week/ }).check();
-  await page.getByRole("button", { name: "Save demo plan" }).click();
-  await expect(
-    page.getByText("Repair plan saved", { exact: true }),
-  ).toBeVisible();
-  await page.reload();
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect(
-    page.getByText("Repair plan saved", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: /Repair plan saved/ }).click();
-  await expect(page.getByRole("radio", { name: /This week/ })).toBeChecked();
-  await page.getByRole("button", { name: "Save demo plan" }).click();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-});
 test("connection errors stay errors and never switch to fictional balances", async ({
   page,
 }) => {
@@ -90,112 +11,6 @@ test("connection errors stay errors and never switch to fictional balances", asy
   await page.goto("/");
   await expect(page.getByRole("alert")).toHaveText("Connection unavailable");
   await expect(page.getByText("$8,420.00", { exact: true })).not.toBeVisible();
-});
-
-test("connected history and conversations keep account scopes separate", async ({
-  page,
-}) => {
-  const company = {
-    key: "example",
-    name: "Example entity",
-    currency: "USD",
-    basis: "accrual",
-  };
-  const sent: { account: string; messages: { content: string }[] }[] = [];
-  const reportURLs: string[] = [];
-  await page.route("**/api/config", (route) =>
-    route.fulfill({ json: { demo: false, agent: true } }),
-  );
-  await page.route("**/api/books/companies", (route) =>
-    route.fulfill({ json: [company] }),
-  );
-  await page.route("**/api/books/companies/example/reports/**", (route) => {
-    reportURLs.push(route.request().url());
-    return route.fulfill({
-      json: route.request().url().includes("general-ledger")
-        ? {
-            accounts: ["Checking", "Savings"].map((name, i) => ({
-              account: {
-                id: name,
-                code: String(1000 + i),
-                name,
-                subtype: "BANK",
-              },
-              opening_balance: { consolidated_cents: "100" },
-              closing_balance: { consolidated_cents: "100" },
-              lines: [],
-            })),
-          }
-        : {
-            total_revenue: { consolidated_cents: "0" },
-            total_expenses: { consolidated_cents: "0" },
-            net_income: { consolidated_cents: "0" },
-          },
-    });
-  });
-  await page.route("**/api/ask", (route) => {
-    sent.push(route.request().postDataJSON());
-    return route.fulfill({
-      json: { text: "Answer for " + sent.at(-1)!.account },
-    });
-  });
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page.getByText(/^Period:/).click();
-  await page.getByLabel("Period start").fill("2024-06-01");
-  await page.getByLabel("Period end").fill("2024-06-30");
-  await page.getByRole("button", { name: "Apply period" }).click();
-  await expect
-    .poll(() =>
-      reportURLs.some((url) => url.includes("from=2024-06-01&to=2024-06-30")),
-    )
-    .toBe(true);
-  await page
-    .getByRole("button", { name: "Cash", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect
-    .poll(() =>
-      reportURLs.some((url) =>
-        url.includes("to=" + new Date().toISOString().slice(0, 10)),
-      ),
-    )
-    .toBe(true);
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("button", { name: /Checking Cash account/ }).click();
-  await page.getByRole("button", { name: "Ask about this account" }).click();
-  await page
-    .getByRole("textbox", { name: "Ask Books a question" })
-    .fill("Question for checking");
-  await page.getByRole("button", { name: "Send question" }).click();
-  await expect(
-    page.getByText("Answer for 1000", { exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("button", { name: /Savings Cash account/ }).click();
-  await page.getByRole("button", { name: "Ask about this account" }).click();
-  await expect(
-    page.getByText("Answer for 1000", { exact: true }),
-  ).not.toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Ask Books a question" })
-    .fill("Question for savings");
-  await page.getByRole("button", { name: "Send question" }).click();
-  await expect(
-    page.getByText("Answer for 1001", { exact: true }),
-  ).toBeVisible();
-  expect(sent[1].messages).toEqual([
-    { role: "user", content: "Question for savings" },
-  ]);
 });
 
 type PlanEvent = {
@@ -494,256 +309,6 @@ async function connectedHousehold(
 const noPageScroll = (page: import("@playwright/test").Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
-test("point-forward outlook answers coverage, reserves and account gaps", async ({
-  page,
-}, testInfo) => {
-  await connectedHousehold(page);
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  const summary = page
-    .getByText("Looking ahead", { exact: true })
-    .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(
-    summary.getByText(
-      "Planned spending is more than expected income in November.",
-    ),
-  ).toBeVisible();
-  await expect(summary.getByText("+$275.00")).toBeVisible();
-  await expect(
-    summary.getByText(/Baseline: Kids Activities runs short from Nov 20/),
-  ).toBeVisible();
-  await summary.getByRole("button", { name: "Open outlook" }).click();
-
-  await expect(
-    page.getByRole("heading", { name: "Will income cover spending?" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Forecast · Estimates from a saved cash plan"),
-  ).toBeVisible();
-  await expect(page.getByText(/Period:/)).toHaveCount(0);
-  // Oct: 5,000 − 3,000 − 1,200 = +800. Nov: 5,000 − 3,000 − 1,800 − 450 = −250.
-  // Card payments and the partial Sep 30 paycheck are excluded from the rate.
-  const months = page.getByRole("list", { name: "Full months" });
-  await expect(
-    months.getByRole("button", {
-      name: /^October: income \$5,000\.00, spending \$4,200\.00, left over \$800\.00/,
-    }),
-  ).toBeVisible();
-  await expect(
-    months.getByRole("button", {
-      name: /^November, tightest month: income \$5,000\.00, spending \$5,250\.00, short \$250\.00/,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", {
-      name: "Planned spending is more than expected income in November.",
-    }),
-  ).toBeVisible();
-  await expect(page.getByText("+$275.00", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("Sep 30 · Partial month, not included in the average"),
-  ).toBeVisible();
-  await expect(months.getByText("105.0% of income spent")).toBeVisible();
-  await months.getByRole("button", { name: /^November,/ }).click();
-  await expect(months.getByText("Kids activities")).toBeVisible();
-  await expect(
-    page.getByText("This scenario has no reserve account activity."),
-  ).toBeVisible();
-  await expect(
-    page.getByText(/Baseline includes no proposed transfers/),
-  ).toBeVisible();
-
-  await page.getByRole("radio", { name: "Funded" }).click();
-  await expect(page.getByText("Example — proposed funding")).toBeVisible();
-  await expect(
-    page.getByText(
-      /other bank and card balances decrease by \$175\.00 a month on average/,
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Full reserve goals aren’t assessed.", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  // The partial month's reserve transfer is shown, outside the average.
-  await expect(
-    page.getByText("Sep 30 · Partial month, not included in the average"),
-  ).toHaveCount(2);
-  const gap = page.getByRole("button", {
-    name: "View daily balances for Kids Activities",
-  });
-  await expect(
-    page.getByText(/Below its \$0\.00 floor from Nov 20/),
-  ).toBeVisible();
-  await gap.click();
-  await expect(
-    page.getByRole("heading", { name: "Daily balances by account" }),
-  ).toBeFocused();
-  await expect(
-    page.getByRole("combobox", { name: "Bank account" }),
-  ).toContainText("Kids Activities");
-  await expect(
-    page.getByRole("radio", { name: "Below floor, 11 days" }),
-  ).toBeChecked();
-  const day = page.getByRole("button", { name: /Fri, Nov 20/ });
-  await expect(day).toHaveAttribute("aria-expanded", "true");
-  await page.getByRole("button", { name: "Evidence" }).first().click();
-  await expect(
-    page.getByText("Evidence: Synthetic evidence for Team registration"),
-  ).toBeVisible();
-  expect(await noPageScroll(page)).toBe(true);
-  await page.screenshot({
-    path: testInfo.outputPath("outlook-gap.png"),
-    fullPage: true,
-  });
-
-  await page.getByRole("combobox", { name: "Bank account" }).click();
-  await page.getByRole("option", { name: /Home Reserve/ }).click();
-  await expect(
-    page.getByRole("radio", { name: "With activity, 3 days" }),
-  ).toBeChecked();
-  await expect(
-    page.getByRole("radio", { name: "Below floor, 0 days" }),
-  ).toBeDisabled();
-
-  // Scenario and account survive leaving and returning.
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Outlook", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect(page.getByRole("radio", { name: "Funded" })).toBeChecked();
-  await expect(
-    page.getByRole("combobox", { name: "Bank account" }),
-  ).toContainText("Home Reserve");
-  expect(await noPageScroll(page)).toBe(true);
-});
-
-test("outlook recovers from a failed scenario and links from account detail", async ({
-  page,
-}) => {
-  await connectedHousehold(page, { failFunded: true });
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Outlook", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("radio", { name: "Funded" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Funded couldn’t load" }),
-  ).toBeVisible();
-  await expect(page.getByText("Scenario unavailable")).toBeVisible();
-  await page.getByRole("button", { name: "Back to Baseline" }).click();
-  await expect(page.getByText("Example — baseline")).toBeVisible();
-  await page.getByRole("radio", { name: "Funded" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Funded couldn’t load" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText("Example — proposed funding")).toBeVisible();
-
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByRole("button", { name: /Kids Activities Cash account/ })
-    .click();
-  await page.getByRole("tab", { name: "Outlook" }).click();
-  await page
-    .getByRole("button", { name: "View daily balances in Outlook" })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Daily balances by account" }),
-  ).toBeFocused();
-  await expect(
-    page.getByRole("combobox", { name: "Bank account" }),
-  ).toContainText("Kids Activities");
-
-  // A card is in the plan but has no daily balance; say how it counts.
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page.getByRole("button", { name: /Everyday Card/ }).click();
-  await page.getByRole("tab", { name: "Outlook" }).click();
-  await expect(
-    page.getByText(/This card is in the saved cash plan/),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Open outlook" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Will income cover spending?" }),
-  ).toBeVisible();
-  expect(await noPageScroll(page)).toBe(true);
-});
-
-test("outlook labels the scenario on screen while another loads", async ({
-  page,
-}) => {
-  let release = () => {};
-  const holdFunded = new Promise<void>((resolve) => (release = resolve));
-  await connectedHousehold(page, { holdFunded });
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Outlook", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect(page.getByText("Example — baseline")).toBeVisible();
-  await page.getByRole("radio", { name: "Funded" }).click();
-  await expect(page.getByText("Loading Funded…")).toBeVisible();
-  // Baseline's figures stay labelled Baseline; its comparison prompt waits.
-  await expect(page.getByText(/End-of-day estimates · Baseline/)).toBeVisible();
-  await expect(page.getByText(/includes no proposed transfers/)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^Compare/ })).toHaveCount(0);
-  release();
-  await expect(page.getByText("Example — proposed funding")).toBeVisible();
-  await expect(page.getByText(/End-of-day estimates · Funded/)).toBeVisible();
-});
-
-test("an older plan leaves ended months out of the answer", async ({
-  page,
-}) => {
-  await connectedHousehold(page, { today: "2026-11-05" });
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Accounts", exact: true })
-    .filter({ visible: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Outlook", exact: true })
-    .filter({ visible: true })
-    .click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Planned spending is more than expected income on average.",
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("−$250.00", { exact: true }).first(),
-  ).toBeVisible();
-  await expect(
-    page.getByText(/2 months in this plan have already ended/),
-  ).toBeVisible();
-  await expect(
-    page.getByText("October · Already ended, not included"),
-  ).toBeVisible();
-  await expect(page.getByText(/37 days ago/)).toBeVisible();
-});
-
 test("Cash is the default with bounded horizons and bank-only rows", async ({
   page,
 }) => {
@@ -761,12 +326,10 @@ test("Cash is the default with bounded horizons and bank-only rows", async ({
       .filter({ visible: true })
       .first(),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /Checking 1000/ }),
-  ).toContainText("$777.00");
+  await expect(page.getByTestId("cash-row-1000")).toContainText("$777.00");
   await page.getByRole("tab", { name: "Year", exact: true }).click();
   await expect(
-    page.getByText(/The forecast does not cover this entire period/),
+    page.getByText(/Forecast incomplete for this period/),
   ).toBeVisible();
   await expect(
     page.getByText("Stays at or above zero", { exact: true }),
@@ -780,12 +343,11 @@ test("Cash is the default with bounded horizons and bank-only rows", async ({
     path: "/tmp/books-cash-" + page.viewportSize()!.width + ".png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: /Extra bank.*Not included in forecast/ })
-    .click();
+  await expect(page.getByTestId("cash-row-1099")).toContainText("No forecast");
   await expect(
-    page.getByRole("heading", { name: "Extra bank", exact: true }),
-  ).toBeVisible();
+    page.getByRole("button", { name: /^(Accounts|Outlook|Ask Books)$/ }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("cash-row-2100")).toHaveCount(0);
 });
 
 test("Cash shows a failed ledger load and can retry", async ({ page }) => {
@@ -854,7 +416,7 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
     return r.fulfill({ json: budgetData() });
   });
   await page.goto("/");
-  const row = page.getByRole("button", { name: /Checking 1000/ });
+  const row = page.getByTestId("cash-row-1000");
   await expect(row).toContainText("$150.00");
   await expect(row).toContainText("$200.00");
   await expect(page.getByText(/\$25.00 \/ month unassigned/)).toBeVisible();
@@ -872,4 +434,178 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
     path: "/tmp/books-budgets-" + page.viewportSize()!.width + ".png",
     fullPage: true,
   });
+});
+
+test("entity selection stays scoped and narrow layouts fit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cash-row-1000")).toContainText(
+    "Everyday checking",
+  );
+  for (const width of [320, 390, 760, 761, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => noPageScroll(page), { message: `Layout at ${width}px` }).toBe(true);
+  }
+  await page
+    .getByRole("button", { name: "Select entity, current: Maple Household" })
+    .click();
+  await page.getByRole("menuitem", { name: "Example Studio" }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Select entity, current: Example Studio",
+    }),
+  ).toBeVisible();
+  await expect(page.getByTestId("cash-row-1000")).toContainText(
+    "Operating account",
+  );
+  await expect(
+    page.getByText("Everyday checking", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "No forecast for this entity. Future shortfalls are unknown.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Month", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    page.getByRole("tab", { name: "Year", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+});
+
+test("failed forecasts keep posted banks visible and recover", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  let fails = true;
+  await page.route("**/api/books/companies/example/cash-forecast?**", (r) =>
+    fails
+      ? r.fulfill({ status: 503, json: { error: "Forecast offline" } })
+      : r.fulfill({ json: householdForecast.baseline }),
+  );
+  await page.route("**/api/books/companies/example/budget", (r) =>
+    r.fulfill({ status: 503, json: { error: "Budgets offline" } }),
+  );
+  await page.goto("/");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Forecast unavailable" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("cash-row-1099")).toContainText("$777.00");
+  await expect(page.getByTestId("cash-row-1099")).toContainText("Unavailable");
+  await expect(page.getByTestId("cash-row-1099")).not.toContainText("Not set");
+  fails = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Forecast unavailable" }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("cash-row-1000")).toBeVisible();
+});
+
+test("budget editor fits 320px and preserves conflicts, categories and purchase overrides", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.setViewportSize({ width: 320, height: 900 });
+  const budget = {
+    can_edit: true,
+    months: ["2026-07", "2026-08"],
+    from: "2026-07-01",
+    to: "2026-08-31",
+    rows: [
+      {
+        account: "1000",
+        average: "15000",
+        monthly: null,
+        count: 1,
+        months: ["15000", "15000"],
+      },
+    ],
+    unassigned: { average: "15000", count: 1 },
+    expenses: [
+      {
+        journal: "purchase-1",
+        line: 1,
+        date: "2026-08-20",
+        description: "Synthetic groceries",
+        amount: "12000",
+        expense_account: "5000",
+        bucket: "",
+        basis: "unassigned",
+      },
+    ],
+    plan: {
+      revision: "one",
+      buckets: [
+        { account: "1000", monthly: null, expense_accounts: [] as string[] },
+      ],
+      assignments: [],
+    },
+    accounts: [
+      {
+        code: "1000",
+        name: "Emergency Savings",
+        type: "ASSET",
+        subtype: "BANK",
+      },
+      { code: "5000", name: "Groceries", type: "EXPENSE", subtype: "" },
+    ],
+  };
+  await page.route("**/api/books/companies/example/budget", (r) =>
+    r.fulfill({ json: budget }),
+  );
+  let saved: { plan: typeof budget.plan } | undefined;
+  await page.route("**/api/books/companies/example/budget/save", (r) => {
+    saved = r.request().postDataJSON();
+    return r.fulfill({
+      status: 409,
+      json: { error: "Budget changed. Reload before saving." },
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit budgets" }).click();
+  const dialog = page.getByRole("dialog");
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+  await page
+    .getByRole("textbox", { name: "Monthly budget for Emergency Savings" })
+    .fill("0");
+  await page
+    .getByRole("button", { name: "Spending assignments", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Bucket for Groceries", exact: true })
+    .click();
+  await page
+    .getByRole("option", { name: "Emergency Savings", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Review purchase assignments (1)" })
+    .click();
+  await page
+    .getByRole("combobox", { name: /Bucket for Synthetic groceries/ })
+    .click();
+  await page
+    .getByRole("option", { name: "Emergency Savings", exact: true })
+    .click();
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+  await page.getByRole("button", { name: "Save budgets", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Budget changed");
+  expect(saved?.plan.revision).toBe("one");
+  expect(saved?.plan.buckets.find((b) => b.account === "1000")).toMatchObject({
+    monthly: "0",
+    expense_accounts: ["5000"],
+  });
+  expect(saved?.plan.assignments).toEqual([
+    { journal: "purchase-1", line: 1, account: "1000" },
+  ]);
+  await expect(
+    page.getByRole("textbox", { name: "Monthly budget for Emergency Savings" }),
+  ).toHaveValue("0");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByTestId("cash-row-1000")).toContainText("Not set");
 });
