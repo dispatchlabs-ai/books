@@ -122,3 +122,27 @@ macOS checks used the installed Command Line Tools through `DEVELOPER_DIR` after
 an unrelated Xcode selection required its license setup. No global toolchain
 configuration was changed. Development used synthetic data only. Visual product
 acceptance remains the maintainer's review, separate from these checks.
+
+## Expected income
+
+Cash now shows the selected period's expected external bank receipts in a
+compact disclosure above the accounts. It reuses the configured scenario and
+does not infer recurring pay, rewrite budgets or execute transfers.
+
+- Full repository gates passed on macOS and Linux, including disposable CLI/API
+  integration and dependency audit. Development fixtures were synthetic.
+- All 42 desktop/mobile browser flows passed, including period totals, dated
+  payment details, partial/expired coverage, failure after a successful load,
+  exact large amounts on a 320-pixel phone and existing no-jump editing.
+- Unit coverage checks exact sums, opening-day and horizon boundaries, actual
+  replacements inside/outside the window, reserve receipts and exclusion of
+  internal transfers and card credits.
+- Independent review found a narrow-screen overflow for large supported amounts.
+  Wrapping the summary and stacking receipt amounts on narrow phones repaired
+  it. Re-review verified 320/360/390-pixel layouts and keyboard expansion, with
+  no remaining findings. Separate checks preserved expanded-income budget-edit
+  geometry at 320, 390 and 1280 pixels. Desktop and phone screenshots were read.
+
+Income amounts and payment assumptions are private scenario inputs, not public
+fixtures or application defaults. Product acceptance remains the maintainer's
+review.

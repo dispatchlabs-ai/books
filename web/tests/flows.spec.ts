@@ -309,6 +309,89 @@ async function connectedHousehold(
 const noPageScroll = (page: import("@playwright/test").Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
+test("expected income follows the period and expands into dated payments", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.goto("/");
+  const summary = page.getByRole("button", { name: /^Expected income/ });
+  await expect(summary).toContainText("$10,000.00");
+  await summary.click();
+  const payments = page.getByRole("list", { name: "Expected payments" });
+  await expect(payments.getByRole("listitem")).toHaveCount(2);
+  await expect(payments.getByRole("listitem").first()).toContainText(
+    "Sep 30Salary Sep 30Checking$5,000.00Estimated",
+  );
+  await page.getByRole("tab", { name: "Week", exact: true }).click();
+  await expect(summary).toContainText("$5,000.00");
+  await expect(payments.getByRole("listitem")).toHaveCount(1);
+  await page.getByRole("tab", { name: "Year", exact: true }).click();
+  await expect(summary).toContainText("$15,000.00");
+  await expect(payments.getByRole("listitem")).toHaveCount(3);
+  await expect(
+    page.getByText("Sep 30–Nov 30 only", { exact: true }),
+  ).toBeVisible();
+  expect(await noPageScroll(page)).toBe(true);
+  await page.screenshot({
+    path: `/tmp/books-income-${page.viewportSize()!.width}.png`,
+    fullPage: true,
+  });
+  await summary.click();
+  await expect(payments).not.toBeVisible();
+});
+
+test("income becomes unavailable on a failed refresh instead of showing the old total", async ({
+  page,
+}) => {
+  await connectedHousehold(page);
+  await page.goto("/");
+  const summary = page.getByRole("button", { name: /^Expected income/ });
+  await expect(summary).toContainText("$10,000.00");
+  await summary.click();
+  await page.route("**/api/books/companies/example/cash-forecast?**", (r) =>
+    r.fulfill({ status: 503, json: { error: "Forecast unavailable" } }),
+  );
+  await page.getByRole("button", { name: "Refresh view" }).click();
+  await expect(summary).toHaveText("Expected incomeUnavailable");
+  await expect(summary).toBeDisabled();
+  await expect(
+    page.getByRole("list", { name: "Expected payments" }),
+  ).not.toBeVisible();
+});
+
+test("an expired plan leaves expected income unknown rather than zero", async ({
+  page,
+}) => {
+  await connectedHousehold(page, { today: "2026-12-01" });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Expected income Not forecast" }),
+  ).toBeDisabled();
+});
+
+test("large expected income and long payment names fit a narrow phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await connectedHousehold(page);
+  const forecast = structuredClone(householdForecast.baseline);
+  forecast.plan.events = [
+    e("Long example payment description", "2026-10-01", "inflow", "1000", 0),
+  ];
+  forecast.plan.events[0].amount = "9007199254740993";
+  await page.route("**/api/books/companies/example/cash-forecast?**", (r) =>
+    r.fulfill({ json: forecast }),
+  );
+  await page.goto("/");
+  const summary = page.getByRole("button", { name: /^Expected income/ });
+  await expect(summary).toContainText("$90,071,992,547,409.93");
+  await summary.click();
+  await expect(
+    page.getByRole("list", { name: "Expected payments" }),
+  ).toContainText("Long example payment description");
+  expect(await noPageScroll(page)).toBe(true);
+});
+
 test("Cash is the default with bounded horizons and bank-only rows", async ({
   page,
 }) => {

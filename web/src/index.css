@@ -231,6 +231,83 @@
   margin: auto;
   padding: 48px 40px 64px;
 }
+.expected-income {
+  margin: 0 0 20px;
+}
+.income-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+.income-trigger {
+  padding: 0 4px;
+  min-height: 36px;
+  height: auto;
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  white-space: normal;
+  gap: 4px 16px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.income-trigger:disabled {
+  opacity: 1;
+}
+.income-trigger strong {
+  font-weight: 600;
+}
+.income-trigger[data-state="open"] svg {
+  transform: rotate(180deg);
+}
+.income-coverage {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.income-receipts {
+  max-width: 640px;
+  padding: 8px 4px 0;
+}
+.income-receipts li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+  font-size: 13px;
+}
+.income-description,
+.income-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.income-description {
+  overflow-wrap: anywhere;
+}
+.income-amount {
+  text-align: right;
+}
+.income-receipts time,
+.income-receipts small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+@media (max-width: 360px) {
+  .income-receipts li {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 6px 12px;
+  }
+  .income-amount {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
 .cash-heading {
   transition: none;
   position: sticky;

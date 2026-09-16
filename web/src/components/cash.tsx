@@ -38,6 +38,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { move } from "@dnd-kit/helpers";
 import { Eye } from "lucide-react";
 import { CashAccountRow } from "@/components/cash-account-row";
+import { ExpectedIncome } from "@/components/expected-income";
 import { orderedAccounts, reorderedView, useCashView } from "@/lib/cash-view";
 import {
   DropdownMenu,
@@ -353,6 +354,12 @@ export function Cash({
             )}
           </div>
         </div>
+        <ExpectedIncome
+          forecast={forecast}
+          horizon={horizon}
+          today={now}
+          currency={currency}
+        />
         {saveError && (
           <p
             ref={saveErrorRef}

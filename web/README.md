@@ -78,6 +78,15 @@ Rows remain sorted by their first projected negative date, then name. Reserve
 accounts stay visible; card liabilities are excluded. Incomplete horizons and
 unplanned banks cannot establish that an account stays nonnegative.
 
+Expected income follows the selected horizon and expands into dated payments
+with destination accounts and recorded/estimated/confirmed/proposed status. It
+sums external bank inflows from the configured scenario, excluding internal
+transfers, card credits, replaced estimates and receipts already in opening cash.
+Partial coverage is labelled; unavailable or expired plans do not imply zero.
+The plan's producer must include only the income assumptions appropriate for
+that scenario. Books does not infer recurring income from historical deposits,
+and this total does not mean the money is uncommitted or ready to spend.
+
 The monthly comparison is the average of the previous two complete months'
 posted expenses by budget bucket. It stays monthly across forecast horizons.
 Unset targets, missing data, unassigned spending, errors and retry controls

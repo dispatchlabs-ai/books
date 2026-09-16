@@ -16,6 +16,14 @@ quarter selector, or always-open detail panel.
 ## Semantics
 
 - Rolling horizons contain today and the next 6, 29, or 364 calendar days.
+- Expected income totals the configured scenario's dated external bank receipts
+  in that horizon. Expand the amount to inspect payment dates, names, destination
+  accounts and statuses. Internal transfers and card credits are excluded;
+  actual replacements supersede estimates even outside the selected window.
+  Receipts already in the opening snapshot are excluded. Coverage stops at the
+  plan end and partial totals show their covered dates; no annual extrapolation
+  or recurrence inference is performed. Missing or failed forecasts remain
+  unknown. Hiding an account does not remove its expected receipts.
 - Negative means end-of-day cash below zero, independently of reserve floors.
   Card liabilities are excluded. Intraday overdrafts are not assessed.
 - Default to known shortfalls by first date, then by account name. A saved
