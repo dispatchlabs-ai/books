@@ -920,7 +920,7 @@ test("a late budget read cannot replace a successful save", async ({
   await expect(row.getByRole("textbox")).toHaveValue("175.50");
 });
 
-test("clicking a scrolled budget keeps its input clear of sticky controls", async ({
+test("budget editing preserves the viewport and row positions", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -974,13 +974,39 @@ test("clicking a scrolled budget keeps its input clear of sticky controls", asyn
     }),
   );
   await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const first = page.getByRole("button", {
+    name: /^Edit monthly budget for Bank 1,/,
+  });
+  await expect(first).toBeVisible();
+  const positions = () =>
+    page.evaluate(() => ({
+      scroll: window.scrollY,
+      rows: [...document.querySelectorAll(".cash-table tbody tr")].map((el) => {
+        const { x, y, width, height } = el.getBoundingClientRect();
+        return { x, y, width, height };
+      }),
+    }));
+  const initial = await positions();
+  await first.click();
+  await expect(
+    page.getByRole("textbox", { name: "Monthly budget for Bank 1", exact: true }),
+  ).toBeFocused();
+  expect(await positions()).toEqual(initial);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await positions()).toEqual(initial);
   const button = page.getByRole("button", {
     name: /^Edit monthly budget for Bank 13,/,
   });
   await button.evaluate((el) => {
     el.scrollIntoView();
-    window.scrollBy(0, el.getBoundingClientRect().top - 20);
+    const heading = document.querySelector(".cash-heading")!;
+    window.scrollBy(
+      0,
+      el.getBoundingClientRect().top - heading.getBoundingClientRect().bottom - 20,
+    );
   });
+  const scrolled = await positions();
   await button.click();
   const input = page.getByRole("textbox", {
     name: "Monthly budget for Bank 13",
@@ -994,6 +1020,10 @@ test("clicking a scrolled budget keeps its input clear of sticky controls", asyn
     );
   await expect(input).toBeFocused();
   await expect.poll(unobscured).toBe(true);
+  expect(await positions()).toEqual(scrolled);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await positions()).toEqual(scrolled);
+  await button.click();
   await input.fill("-1");
   await page.getByRole("button", { name: "Save budgets", exact: true }).click();
   await expect(input).toHaveAttribute("aria-invalid", "true");

@@ -233,6 +233,10 @@
 }
 .cash-heading {
   transition: none;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fafbf8;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -256,10 +260,20 @@
   padding-left: 12px;
 }
 .cash-controls {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
+}
+.budget-actions {
+  position: absolute;
+  right: calc(100% + 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .budget-amount-trigger {
   width: 100%;
@@ -283,23 +297,11 @@
   font-variant-numeric: tabular-nums;
   background: white;
 }
-.budget-edit-note {
-  margin: -12px 0 18px;
-  font-size: 12px;
-  color: var(--muted-foreground);
-}
 .budget-assignments {
   margin-top: 24px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
   max-width: 720px;
-}
-[data-editing="true"] .cash-heading {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  padding-block: 16px;
-  background: #fafbf8;
 }
 .cash-tabs {
   height: 34px !important;
@@ -481,9 +483,15 @@
     font-size: 28px;
   }
   .cash-controls {
+    position: static;
     width: 100%;
     justify-content: space-between;
     gap: 10px;
+  }
+  .budget-actions {
+    right: 0;
+    top: 0;
+    transform: none;
   }
   .cash-tabs {
     height: 36px !important;

@@ -69,3 +69,26 @@ Cancel return focus to that amount. Read-only entities retain plain values.
   remaining findings; the regression is included in the browser suite.
 
 Development used only synthetic records. No production targets were changed.
+
+## Review follow-up: keep the screen in place
+
+The maintainer reported a jump when clicking a budget amount. The earlier editor
+added heading padding, a helper line and a wrapped action row on phones, then
+scrolled to the input. The repair keeps heading geometry and sticky behavior
+constant, places Save/Cancel in existing header space, removes the helper line,
+and focuses entry/exit without scrolling. Error recovery can still reveal a
+field or message.
+
+- Full `./scripts/check` passed on macOS and Linux. The first Linux source
+  transfer included macOS metadata sidecars; a clean transfer excluding those
+  sidecars passed the complete gate. No repository behavior was changed for
+  that transfer issue.
+- All 26 desktop/mobile browser tests passed. The regression asserts identical
+  viewport scroll and all 25 account-row rectangles before/after entry and
+  cancellation, both at the top and farther down the table, with reduced motion.
+- Independent review confirmed exact positions at 320, 390, 761 and 1280 pixels,
+  including rows near the sticky heading. Save/Cancel do not overlap the title
+  or tabs, there is no page overflow, and invalid-input/server-error focus stays
+  visible. Desktop and 320-pixel screenshots were visually checked.
+
+All test records were synthetic; no production target was changed.

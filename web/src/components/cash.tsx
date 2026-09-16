@@ -147,13 +147,15 @@ export function Cash({
   useEffect(() => {
     if (editing) {
       const input = inputRefs.current.get(editOrigin.current);
-      focusEditorElement(input);
+      input?.focus({ preventScroll: true });
       input?.select();
     } else if (wasEditing.current) {
-      budgetButtonRefs.current.get(editOrigin.current)?.focus();
+      budgetButtonRefs.current
+        .get(editOrigin.current)
+        ?.focus({ preventScroll: true });
     }
     wasEditing.current = editing;
-  }, [editing, focusEditorElement]);
+  }, [editing]);
   useEffect(() => {
     if (saveError && !invalidAccount) focusEditorElement(saveErrorRef.current);
   }, [saveError, invalidAccount, focusEditorElement]);
@@ -291,7 +293,7 @@ export function Cash({
             </TabsList>
             {draft && (
               <div
-                className="flex items-center gap-2"
+                className="budget-actions"
                 aria-label="Budget actions"
               >
                 <Button
@@ -318,11 +320,6 @@ export function Cash({
             className="cash-notice cash-negative"
           >
             {saveError}
-          </p>
-        )}
-        {draft && (
-          <p className="budget-edit-note">
-            Edit monthly targets below. Leave blank for no target.
           </p>
         )}
         {horizons.map((h) => (

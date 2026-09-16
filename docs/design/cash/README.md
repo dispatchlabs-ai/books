@@ -48,6 +48,9 @@ DropdownMenu, Input, Select and Collapsible components. Following maintainer
 review, clicking a budget amount or **Not set** starts editing directly in the
 Cash table, focusing and selecting that account's input. Explicit Save and Cancel
 controls appear above the table; either returns focus to the clicked amount.
+The heading keeps the same size and sticky position in both states. Editing
+does not scroll the viewport or move account rows; only validation and save
+errors may scroll to reveal the problem.
 Category and purchase assignments remain under a disclosure
 below the table while editing. Drafts survive period changes and failed saves;
 entity switching and refresh are disabled until the edit is saved or cancelled.

@@ -8,6 +8,9 @@ versions. Breaking changes are called out in this file and in release notes.
 
 ## Unreleased
 
+- Keep the Cash viewport and account rows in place when entering or cancelling
+  budget editing.
+
 - Remember the selected accessible browser entity across reloads and edit monthly
   targets by clicking their amount in the Cash table, preserving drafts on period
   changes and failed saves.
