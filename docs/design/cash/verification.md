@@ -48,3 +48,24 @@ section. Accessible entity selection persists separately for demo and connected 
 
 The replacement editor awaits maintainer visual review. Existing accounting,
 forecast arithmetic and real budget records were not changed by development.
+
+## Review follow-up: click the budget amount
+
+The maintainer accepted the inline direction and requested direct activation
+from a budget number instead of a separate Edit budgets button. Clicking an
+amount or Not set now focuses and selects the corresponding input; Save and
+Cancel return focus to that amount. Read-only entities retain plain values.
+
+- The full `./scripts/check` passed on macOS and Linux. After the focus repair,
+  web lint, unit/server tests and production builds were repeated on both hosts;
+  the CLI/API integration had already passed with the unchanged backend.
+- All 26 desktop/mobile browser tests passed. Coverage includes amount and
+  Not set activation, keyboard selection, Save/Cancel focus, read-only access,
+  existing draft/assignment/refresh regressions and a scrolled 25-bank table.
+- Independent review reproduced an input hidden by the sticky heading. The
+  repair scrolls the focused input below the measured controls and prevents a
+  reduced-motion rule from introducing a heading padding transition. The exact
+  desktop/mobile reduced-motion reproduction passed after repair, with no
+  remaining findings; the regression is included in the browser suite.
+
+Development used only synthetic records. No production targets were changed.

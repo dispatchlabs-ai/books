@@ -232,6 +232,7 @@
   padding: 48px 40px 64px;
 }
 .cash-heading {
+  transition: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -259,6 +260,18 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
+}
+.budget-amount-trigger {
+  width: 100%;
+  justify-content: flex-end;
+  padding-inline: 0;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+}
+.budget-amount-trigger:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .budget-amount-input {
   width: 100%;

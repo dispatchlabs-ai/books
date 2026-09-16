@@ -45,8 +45,10 @@ red. Unknown forecasts, unavailable balances and unset budgets remain explicit.
 
 The implementation reuses the installed shadcn Table, Tabs, Button,
 DropdownMenu, Input, Select and Collapsible components. Following maintainer
-review, monthly targets are edited directly in the Cash table with explicit Save
-and Cancel controls. Category and purchase assignments remain under a disclosure
+review, clicking a budget amount or **Not set** starts editing directly in the
+Cash table, focusing and selecting that account's input. Explicit Save and Cancel
+controls appear above the table; either returns focus to the clicked amount.
+Category and purchase assignments remain under a disclosure
 below the table while editing. Drafts survive period changes and failed saves;
 entity switching and refresh are disabled until the edit is saved or cancelled.
 An empty input clears the target; zero remains an explicit target.
@@ -59,4 +61,5 @@ storage does not prevent switching; it only prevents remembering the selection.
 No new application screen, aggregate hero, speculative chart or marketing copy
 is introduced. The September 15 concept and initial September 16 Sheet remain
 historical evidence. The maintainer accepted the Cash layout and requested this
-replacement for the budget editor; its visual acceptance remains pending review.
+replacement for the budget editor, then requested direct activation from the
+budget amount instead of a separate Edit budgets button.

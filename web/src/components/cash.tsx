@@ -1,4 +1,11 @@
-import { useState, useId, useRef, useEffect, type ReactNode } from "react";
+import {
+  useState,
+  useId,
+  useRef,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import {
   useBudget,
   decimalMinor,
@@ -120,19 +127,36 @@ export function Cash({
   const [invalidAccount, setInvalidAccount] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
-  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const budgetButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const editOrigin = useRef("");
+  const headingRef = useRef<HTMLDivElement>(null);
   const wasEditing = useRef(false);
   const editing = !!draft;
   const saveErrorRef = useRef<HTMLParagraphElement>(null);
   const errorId = useId();
+  const focusEditorElement = useCallback(
+    (element: HTMLElement | null | undefined) => {
+      if (!element) return;
+      element.focus({ preventScroll: true });
+      element.style.scrollMarginTop = `${(headingRef.current?.getBoundingClientRect().height ?? 0) + 16}px`;
+      element.style.scrollMarginBottom = "16px";
+      element.scrollIntoView({ block: "nearest", behavior: "instant" });
+    },
+    [],
+  );
   useEffect(() => {
-    if (editing) inputRefs.current.values().next().value?.focus();
-    else if (wasEditing.current) editButtonRef.current?.focus();
+    if (editing) {
+      const input = inputRefs.current.get(editOrigin.current);
+      focusEditorElement(input);
+      input?.select();
+    } else if (wasEditing.current) {
+      budgetButtonRefs.current.get(editOrigin.current)?.focus();
+    }
     wasEditing.current = editing;
-  }, [editing]);
+  }, [editing, focusEditorElement]);
   useEffect(() => {
-    if (saveError && !invalidAccount) saveErrorRef.current?.focus();
-  }, [saveError, invalidAccount]);
+    if (saveError && !invalidAccount) focusEditorElement(saveErrorRef.current);
+  }, [saveError, invalidAccount, focusEditorElement]);
   const now = today();
   const budgets = useBudget(company, snapshot?.fetchedAt);
   const data = forecast.data;
@@ -182,8 +206,9 @@ export function Cash({
       }),
     )
     .join(" – ");
-  const beginEditing = () => {
+  const beginEditing = (account: string) => {
     if (!budgets.data?.can_edit) return;
+    editOrigin.current = account;
     const plan = structuredClone(budgets.data.plan);
     for (const bank of bankOptions) {
       if (!plan.buckets.some((b) => b.account === bank.code))
@@ -227,7 +252,7 @@ export function Cash({
             };
           } catch (e) {
             setInvalidAccount(b.account);
-            inputRefs.current.get(b.account)?.focus();
+            focusEditorElement(inputRefs.current.get(b.account));
             throw e;
           }
         }),
@@ -248,7 +273,7 @@ export function Cash({
         onValueChange={(v) => setHorizon(v as Horizon)}
         className="gap-0"
       >
-        <div className="cash-heading">
+        <div ref={headingRef} className="cash-heading">
           <div>
             <h1>Cash</h1>
             <p className="cash-period">
@@ -264,7 +289,7 @@ export function Cash({
                 </TabsTrigger>
               ))}
             </TabsList>
-            {draft ? (
+            {draft && (
               <div
                 className="flex items-center gap-2"
                 aria-label="Budget actions"
@@ -281,16 +306,7 @@ export function Cash({
                   {saving ? "Saving…" : "Save budgets"}
                 </Button>
               </div>
-            ) : budgets.data?.can_edit ? (
-              <Button
-                ref={editButtonRef}
-                variant="outline"
-                size="sm"
-                onClick={beginEditing}
-              >
-                Edit budgets
-              </Button>
-            ) : null}
+            )}
           </div>
         </div>
         {saveError && (
@@ -429,6 +445,24 @@ export function Cash({
                               }))
                             }
                           />
+                        ) : budgets.data?.can_edit ? (
+                          <Button
+                            ref={(node) => {
+                              if (node)
+                                budgetButtonRefs.current.set(row.code, node);
+                              else budgetButtonRefs.current.delete(row.code);
+                            }}
+                            variant="ghost"
+                            className="budget-amount-trigger"
+                            aria-label={`Edit monthly budget for ${row.name}, ${b?.monthly != null ? money(b.monthly, currency) : "not set"}`}
+                            onClick={() => beginEditing(row.code)}
+                          >
+                            {b?.monthly != null ? (
+                              money(b.monthly, currency)
+                            ) : (
+                              <Missing>Not set</Missing>
+                            )}
+                          </Button>
                         ) : b?.monthly != null ? (
                           money(b.monthly, currency)
                         ) : (

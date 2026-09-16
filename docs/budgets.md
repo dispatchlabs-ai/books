@@ -21,7 +21,7 @@ is complete. Unassigned spending is shown separately and can change the bucket
 averages when classified. Category edits also affect the displayed historical
 comparison; they do not alter immutable ledger entries.
 
-In **Edit budgets**, change monthly targets directly in the Cash table and use
+Click a budget amount or **Not set** to change monthly targets in the Cash table. Use
 **Save budgets** or **Cancel** above it. Open **Spending assignments** below the
 table to assign expense categories and review purchase exceptions. An empty
 target means Not set; zero is a deliberate target. Period changes keep the draft;

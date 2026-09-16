@@ -372,8 +372,9 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
   let revision = "one",
     monthly: string | null = "20000";
   let saves = 0;
+  let canEdit = true;
   const budgetData = () => ({
-    can_edit: true,
+    can_edit: canEdit,
     from: "2026-07-01",
     to: "2026-08-31",
     months: ["2026-07", "2026-08"],
@@ -422,7 +423,34 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
   await expect(row).toContainText("$150.00");
   await expect(row).toContainText("$200.00");
   await expect(page.getByText(/\$25.00 \/ month unassigned/)).toBeVisible();
-  await page.getByRole("button", { name: "Edit budgets" }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit budgets", exact: true }),
+  ).toHaveCount(0);
+  const otherBudget = page.getByRole("button", {
+    name: /^Edit monthly budget for Extra bank, not set$/,
+  });
+  await otherBudget.click();
+  await expect(
+    page.getByRole("textbox", {
+      name: "Monthly budget for Extra bank",
+      exact: true,
+    }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(otherBudget).toBeFocused();
+  const budgetNumber = row.getByRole("button", {
+    name: /^Edit monthly budget for Checking,/,
+  });
+  await budgetNumber.focus();
+  await page.keyboard.press("Enter");
+  const focusedAmount = row.getByRole("textbox");
+  await expect(focusedAmount).toBeFocused();
+  expect(
+    await focusedAmount.evaluate(
+      (el: HTMLInputElement) =>
+        el.selectionStart === 0 && el.selectionEnd === el.value.length,
+    ),
+  ).toBe(true);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /^Select entity/ }),
@@ -451,7 +479,9 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
   await expect(row).toContainText("$175.50");
   await page.getByRole("tab", { name: "Week", exact: true }).click();
   await expect(row).toContainText("$150.00");
-  await page.getByRole("button", { name: "Edit budgets" }).click();
+  await page
+    .getByRole("button", { name: /^Edit monthly budget for Checking,/ })
+    .click();
   await amount.fill("999");
   await page.getByRole("tab", { name: "Month", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
@@ -465,7 +495,7 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
   ).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Edit budgets" }),
+    page.getByRole("button", { name: /^Edit monthly budget for Checking,/ }),
   ).toBeFocused();
   await expect(row).toContainText("$175.50");
   expect(saves).toBe(1);
@@ -473,7 +503,9 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
     ["0", "$0.00"],
     ["", "Not set"],
   ]) {
-    await page.getByRole("button", { name: "Edit budgets" }).click();
+    await page
+      .getByRole("button", { name: /^Edit monthly budget for Checking,/ })
+      .click();
     await amount.fill(value);
     await page.getByRole("button", { name: "Save budgets" }).click();
     await expect(row).toContainText(expected);
@@ -484,6 +516,12 @@ test("Cash compares two-month spending and saves explicit monthly budgets", asyn
     path: "/tmp/books-budgets-" + page.viewportSize()!.width + ".png",
     fullPage: true,
   });
+  canEdit = false;
+  await page.getByRole("button", { name: "Refresh view" }).click();
+  await expect(row.getByText("Not set", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Edit monthly budget/ }),
+  ).toHaveCount(0);
 });
 
 test("entity selection stays scoped and narrow layouts fit", async ({
@@ -624,7 +662,9 @@ test("budget editor fits 320px and preserves conflicts, categories and purchase 
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Edit budgets" }).click();
+  await page
+    .getByRole("button", { name: /^Edit monthly budget for Checking,/ })
+    .click();
   expect(await noPageScroll(page)).toBe(true);
   await page
     .getByRole("textbox", { name: "Monthly budget for Checking" })
@@ -752,9 +792,6 @@ test("budget edits include bank rows that load after editing begins", async ({
   page,
 }) => {
   await connectedHousehold(page);
-  await page.route("**/api/config", (r) =>
-    r.fulfill({ json: { demo: false } }),
-  );
   let release!: () => void;
   const ready = new Promise<void>((resolve) => {
     release = resolve;
@@ -785,8 +822,15 @@ test("budget edits include bank rows that load after editing begins", async ({
     return r.fulfill({ json: budget });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
-  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: /^Edit monthly budget for Checking,/ })
+    .click();
+  await expect(
+    page.getByRole("textbox", {
+      name: "Monthly budget for Extra bank",
+      exact: true,
+    }),
+  ).toHaveCount(0);
   release();
   const input = page.getByRole("textbox", {
     name: "Monthly budget for Extra bank",
@@ -804,9 +848,6 @@ test("a late budget read cannot replace a successful save", async ({
   page,
 }) => {
   await connectedHousehold(page);
-  await page.route("**/api/config", (r) =>
-    r.fulfill({ json: { demo: false } }),
-  );
   let releaseLedger!: () => void;
   const ledgerReady = new Promise<void>((resolve) => {
     releaseLedger = resolve;
@@ -849,7 +890,9 @@ test("a late budget read cannot replace a successful save", async ({
     r.fulfill({ json: budget("17550", "two") }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Edit monthly budget for Checking,/ })
+    .click();
   releaseLedger();
   await reading;
   await page
@@ -871,6 +914,89 @@ test("a late budget read cannot replace a successful save", async ({
       ),
   );
   await expect(row).toContainText("$175.50");
-  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Edit monthly budget for Extra bank,/ })
+    .click();
   await expect(row.getByRole("textbox")).toHaveValue("175.50");
+});
+
+test("clicking a scrolled budget keeps its input clear of sticky controls", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await connectedHousehold(page);
+  await page.route("**/api/config", (r) =>
+    r.fulfill({ json: { demo: false } }),
+  );
+  const accounts = Array.from({ length: 25 }, (_, i) => ({
+    id: `bank-${i}`,
+    code: String(1000 + i),
+    name: `Bank ${i + 1}`,
+    type: "ASSET",
+    subtype: "BANK",
+  }));
+  await page.route("**/api/books/companies/example/reports/general-ledger?**", (r) =>
+    r.fulfill({
+      json: {
+        accounts: accounts.map((account) => ({
+          account,
+          opening_balance: { consolidated_cents: "0" },
+          closing_balance: { consolidated_cents: "0" },
+          lines: [],
+        })),
+      },
+    }),
+  );
+  await page.route("**/api/books/companies/example/budget", (r) =>
+    r.fulfill({
+      json: {
+        can_edit: true,
+        months: ["2026-07", "2026-08"],
+        unassigned: { average: "0", count: 0 },
+        expenses: [],
+        accounts,
+        rows: accounts.map((a) => ({
+          account: a.code,
+          average: "0",
+          monthly: "20000",
+          count: 0,
+        })),
+        plan: {
+          revision: "one",
+          buckets: accounts.map((a) => ({
+            account: a.code,
+            monthly: "20000",
+            expense_accounts: [],
+          })),
+          assignments: [],
+        },
+      },
+    }),
+  );
+  await page.goto("/");
+  const button = page.getByRole("button", {
+    name: /^Edit monthly budget for Bank 13,/,
+  });
+  await button.evaluate((el) => {
+    el.scrollIntoView();
+    window.scrollBy(0, el.getBoundingClientRect().top - 20);
+  });
+  await button.click();
+  const input = page.getByRole("textbox", {
+    name: "Monthly budget for Bank 13",
+    exact: true,
+  });
+  const unobscured = () =>
+    input.evaluate(
+      (el) =>
+        el.getBoundingClientRect().top >=
+        document.querySelector(".cash-heading")!.getBoundingClientRect().bottom,
+    );
+  await expect(input).toBeFocused();
+  await expect.poll(unobscured).toBe(true);
+  await input.fill("-1");
+  await page.getByRole("button", { name: "Save budgets", exact: true }).click();
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(input).toBeFocused();
+  await expect.poll(unobscured).toBe(true);
 });

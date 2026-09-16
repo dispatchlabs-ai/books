@@ -83,8 +83,8 @@ posted expenses by budget bucket. It stays monthly across forecast horizons.
 Unset targets, missing data, unassigned spending, errors and retry controls
 remain distinct. Editing budgets uses the existing revisioned, separately
 permissioned budget operation. It never rewrites dated forecasts.
-Targets are edited in the Cash table with Save and Cancel controls; spending
-assignments expand below it. The last accessible entity is remembered across
+Click a target amount or **Not set** to edit in the Cash table with Save and Cancel
+controls; spending assignments expand below it. The last accessible entity is remembered across
 reloads when browser storage is available, separately for demo and connected use.
 
 ## Components and maintenance
